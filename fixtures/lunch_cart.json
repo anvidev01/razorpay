@@ -1,0 +1,8 @@
+{
+  "mandate_id": "mnd_8f21c4", "merchant": "swiggy",
+  "lines": [
+    { "sku": "SKU_MEAL_THALI_001", "unit_paise": 24000, "qty": 1 },
+    { "sku": "SKU_DRINK_LIME_007", "unit_paise":  6000, "qty": 2 },
+    { "sku": "SKU_SIDE_RAITA_014", "unit_paise":  4500, "qty": 1 }
+  ]
+}

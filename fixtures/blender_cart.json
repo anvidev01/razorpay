@@ -1,0 +1,10 @@
+{
+  "mandate_id": "mnd_8f21c4", "merchant": "swiggy",
+  "_note": "the hallucinated cart: agent added an appliance to a lunch mandate",
+  "lines": [
+    { "sku": "SKU_MEAL_THALI_001",       "unit_paise":  24000, "qty": 1 },
+    { "sku": "SKU_DRINK_LIME_007",       "unit_paise":   6000, "qty": 2 },
+    { "sku": "SKU_APPLIANCE_BLENDER_5",  "unit_paise": 600000, "qty": 1 }
+  ],
+  "_expected_verdict": "0x000D = R_SKU_NOT_IN_INTENT | R_UNIT_PRICE_EXCEEDED | R_CART_TOTAL_EXCEEDED"
+}

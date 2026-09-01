@@ -1,0 +1,20 @@
+{
+  "mandate_id": "mnd_8f21c4",
+  "utterance": "order me lunch, keep it under 500 rupees",
+  "subject_agent": "agent_swiggy_v3",
+  "not_before_ns": 1756742400000000000,
+  "not_after_ns":  1756743300000000000,
+  "total_budget_paise": 50000,
+  "merchant_allow": ["swiggy", "zomato"],
+  "constraints": [
+    { "sku": "SKU_MEAL_THALI_001",   "max_unit_paise": 30000, "max_qty": 2 },
+    { "sku": "SKU_MEAL_BIRYANI_02",  "max_unit_paise": 35000, "max_qty": 2 },
+    { "sku": "SKU_DRINK_LIME_007",   "max_unit_paise":  8000, "max_qty": 4 },
+    { "sku": "SKU_DRINK_COLA_003",   "max_unit_paise":  8000, "max_qty": 4 },
+    { "sku": "SKU_SIDE_RAITA_014",   "max_unit_paise":  6000, "max_qty": 2 },
+    { "sku": "SKU_SIDE_PAPAD_021",   "max_unit_paise":  3000, "max_qty": 4 }
+  ],
+  "schema_version": 1,
+  "sig_alg": "ed25519",
+  "signature": "<filled at admission>"
+}
