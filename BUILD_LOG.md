@@ -2,7 +2,7 @@
 
 A timestamped engineering record. Appended via `./scripts/log.sh "<phase>" "<note>" --commit`.
 
-### 2025-09-01 — Phase 0: blueprint + de-risking
+### 2026-09-01 — Phase 0: blueprint + de-risking
 - **Environment audit.** Target is Apple M4 / arm64, macOS 15.7.7, Apple clang 17,
   JDK 21, Node 24. Consequences recorded before writing any engine code:
   - **no AVX2** (NEON only), **no `rdtscp`**, **no `perf`**, **no Valgrind on arm64 macOS**, **no gdb**.
@@ -34,3 +34,7 @@ A timestamped engineering record. Appended via `./scripts/log.sh "<phase>" "<not
 
 **Net effect:** the two highest-risk unknowns — *is the kernel actually fast?* and *is the
 incident story real?* — were both answered before the build sprint began.
+
+### 2026-09-01 18:30:37Z — phase0-fix
+- **at:** `2026-09-01 18:30:37Z` (HEAD `52c625a`)
+- corrected build-log year to 2026; regenerated mandate TTL fixtures against real clock
