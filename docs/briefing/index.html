@@ -1,0 +1,587 @@
+<title>Intent Gateway Blueprint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  /* ---------- tokens : light is the base ---------- */
+  :root{
+    --ground:#F5F6F8;
+    --surface:#FFFFFF;
+    --surface-2:#EDEFF4;
+    --ink:#0E1726;
+    --ink-2:#3A4557;
+    --muted:#5A6577;
+    --line:#DDE2EA;
+    --line-2:#C7CEDA;
+    --accent:#1F5FFF;
+    --accent-soft:#E7EEFF;
+    --allow:#0E9E6E;
+    --allow-soft:#E2F5EE;
+    --deny:#D6455D;
+    --deny-soft:#FCE9EC;
+    --warn:#B26A00;
+    --shadow:0 1px 2px rgba(14,23,38,.06), 0 8px 24px -12px rgba(14,23,38,.18);
+    --mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --sans:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0B1220;
+      --surface:#121B2B;
+      --surface-2:#1A2436;
+      --ink:#E6EBF2;
+      --ink-2:#B8C2D2;
+      --muted:#8E9AAD;
+      --line:#233047;
+      --line-2:#2E3D57;
+      --accent:#5B8CFF;
+      --accent-soft:#16233F;
+      --allow:#3DBF95;
+      --allow-soft:#0F2A22;
+      --deny:#F2687E;
+      --deny-soft:#2C151B;
+      --warn:#D99A3A;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0B1220;
+    --surface:#121B2B;
+    --surface-2:#1A2436;
+    --ink:#E6EBF2;
+    --ink-2:#B8C2D2;
+    --muted:#8E9AAD;
+    --line:#233047;
+    --line-2:#2E3D57;
+    --accent:#5B8CFF;
+    --accent-soft:#16233F;
+    --allow:#3DBF95;
+    --allow-soft:#0F2A22;
+    --deny:#F2687E;
+    --deny-soft:#2C151B;
+    --warn:#D99A3A;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    background:var(--ground);
+    color:var(--ink);
+    font-family:var(--sans);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 28px 96px}
+
+  /* ---------- type ---------- */
+  h1,h2,h3{text-wrap:balance;margin:0}
+  h1{font-size:clamp(34px,5.2vw,56px);font-weight:700;letter-spacing:-.03em;line-height:1.05}
+  h2{font-size:clamp(21px,2.4vw,27px);font-weight:600;letter-spacing:-.018em;line-height:1.2}
+  h3{font-size:16px;font-weight:600;letter-spacing:-.01em}
+  p{margin:0}
+  .lede{font-size:clamp(16px,1.65vw,19px);color:var(--ink-2);max-width:64ch;line-height:1.62}
+  .eyebrow{
+    font-family:var(--mono);font-size:11px;font-weight:500;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+  }
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  a{color:var(--accent)}
+
+  /* ---------- header ---------- */
+  header{padding:64px 0 40px;border-bottom:1px solid var(--line)}
+  .kicker{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:22px}
+  .tag{
+    font-family:var(--mono);font-size:11px;letter-spacing:.06em;
+    padding:4px 9px;border-radius:4px;border:1px solid var(--line-2);color:var(--muted);
+    background:var(--surface);
+  }
+  .tag.on{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+  .thesis{
+    margin-top:26px;padding-left:18px;border-left:2px solid var(--accent);
+    font-size:clamp(16px,1.7vw,19px);color:var(--ink);max-width:62ch;line-height:1.55;
+  }
+  .thesis b{font-weight:600}
+
+  /* ---------- sections ---------- */
+  section{padding-top:60px}
+  .shead{display:flex;align-items:baseline;gap:14px;margin-bottom:8px;flex-wrap:wrap}
+  .sidx{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:600}
+  .sdek{color:var(--muted);font-size:14.5px;margin-top:6px;max-width:66ch}
+
+  /* ---------- latency ladder ---------- */
+  .ladder{
+    margin-top:26px;background:var(--surface);border:1px solid var(--line);
+    border-radius:10px;padding:24px 22px 18px;box-shadow:var(--shadow);
+  }
+  .lrow{display:grid;grid-template-columns:186px 1fr 92px;gap:14px;align-items:center;padding:7px 0}
+  .lname{font-size:13.5px;color:var(--ink-2);line-height:1.3}
+  .lname small{display:block;color:var(--muted);font-size:11.5px;font-family:var(--mono)}
+  .track{position:relative;height:22px;background:var(--surface-2);border-radius:3px;overflow:hidden}
+  .bar{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--accent);opacity:.9}
+  .bar.g{background:var(--allow)}
+  .bar.r{background:var(--deny)}
+  .bar.m{background:var(--line-2)}
+  .lval{font-family:var(--mono);font-size:13px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .lscale{
+    display:flex;justify-content:space-between;margin-top:12px;padding-top:10px;
+    border-top:1px dashed var(--line);font-family:var(--mono);font-size:11px;color:var(--muted);
+  }
+
+  /* ---------- generic cards ---------- */
+  .grid{display:grid;gap:16px;margin-top:24px}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:10px;
+    padding:20px 20px 18px;box-shadow:var(--shadow);
+  }
+  .card h3{margin-bottom:7px}
+  .card p{font-size:14px;color:var(--ink-2);line-height:1.55}
+  .stat{font-family:var(--mono);font-size:29px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .stat.a{color:var(--accent)} .stat.g{color:var(--allow)} .stat.r{color:var(--deny)}
+
+  /* ---------- flow ---------- */
+  .flowwrap{overflow-x:auto;margin-top:24px;padding-bottom:6px}
+  .flow{display:flex;align-items:stretch;gap:0;min-width:840px}
+  .node{
+    flex:1;background:var(--surface);border:1px solid var(--line);border-radius:9px;
+    padding:15px 14px;text-align:center;box-shadow:var(--shadow);
+  }
+  .node .t{font-size:13.5px;font-weight:600;line-height:1.25}
+  .node .s{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:5px;display:block}
+  .node.key{border-color:var(--accent);background:var(--accent-soft)}
+  .node.key .t{color:var(--accent)}
+  .node.nokey{border-style:dashed}
+  .arrow{
+    display:flex;align-items:center;padding:0 9px;color:var(--line-2);
+    font-family:var(--mono);font-size:15px;flex:0 0 auto;
+  }
+  .flownote{
+    margin-top:12px;font-family:var(--mono);font-size:11.5px;color:var(--muted);
+    display:flex;gap:8px;align-items:flex-start;line-height:1.5;
+  }
+
+  /* ---------- register / code ---------- */
+  .reg{
+    margin-top:22px;background:var(--surface);border:1px solid var(--line);border-radius:10px;
+    overflow:hidden;box-shadow:var(--shadow);
+  }
+  .regbar{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+    padding:12px 18px;background:var(--surface-2);border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:12px;color:var(--muted);
+  }
+  .regbar b{color:var(--deny);font-weight:600;font-size:14px}
+  .reglist{padding:6px 0}
+  .bit{
+    display:grid;grid-template-columns:78px 210px 1fr;gap:14px;align-items:baseline;
+    padding:9px 18px;font-size:13.5px;border-bottom:1px solid var(--line);
+  }
+  .bit:last-child{border-bottom:0}
+  .bit code{font-family:var(--mono);font-size:12px;color:var(--deny)}
+  .bit .n{font-family:var(--mono);font-size:12.5px;color:var(--ink)}
+  .bit .d{color:var(--ink-2);font-size:13px}
+  pre{
+    margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.65;
+    overflow-x:auto;color:var(--ink-2);
+  }
+  .term{
+    margin-top:16px;background:var(--surface);border:1px solid var(--line);
+    border-radius:9px;padding:16px 18px;box-shadow:var(--shadow);
+  }
+  .term .ok{color:var(--allow)} .term .no{color:var(--deny)} .term .dim{color:var(--muted)}
+
+  /* ---------- table ---------- */
+  .tablewrap{overflow-x:auto;margin-top:22px;border:1px solid var(--line);border-radius:10px;background:var(--surface);box-shadow:var(--shadow)}
+  table{border-collapse:collapse;width:100%;min-width:560px;font-size:13.5px}
+  th,td{text-align:left;padding:11px 16px;border-bottom:1px solid var(--line)}
+  th{
+    font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--muted);font-weight:500;background:var(--surface-2);
+  }
+  tr:last-child td{border-bottom:0}
+  td.n{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .chip{
+    display:inline-block;font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;
+    padding:2.5px 7px;border-radius:20px;white-space:nowrap;
+  }
+  .chip.s{background:var(--allow-soft);color:var(--allow);border:1px solid var(--allow)}
+
+  /* ---------- timeline ---------- */
+  .days{margin-top:24px;display:grid;gap:12px}
+  .day{
+    display:grid;grid-template-columns:118px 1fr;gap:20px;
+    background:var(--surface);border:1px solid var(--line);border-radius:10px;
+    padding:17px 20px;box-shadow:var(--shadow);
+  }
+  .day .when{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:600;line-height:1.5}
+  .day .when small{display:block;color:var(--muted);font-weight:400;letter-spacing:.03em}
+  .day h3{margin-bottom:5px}
+  .day p{font-size:13.5px;color:var(--ink-2);line-height:1.55}
+  .gate{
+    margin-top:9px;font-family:var(--mono);font-size:11.5px;color:var(--muted);
+    padding-top:8px;border-top:1px dashed var(--line);
+  }
+  .gate b{color:var(--ink-2);font-weight:500}
+
+  footer{
+    margin-top:72px;padding-top:26px;border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;
+    font-family:var(--mono);font-size:11.5px;color:var(--muted);
+  }
+  @media (max-width:760px){
+    .g2,.g3{grid-template-columns:1fr}
+    .lrow{grid-template-columns:120px 1fr 76px;gap:10px}
+    .lname small{display:none}
+    .bit{grid-template-columns:1fr;gap:2px}
+    .day{grid-template-columns:1fr;gap:8px}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="kicker">
+    <span class="tag on">Track 01 · Agentic Commerce</span>
+    <span class="tag">Razorpay AI Buildathon</span>
+    <span class="tag">C++ · Java · vanilla JS</span>
+  </div>
+  <h1>Intent Gateway</h1>
+  <p class="lede" style="margin-top:18px">
+    UPI Reserve Pay lets an AI agent spend your money. The rail enforces exactly one thing —
+    is the agent under its limit. It never looks at the cart. So an agent told
+    <em>“order lunch under ₹500”</em> can buy a ₹6,000 blender, and the payment succeeds.
+  </p>
+  <div class="thesis">
+    The gateway asks the question the rail doesn’t: <b>does this cart match what the human
+    actually agreed to?</b> A branch-free C++ kernel answers it in <b>28 nanoseconds</b>, and
+    no payment token can exist until that answer is durable in a hash-chained log.
+  </div>
+</header>
+
+<section>
+  <div class="shead"><span class="sidx">01</span><h2>Why the safety layer is free</h2></div>
+  <p class="sdek">
+    Every value measured on the target machine (Apple M4, clang 17, <span class="num">-O3</span>).
+    Log scale — each gridline is a factor of ten.
+  </p>
+
+  <div class="ladder">
+    <div class="lrow">
+      <div class="lname">Policy kernel<small>8-line cart, branch-free</small></div>
+      <div class="track"><div class="bar g" style="width:1.4%"></div></div>
+      <div class="lval">28 ns</div>
+    </div>
+    <div class="lrow">
+      <div class="lname">simdjson parse<small>509 B, 3.19 GB/s</small></div>
+      <div class="track"><div class="bar g" style="width:11.0%"></div></div>
+      <div class="lval">160 ns</div>
+    </div>
+    <div class="lrow">
+      <div class="lname">Full decision<small>parse + intern + kernel</small></div>
+      <div class="track"><div class="bar" style="width:14.4%"></div></div>
+      <div class="lval">270 ns</div>
+    </div>
+    <div class="lrow">
+      <div class="lname">Durable audit<small>group commit, amortised</small></div>
+      <div class="track"><div class="bar" style="width:40.0%"></div></div>
+      <div class="lval">15.5 µs</div>
+    </div>
+    <div class="lrow">
+      <div class="lname">Ed25519 verify<small>moved off the hot path</small></div>
+      <div class="track"><div class="bar r" style="width:45.4%"></div></div>
+      <div class="lval">36.5 µs</div>
+    </div>
+    <div class="lrow">
+      <div class="lname">F_FULLFSYNC<small>true durability, un-amortised</small></div>
+      <div class="track"><div class="bar r" style="width:75.1%"></div></div>
+      <div class="lval">3.96 ms</div>
+    </div>
+    <div class="lrow">
+      <div class="lname">Razorpay round trip<small>the actual payment</small></div>
+      <div class="track"><div class="bar m" style="width:100%"></div></div>
+      <div class="lval">~200 ms</div>
+    </div>
+    <div class="lscale">
+      <span>10 ns</span><span>1 µs</span><span>100 µs</span><span>10 ms</span><span>200 ms</span>
+    </div>
+  </div>
+
+  <div class="grid g3">
+    <div class="card">
+      <div class="eyebrow">Decision cost</div>
+      <div class="stat g" style="margin:6px 0 4px">0.00013%</div>
+      <p>of a 200 ms checkout. The claim is not “microsecond checkout” — it’s that the safety
+      layer is free.</p>
+    </div>
+    <div class="card">
+      <div class="eyebrow">Tail behaviour</div>
+      <div class="stat a" style="margin:6px 0 4px">p99/p50 = 1.29</div>
+      <p>Branch-free means the adversarial cart costs the same as the benign one. No timing
+      side channel, no attack-shaped tail.</p>
+    </div>
+    <div class="card">
+      <div class="eyebrow">The design constraint</div>
+      <div class="stat r" style="margin:6px 0 4px">141,000×</div>
+      <p>Durability costs that much more than the decision. This is an amortised-durability
+      problem, not a speed problem.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="shead"><span class="sidx">02</span><h2>The agent holds no credentials</h2></div>
+  <p class="sdek">
+    A guardrail the model can be talked out of is not a guardrail. Bypass here isn’t a
+    prompt-engineering problem — it requires forging an Ed25519 signature.
+  </p>
+
+  <div class="flowwrap">
+    <div class="flow">
+      <div class="node nokey">
+        <span class="t">LLM agent</span>
+        <span class="s">proposes only<br>✗ no API keys</span>
+      </div>
+      <div class="arrow">→</div>
+      <div class="node key">
+        <span class="t">C++ policy engine</span>
+        <span class="s">270 ns · pure fn</span>
+      </div>
+      <div class="arrow">→</div>
+      <div class="node">
+        <span class="t">Hash-chained WAL</span>
+        <span class="s">BLAKE3 · durable</span>
+      </div>
+      <div class="arrow">→</div>
+      <div class="node">
+        <span class="t">Capability token</span>
+        <span class="s">Ed25519 · 60 s TTL</span>
+      </div>
+      <div class="arrow">→</div>
+      <div class="node key">
+        <span class="t">Executor</span>
+        <span class="s">holds the RZP key</span>
+      </div>
+    </div>
+  </div>
+  <p class="flownote">
+    <span style="color:var(--accent)">▲</span>
+    <span>The ordering invariant: a token is minted only <em>after</em> its decision record is
+    durable. A payment that is not in the audit log is cryptographically unconstructible.</span>
+  </p>
+
+  <div class="term">
+    <div class="eyebrow" style="margin-bottom:10px">./scripts/attack.sh — four ways to route around the engine</div>
+<pre><span class="dim">$</span> --force-payment --skip-gateway    <span class="no">REFUSED</span>  <span class="dim">PCT missing</span>
+<span class="dim">$</span> --forge-pct                       <span class="no">REFUSED</span>  <span class="dim">signature invalid</span>
+<span class="dim">$</span> --replay-last-valid-pct           <span class="no">REFUSED</span>  <span class="dim">nonce already burned</span>
+<span class="dim">$</span> --swap-cart-after-approval        <span class="no">REFUSED</span>  <span class="dim">cart_hash mismatch</span></pre>
+  </div>
+</section>
+
+<section>
+  <div class="shead"><span class="sidx">03</span><h2>Explainable, by construction</h2></div>
+  <p class="sdek">
+    The kernel evaluates <em>every</em> rule and accumulates into a bitfield — it never
+    short-circuits. A bad cart reports all its reasons, not the first one.
+  </p>
+
+  <div class="reg">
+    <div class="regbar">
+      <span>cart: <span style="color:var(--ink)">SKU_APPLIANCE_BLENDER_5</span> added to a lunch mandate</span>
+      <span>verdict <b>0x000D</b> · eval 31 ns</span>
+    </div>
+    <div class="reglist">
+      <div class="bit">
+        <code>1u &lt;&lt; 0</code>
+        <span class="n">R_SKU_NOT_IN_INTENT</span>
+        <span class="d">appliance is not in {MEAL, DRINK, SIDE}</span>
+      </div>
+      <div class="bit">
+        <code>1u &lt;&lt; 2</code>
+        <span class="n">R_UNIT_PRICE_EXCEEDED</span>
+        <span class="d">₹6,000 exceeds the ₹500 per-item cap</span>
+      </div>
+      <div class="bit">
+        <code>1u &lt;&lt; 3</code>
+        <span class="n">R_CART_TOTAL_EXCEEDED</span>
+        <span class="d">₹6,420 exceeds the ₹500 mandate budget</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <h3>Graceful failure is the product</h3>
+      <p>Blocking is easy; blocking without breaking the user is the point. The denial carries
+      <span class="num">repair</span> hints — the agent drops the blender, resubmits, and
+      <b>the lunch still arrives</b>. Then the user gets one tap to approve the blender
+      deliberately with MFA, which mints a new mandate and the same engine allows it.
+      It degrades to <em>ask the human</em>, never to <em>fail the task</em> and never to
+      <em>allow it anyway</em>.</p>
+    </div>
+    <div class="card">
+      <h3>Replay is the proof</h3>
+      <p>Because <span class="num">evaluate()</span> is pure — no allocation, no clock read,
+      no floating point — every historical decision can be re-executed offline and checked
+      against what was logged.</p>
+      <div class="term" style="margin-top:12px;box-shadow:none">
+<pre>chain    : 128,441 records <span class="ok">INTACT</span>
+replay   : 128,441 re-executed
+divergent: <span class="ok">0</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="shead"><span class="sidx">04</span><h2>Decisions the measurements forced</h2></div>
+  <p class="sdek">Three architectural calls that came out of benchmarking, two of which reversed my starting instinct.</p>
+
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>Question</th><th>What the measurement said</th><th class="n">Δ</th><th>Call</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Hand-rolled parser or simdjson?</td>
+          <td>Hand-rolled won p50 by 7%, <b>lost p99 by 12%</b></td>
+          <td class="n">282 vs 248 ns</td>
+          <td><span class="chip s">simdjson</span></td>
+        </tr>
+        <tr>
+          <td>Verify the signature per cart?</td>
+          <td>Ed25519 is <b>1,302×</b> the kernel — it would dominate everything</td>
+          <td class="n">36,458 ns</td>
+          <td><span class="chip s">verify once at admission</span></td>
+        </tr>
+        <tr>
+          <td>Is <span class="num">fsync()</span> enough for the WAL?</td>
+          <td>On macOS it does <b>not</b> flush the drive cache — the guarantee would be fiction</td>
+          <td class="n">3.96 ms</td>
+          <td><span class="chip s">F_FULLFSYNC + group commit</span></td>
+        </tr>
+        <tr>
+          <td>Pad everything to the 128 B line?</td>
+          <td>64 B captures 98% of the win; 128 B adds 6% and halves L1 density</td>
+          <td class="n">5.9× → 6%</td>
+          <td><span class="chip s">64 B, except 2 fields</span></td>
+        </tr>
+        <tr>
+          <td>Vectorise the kernel with NEON?</td>
+          <td>Would optimise 13% of the decision; search domain is already one cache line</td>
+          <td class="n">28 ns</td>
+          <td><span class="chip s">stay scalar</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="shead"><span class="sidx">05</span><h2>What broke at 2 AM</h2></div>
+  <p class="sdek">
+    SIGSEGV at 41,000 rps, never under the debugger, and some survivors wrote corrupt
+    <span class="num">POLICY_DECISION</span> records — the one artefact whose integrity is the
+    whole premise. Reproduced and committed as a test.
+  </p>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="eyebrow">The trap</div>
+      <h3 style="margin:8px 0 7px">A pool allocator makes your program invisible to ASan</h3>
+      <p>simdjson returns <span class="num">string_view</span>s into <em>its own</em> buffer. The
+      audit ring retained them across a request boundary, then the arena reset underneath.
+      But ASan only tracks <span class="num">malloc</span>: the arena mallocs one 4 MB slab at
+      startup, so every byte stays “live” forever. A use-after-free inside a pool is an
+      ordinary read of valid memory.</p>
+    </div>
+    <div class="card">
+      <div class="eyebrow">The fix — to the tooling, first</div>
+      <h3 style="margin:8px 0 7px">Three lines, then a 9-second repro</h3>
+      <div class="term" style="margin-top:0;box-shadow:none">
+<pre>void reset(){
+  ASAN_POISON_MEMORY_REGION(base, head);
+  head = 0;
+}</pre>
+      </div>
+      <p style="margin-top:12px">Same bug, same logic, only the instrumentation differs:</p>
+      <div class="term" style="margin-top:10px;box-shadow:none">
+<pre><span class="dim">POISON=0</span>  exit 0, silent      <span class="no">← the trap</span>
+<span class="dim">POISON=1</span>  use-after-poison    <span class="ok">← caught</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>After interning SKUs to uint32 at the parse boundary</th><th class="n">Before</th><th class="n">After</th></tr></thead>
+      <tbody>
+        <tr><td>Kernel p50, 8-line cart</td><td class="n">73 ns</td><td class="n" style="color:var(--allow)">28 ns</td></tr>
+        <tr><td>Kernel p99</td><td class="n">210 ns</td><td class="n" style="color:var(--allow)">36 ns</td></tr>
+        <tr><td>Crashes @ 45k rps</td><td class="n">1 per 90 s</td><td class="n" style="color:var(--allow)">0 over 6 h</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="flownote" style="margin-top:14px">
+    <span style="color:var(--accent)">▲</span>
+    <span>The fix made it <b>2.6× faster</b> — the hot loop stopped comparing strings. p99 improved
+    5.8× because string compares are data-dependent, producing exactly the tail the branch-free
+    design was meant to eliminate.</span>
+  </p>
+</section>
+
+<section>
+  <div class="shead"><span class="sidx">06</span><h2>Three days to submission</h2></div>
+  <p class="sdek">The demo video is the deliverable. Code that never appears on camera gets cut.</p>
+
+  <div class="days">
+    <div class="day">
+      <div class="when">DONE<small>1 Sep, night</small></div>
+      <div>
+        <h3>De-risk before building</h3>
+        <p>Blueprint written, latency budget measured, prototype kernel benchmarked, 2 AM bug
+        reproduced, parser chosen by measurement.</p>
+        <div class="gate"><b>Result:</b> the two hardest unknowns — is the kernel fast, is the
+        incident real — answered before day one.</div>
+      </div>
+    </div>
+    <div class="day">
+      <div class="when">DAY 1<small>2 Sep</small></div>
+      <div>
+        <h3>The engine</h3>
+        <p>Arena and pools with ASan poisoning from the first commit. Intern table, schema
+        layout, the ten verdict bits, simdjson ingest, <span class="num">rig-eval</span> CLI,
+        benchmark harness, Ed25519 admission.</p>
+        <div class="gate"><b>Gate 20:00 —</b> blender fixture returns <span class="num">0x000D</span> with three reasons. If not, stub the crypto and move on.</div>
+      </div>
+    </div>
+    <div class="day">
+      <div class="when">DAY 2<small>3 Sep</small></div>
+      <div>
+        <h3>Audit trail and the bypass proof</h3>
+        <p>WAL with BLAKE3 chain, group commit, PCT minter, Executor enforcement, Java chain
+        verifier and replay auditor, the four attack scripts.</p>
+        <div class="gate"><b>Gate —</b> all four bypasses refused, tampering detected. This is the segment that wins the track.</div>
+      </div>
+    </div>
+    <div class="day">
+      <div class="when">DAY 3<small>4 Sep</small></div>
+      <div>
+        <h3>Demo, record, submit</h3>
+        <p>Vanilla JS split-screen UI, the graceful-failure loop, deterministic seeded scenario,
+        README, then record to script in segments.</p>
+        <div class="gate"><b>Gate 19:00 —</b> fresh clone builds from the README alone. Submit by 21:00, a full day early.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span>Razorpay AI Buildathon · Track 01 · anvidev01</span>
+  <span>every number measured on Apple M4 · <span class="num">./engine/bench/run_all.sh</span></span>
+</footer>
+
+</div>

@@ -38,3 +38,7 @@ incident story real?* — were both answered before the build sprint began.
 ### 2026-09-01 18:30:37Z — phase0-fix
 - **at:** `2026-09-01 18:30:37Z` (HEAD `52c625a`)
 - corrected build-log year to 2026; regenerated mandate TTL fixtures against real clock
+
+### 2026-09-01 18:34:33Z — phase0-briefing
+- **at:** `2026-09-01 18:34:33Z` (HEAD `d19fa26`)
+- added standalone visual briefing page (log-scale latency ladder, verdict decode, bypass matrix)
