@@ -1,0 +1,41 @@
+cmake_minimum_required(VERSION 3.20)
+project(rig LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
+# Homebrew prefixes (Apple Silicon default)
+execute_process(COMMAND brew --prefix simdjson  OUTPUT_VARIABLE SIMDJSON_PREFIX OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+execute_process(COMMAND brew --prefix openssl@3 OUTPUT_VARIABLE OPENSSL_PREFIX  OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+if(NOT SIMDJSON_PREFIX)
+  set(SIMDJSON_PREFIX /opt/homebrew/opt/simdjson)
+endif()
+if(NOT OPENSSL_PREFIX)
+  set(OPENSSL_PREFIX /opt/homebrew/opt/openssl@3)
+endif()
+
+add_library(rigcore STATIC
+  src/kernel.cpp src/crypto.cpp src/wal.cpp src/parse.cpp src/pct.cpp src/gateway.cpp)
+target_include_directories(rigcore PUBLIC include ${SIMDJSON_PREFIX}/include ${OPENSSL_PREFIX}/include)
+target_link_directories(rigcore PUBLIC ${SIMDJSON_PREFIX}/lib ${OPENSSL_PREFIX}/lib)
+target_link_libraries(rigcore PUBLIC simdjson crypto)
+
+foreach(tool rig_eval rig_replay rig_gateway rig_attack rig_load wal_dump)
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/${tool}.cpp)
+    string(REPLACE "_" "-" bin ${tool})
+    add_executable(${bin} src/${tool}.cpp)
+    target_link_libraries(${bin} PRIVATE rigcore)
+  endif()
+endforeach()
+
+add_executable(rig-tests tests/test_kernel.cpp)
+target_link_libraries(rig-tests PRIVATE rigcore)
+enable_testing()
+add_test(NAME kernel COMMAND rig-tests)
+
+add_executable(bench-engine-kernel bench/bench_engine_kernel.cpp)
+target_link_libraries(bench-engine-kernel PRIVATE rigcore)
