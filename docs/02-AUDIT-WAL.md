@@ -222,3 +222,33 @@ transaction, and you can run it yourself."
 | In-memory schema tampering | SipHash integrity tag re-checked per cart | ✅ |
 
 **Every row is enforced by construction, not by asking the model to behave.**
+
+## Bidirectional traceability with the rail
+
+The audit log and Razorpay's own records point at each other, so neither has to be
+taken on trust.
+
+**Gateway → Razorpay.** Every order is created with audit metadata in its `notes`:
+
+```json
+"notes": { "mandate_id": "11799271369215149681", "decision_id": "1",
+           "wal_seq": "3", "gateway": "intent-gateway" }
+```
+
+Fetching an order back from `api.razorpay.com` therefore names the exact WAL record
+that authorised it.
+
+**Razorpay → gateway.** The evidence pack carries the order id, so a dispute filed
+against `order_...` resolves to a decision that can be re-executed:
+
+```json
+"4_authorisation": {
+  "capability": "ISSUED",
+  "payment_outcome": "PAID", "http_status": 200,
+  "razorpay_order_id": "order_TXC2UJFR9NAMnF",
+  "payment_record_seq": 6
+}
+```
+
+That closes the liability loop: from a disputed charge you reach the human's signed
+intent, and from the signed intent you reach the charge.

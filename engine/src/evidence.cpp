@@ -56,8 +56,9 @@ EvidenceReport evidence_json(const std::string& wal, std::uint64_t want) {
 #pragma clang diagnostic pop
 #endif
 
-  WalRecord mandate{}, cart{}, decision{}, capability{};
+  WalRecord mandate{}, cart{}, decision{}, capability{}, payment{};
   bool have_mandate = false, have_cart = false, have_decision = false, have_cap = false;
+  bool have_payment = false;
   Hash256 chain_head{};
   std::uint64_t total_records = 0;
 
@@ -70,6 +71,9 @@ EvidenceReport evidence_json(const std::string& wal, std::uint64_t want) {
     if (t == RecType::POLICY_DECISION && r.hdr.seq == want) { decision = r; have_decision = true; }
     if ((t == RecType::CAPABILITY_ISSUED || t == RecType::CAPABILITY_DENIED)
         && r.hdr.seq == want + 1) { capability = r; have_cap = true; }
+    // The rail's outcome for this decision. A dispute is filed against the ORDER ID,
+    // so the evidence pack has to name it or nobody can match the two records up.
+    if (t == RecType::PAYMENT_RESULT && r.hdr.seq > want) { payment = r; have_payment = true; }
     return true;
   });
 
@@ -162,7 +166,20 @@ EvidenceReport evidence_json(const std::string& wal, std::uint64_t want) {
                 issued ? "ISSUED" : "DENIED",
                 (unsigned long long)capability.hdr.seq, hex(capability.this_hash).c_str());
   } else {
-    emit("    \"capability\": \"not found adjacent to this decision\"\n");
+    emit("    \"capability\": \"not found adjacent to this decision\",\n");
+  }
+  if (have_payment) {
+    struct PR { std::uint64_t id; std::uint8_t ok; long status; char order[40]; char err[80]; };
+    if (payment.payload.size() >= sizeof(PR)) {
+      PR pr; std::memcpy(&pr, payment.payload.data(), sizeof pr);
+      emit("    ,\"payment_outcome\": \"%s\", \"http_status\": %ld,\n",
+           pr.ok ? "PAID" : "FAILED", pr.status);
+      emit("    \"razorpay_order_id\": \"%s\", \"failure_reason\": \"%s\",\n",
+           pr.order, pr.err);
+      emit("    \"payment_record_seq\": %llu\n", (unsigned long long)payment.hdr.seq);
+    }
+  } else {
+    emit("    ,\"payment_outcome\": \"no payment attempted\"\n");
   }
   emit("  },\n");
 
