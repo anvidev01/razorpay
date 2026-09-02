@@ -28,7 +28,8 @@ ParseResult parse_intent(const std::string& json, InternTable& t, IntentSchema& 
 // Allocates the SoA arrays from `arena`. On success `cart_hash` commits to the
 // canonical (interned) cart, which is what the capability token binds to.
 ParseResult parse_cart(const std::string& json, InternTable& t, ScratchArena& arena,
-                       CartView& out, Hash256& cart_hash, std::uint64_t& mandate_id);
+                       CartView& out, Hash256& cart_hash, std::uint64_t& mandate_id,
+                       std::uint64_t* agent_session_id = nullptr);
 
 Hash256 canonical_cart_hash(const CartView& c) noexcept;
 

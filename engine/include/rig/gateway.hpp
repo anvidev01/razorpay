@@ -12,14 +12,30 @@
 #include "pct.hpp"
 #include "pool.hpp"
 #include "idempotency.hpp"
+#include "risk.hpp"
+#include "rail.hpp"
 #include <string>
 #include <unordered_map>
 #include <memory>
 
 namespace rig {
 
+// Human-bound authorisation for one decision. [Liability gap]
+struct Confirmation {
+  bool          present   = false;
+  bool          approved  = false;
+  std::uint64_t at_ns     = 0;
+  char          human_ref[32]{};   // e.g. the MFA/device reference the human used
+};
+
 struct Decision {
   bool          parsed        = false;
+  Outcome       outcome       = Outcome::DENY;
+  std::uint32_t risk_bits     = 0;
+  std::uint64_t agent_session_id = 0;
+  Confirmation  confirmation{};
+  PaymentResult payment{};
+  bool          paid          = false;
   Verdict       verdict{};
   std::uint64_t eval_ns       = 0;
   std::uint64_t decision_id   = 0;
@@ -62,6 +78,18 @@ public:
   // docs/BENCHMARKS.md. Reporting both keeps the claim honest.
   double measure_last_kernel_ns(int batch = 1000, int rounds = 200) const;
 
+  // REVIEW path: the human's out-of-band answer, cryptographically bound to the
+  // decision it authorises. This is the artefact a chargeback turns on.
+  bool confirm(std::uint64_t decision_id, bool approved, const std::string& human_ref,
+               std::uint64_t now_ns, Decision& out);
+
+  // Executes an authorised decision against the payment rail. Requires a valid PCT,
+  // so there is no path from the agent to money that skips the engine.
+  bool execute(Decision& d, std::uint64_t now_ns);
+
+  const char*  rail_name() const noexcept { return rail_ ? rail_->name() : "none"; }
+  RiskEngine&  risk() noexcept { return risk_; }
+
   // Explainability: render a decision as JSON for the audit UI / CLI.
   std::string decision_json(const Decision& d) const;
   std::string repair_hint_json(const Decision& d) const;
@@ -81,6 +109,20 @@ private:
   Executor                     exec_{key_};
   FixedPool<IntentSchema, 256> pool_;
   IdempotencyStore             idem_;
+  RiskEngine                   risk_;
+  std::unique_ptr<PaymentRail> rail_;
+  std::string                  rail_name_;
+
+  // Decisions parked awaiting a human answer.
+  struct Pending {
+    std::uint64_t decision_id, mandate_id, wal_seq;
+    std::int64_t  amount_paise;
+    std::uint32_t merchant_id;
+    std::uint64_t agent_session_id;
+    Hash256       cart_hash, rec_head;
+    bool          live = false;
+  };
+  Pending pending_[64]{};
   std::unordered_map<std::uint64_t, std::uint32_t> by_id_;
   std::uint8_t                 tag_key_[16]{};
   std::uint64_t                next_decision_ = 1;

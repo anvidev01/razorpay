@@ -22,11 +22,19 @@ static int run(int argc, char** argv) {
       "usage: rig-eval <intent.json> <cart.json> [--json] [--wal PATH]\n");
     return 2;
   }
-  bool json_only = false;
-  std::string wal_path = "wal/rig.wal";
+  bool json_only = false, do_exec = false;
+  int  confirm_as = -1;                       // -1 none, 1 approve, 0 decline
+  std::string wal_path = "wal/rig.wal", human_ref = "mfa_device_9f21";
   for (int i = 3; i < argc; ++i) {
-    if (std::string(argv[i]) == "--json") json_only = true;
-    else if (std::string(argv[i]) == "--wal" && i + 1 < argc) wal_path = argv[++i];
+    const std::string a = argv[i];
+    if      (a == "--json")    json_only = true;
+    else if (a == "--execute") do_exec   = true;
+    else if (a == "--wal"     && i + 1 < argc) wal_path  = argv[++i];
+    else if (a == "--ref"     && i + 1 < argc) human_ref = argv[++i];
+    else if (a == "--confirm" && i + 1 < argc) {
+      const std::string v = argv[++i];
+      confirm_as = (v == "approve" || v == "yes") ? 1 : 0;
+    }
   }
 
   Gateway gw(wal_path);
@@ -43,9 +51,11 @@ static int run(int argc, char** argv) {
 
   if (json_only) { std::printf("%s\n", gw.decision_json(d).c_str()); return d.verdict.allowed() ? 0 : 1; }
 
-  const bool ok = d.verdict.allowed();
+  const bool ok     = d.outcome == Outcome::ALLOW;
+  const bool review = d.outcome == Outcome::REVIEW;
+  const char* oc    = review ? C_YEL : (ok ? C_GRN : C_RED);
   std::printf("\n  %s%s%s  verdict = %s0x%04X%s   eval = %s%llu ns%s   wal_seq = %llu\n",
-    ok ? C_GRN : C_RED, ok ? "ALLOW" : "DENY", C_RST,
+    oc, outcome_name(d.outcome), C_RST,
     C_BLD, d.verdict.bits, C_RST, C_BLD, (unsigned long long)d.eval_ns, C_RST,
     (unsigned long long)d.wal_seq);
   std::printf("  %scart total%s %lld paise (Rs %.2f)   %sdurable in%s %llu us\n",
@@ -58,6 +68,9 @@ static int run(int argc, char** argv) {
   if (!d.parse_error.empty())
     std::printf("  %serror%s %s\n", C_YEL, C_RST, d.parse_error.c_str());
 
+  if (d.agent_session_id)
+    std::printf("  %sagent session%s %llu   %srail%s %s\n", C_DIM, C_RST,
+      (unsigned long long)d.agent_session_id, C_DIM, C_RST, gw.rail_name());
   if (!ok) {
     std::printf("\n  %sreasons (all of them -- the kernel never short-circuits)%s\n", C_DIM, C_RST);
     for (int b = 0; b < R_BIT_COUNT; ++b) {
@@ -92,18 +105,47 @@ static int run(int argc, char** argv) {
       C_YEL, C_RST, (unsigned long long)d.original_decision_id, d.duplicate_hits,
       C_DIM, C_RST);
   if (!ok) std::printf("\n  %srepair%s %s\n", C_YEL, C_RST, gw.repair_hint_json(d).c_str());
-  if (d.has_pct)
-    std::printf("\n  %scapability issued%s nonce=%llu exp=+60s bound to cart %s...\n",
-      C_GRN, C_RST, (unsigned long long)d.pct.body.nonce, hex(d.cart_hash).substr(0,16).c_str());
-  else if (d.duplicate_suppressed)
+  if (d.duplicate_suppressed)
     std::printf("\n  %sno NEW token minted -- decision #%llu already stands, so the basket"
                 " is charged exactly once%s\n",
       C_DIM, (unsigned long long)d.original_decision_id, C_RST);
-  else
+  else if (!ok && !review)
     std::printf("\n  %sno capability token minted -- this cart cannot reach the payment rail%s\n",
       C_DIM, C_RST);
+  Decision act = d;
+  if (review) {
+    std::printf("\n  %sSTEP-UP REQUIRED%s behavioural signal only -- the cart is within intent,\n"
+                "  %sso the engine asks the human instead of killing a legitimate purchase.%s\n",
+      C_YEL, C_RST, C_DIM, C_RST);
+    if (confirm_as >= 0) {
+      Decision c;
+      if (gw.confirm(d.decision_id, confirm_as == 1, human_ref, now, c)) {
+        act = c;
+        std::printf("  %shuman answered%s %s  (ref %s)  -> %s%s%s\n", C_DIM, C_RST,
+          confirm_as ? "APPROVE" : "DECLINE", human_ref.c_str(),
+          confirm_as ? C_GRN : C_RED, outcome_name(c.outcome), C_RST);
+      }
+    } else {
+      std::printf("  %sre-run with --confirm approve --ref <id> to complete%s\n", C_DIM, C_RST);
+    }
+  }
+
+  if (act.has_pct)
+    std::printf("\n  %scapability issued%s nonce=%llu bound to cart %s...\n",
+      C_GRN, C_RST, (unsigned long long)act.pct.body.nonce, hex(act.cart_hash).substr(0,16).c_str());
+
+  if (do_exec && act.has_pct) {
+    const bool paid = gw.execute(act, now);
+    std::printf("\n  %spayment%s rail=%s%s%s status=%ld %s%s%s%s\n",
+      C_DIM, C_RST, C_BLD, act.payment.rail.c_str(), C_RST, act.payment.http_status,
+      paid ? C_GRN : C_RED, paid ? "PAID " : "FAILED ", C_RST,
+      paid ? act.payment.order_id.c_str() : act.payment.error.c_str());
+  } else if (do_exec) {
+    std::printf("\n  %sno capability token -- nothing to execute%s\n", C_DIM, C_RST);
+  }
+
   std::printf("\n");
-  return ok ? 0 : 1;
+  return act.outcome == Outcome::ALLOW ? 0 : 1;
 }
 
 int main(int argc, char** argv) {

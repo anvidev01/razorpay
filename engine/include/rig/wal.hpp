@@ -29,6 +29,8 @@ enum class RecType : std::uint8_t {
   REMEDIATION       = 8,
   ANCHOR            = 9,
   DUPLICATE_SUPPRESSED = 10,
+  STEP_UP_REQUIRED  = 11,   // REVIEW: engine asked the human before moving money
+  HUMAN_CONFIRMED   = 12,   // the human's out-of-band answer, bound to a decision
 };
 const char* rectype_name(RecType t) noexcept;
 
@@ -65,6 +67,10 @@ struct DecisionPayload {
   std::uint64_t eval_ns;
   std::uint64_t cart_hash_lo;        // first 8 bytes of sha256(canonical cart)
   std::uint8_t  idem_key[32];        // semantic retry key, so dedupe survives restart
+  std::uint64_t agent_session_id;    // which agent session proposed this
+  std::uint32_t risk_bits;           // behavioural signals (Track 02), REVIEW not DENY
+  std::uint8_t  outcome;             // Outcome: ALLOW / REVIEW / DENY
+  std::uint8_t  _pad2[3];
 };
 
 class Wal {

@@ -111,7 +111,8 @@ ParseResult parse_intent(const std::string& json, InternTable& t, IntentSchema& 
 }
 
 ParseResult parse_cart(const std::string& json, InternTable& t, ScratchArena& arena,
-                       CartView& out, Hash256& cart_hash, std::uint64_t& mandate_id) {
+                       CartView& out, Hash256& cart_hash, std::uint64_t& mandate_id,
+                       std::uint64_t* agent_session_id) {
   ParseResult r;
   out = CartView{};
   if (json.size() > MAX_CART_BYTES) {                 // oversize -> deny, never grow
@@ -134,6 +135,11 @@ ParseResult parse_cart(const std::string& json, InternTable& t, ScratchArena& ar
     auto doc = parser.iterate(p);
 
     mandate_id = mandate_key(doc["mandate_id"].get_string().value());
+    if (agent_session_id) {
+      std::string_view sid;
+      *agent_session_id = (doc["agent_session_id"].get_string().get(sid) == SUCCESS)
+                            ? mandate_key(sid) : 0ull;
+    }
     std::string_view merch = doc["merchant"].get_string();
     out.merchant_id = t.intern(merch);
 
