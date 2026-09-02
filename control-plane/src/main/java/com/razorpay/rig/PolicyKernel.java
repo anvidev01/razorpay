@@ -23,6 +23,11 @@ public final class PolicyKernel {
     public static final int R_REPLAY_NONCE         = 1 << 7;
     public static final int R_SCHEMA_VERSION       = 1 << 8;
     public static final int R_ENGINE_RESOURCE      = 1 << 9;
+    public static final int R_SUBSTITUTION_DENIED  = 1 << 10;
+    public static final int R_SUBSTITUTION_DELTA   = 1 << 11;
+    public static final int R_INJECTION_SUSPECTED  = 1 << 12;
+    public static final int R_DUPLICATE_CHARGE     = 1 << 13;
+    public static final int SUBST_DENY = 0, SUBST_SAME_CATEGORY = 1, SUBST_ANY_IN_BUDGET = 2;
     public static final int SCHEMA_VER             = 1;
     public static final int MAXC                   = 16;
     public static final int MAX_CART               = 64;
@@ -30,7 +35,9 @@ public final class PolicyKernel {
     public static String[] names(int bits) {
         String[] all = {"R_SKU_NOT_IN_INTENT","R_QTY_EXCEEDED","R_UNIT_PRICE_EXCEEDED",
                         "R_CART_TOTAL_EXCEEDED","R_MERCHANT_NOT_ALLOWED","R_MANDATE_EXPIRED",
-                        "R_ARITH_OVERFLOW","R_REPLAY_NONCE","R_SCHEMA_VERSION","R_ENGINE_RESOURCE"};
+                        "R_ARITH_OVERFLOW","R_REPLAY_NONCE","R_SCHEMA_VERSION","R_ENGINE_RESOURCE",
+                        "R_SUBSTITUTION_DENIED","R_SUBSTITUTION_DELTA","R_INJECTION_SUSPECTED",
+                        "R_DUPLICATE_CHARGE"};
         int n = Integer.bitCount(bits);
         String[] out = new String[n];
         int k = 0;
@@ -51,6 +58,14 @@ public final class PolicyKernel {
         return found;
     }
 
+    private static int findByCategory(DecisionPayload d, int cat) {
+        if (cat == 0) return -1;
+        int found = -1;
+        for (int i = 0; i < MAXC; i++)
+            if (i < d.nConstraints && d.constraintCat[i] == cat) found = i;
+        return found;
+    }
+
     public static Result evaluate(DecisionPayload d) {
         int bits = 0;
 
@@ -61,6 +76,7 @@ public final class PolicyKernel {
         if (d.merchantId == 0 || d.merchantId > 64
          || ((d.merchantAllowMask >>> (d.merchantId - 1)) & 1L) == 0) bits |= R_MERCHANT_NOT_ALLOWED;
         if (d.nLines > MAX_CART) bits |= R_ENGINE_RESOURCE;
+        bits |= (d.textFlags & R_INJECTION_SUSPECTED);
 
         long total = 0;
         int n = Math.min(d.nLines, MAX_CART);
@@ -69,11 +85,24 @@ public final class PolicyKernel {
             long up  = d.unitPaise[i];
             long q   = Integer.toUnsignedLong(d.qty[i]);
 
-            int ci = findConstraint(d, sku);
-            if (ci < 0) bits |= R_SKU_NOT_IN_INTENT;
-            if (ci >= 0 && q > Integer.toUnsignedLong(d.constraintQty[ci])) bits |= R_QTY_EXCEEDED;
+            int cat = d.category[i];
+            int ci  = findConstraint(d, sku);
+            int sub = (ci < 0 && d.substPolicy == SUBST_SAME_CATEGORY)
+                        ? findByCategory(d, cat) : -1;
+            boolean anyOk = (ci < 0 && d.substPolicy == SUBST_ANY_IN_BUDGET);
+            int eff  = ci >= 0 ? ci : sub;
+            int safe = eff < 0 ? 0 : eff;
+
+            if (ci < 0 && sub < 0 && !anyOk) bits |= R_SKU_NOT_IN_INTENT;
+            if (ci < 0 && sub < 0 && d.substPolicy == SUBST_SAME_CATEGORY)
+                bits |= R_SUBSTITUTION_DENIED;
+            long cap     = d.constraintUnit[safe];
+            long ceiling = cap + (cap * d.substMaxDeltaBp) / 10000;
+            if (ci < 0 && sub >= 0 && up > ceiling) bits |= R_SUBSTITUTION_DELTA;
+
+            if (eff >= 0 && q > Integer.toUnsignedLong(d.constraintQty[safe])) bits |= R_QTY_EXCEEDED;
             // two independent unit-price bounds; the second applies even to an unknown SKU
-            if ((ci >= 0 && up > d.constraintUnit[ci]) || up > d.totalBudgetPaise)
+            if ((ci >= 0 && up > d.constraintUnit[safe]) || up > d.totalBudgetPaise)
                 bits |= R_UNIT_PRICE_EXCEEDED;
             if (up < 0 || q == 0) bits |= R_SCHEMA_VERSION;
 

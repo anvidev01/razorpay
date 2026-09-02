@@ -9,30 +9,37 @@ import java.nio.ByteOrder;
  *   sizeof(IntentSchema)=384  sizeof(DecisionPayload)=1536  MAXC=16  MAX_CART=64
  */
 public final class DecisionPayload {
-    public static final int SIZE = 1536;
+    public static final int SIZE = 1920;
     private static final int SCHEMA = 0;
-    // IntentSchema
+    // IntentSchema (sizeof 512)
     private static final int MANDATE_ID = SCHEMA + 0,   NOT_BEFORE = SCHEMA + 8,
                              NOT_AFTER  = SCHEMA + 16,  BUDGET     = SCHEMA + 24,
                              ALLOW_MASK = SCHEMA + 32,  N_CONSTR   = SCHEMA + 40,
                              SCHEMA_VER = SCHEMA + 44,  C_SKU      = SCHEMA + 48,
-                             C_UNIT     = SCHEMA + 112, C_QTY      = SCHEMA + 240;
-    // DecisionPayload
-    private static final int NOW_NS = 384, MERCHANT = 392, N_LINES = 396,
-                             SKU = 400, UNIT = 656, QTY = 1168,
-                             REC_BITS = 1424, REC_TOTAL = 1432, EVAL_NS = 1440;
+                             C_UNIT     = SCHEMA + 112, C_QTY      = SCHEMA + 240,
+                             C_CAT      = SCHEMA + 304, S_DELTA_BP = SCHEMA + 368,
+                             S_POLICY   = SCHEMA + 370;
+    // DecisionPayload (sizeof 1920)
+    private static final int NOW_NS = 512, MERCHANT = 520, N_LINES = 524,
+                             SKU = 528, UNIT = 784, QTY = 1296, CAT = 1552,
+                             TEXT_FLAGS = 1808, REC_BITS = 1812, REC_TOTAL = 1816,
+                             EVAL_NS = 1824, IDEM_KEY = 1840;
 
     public long mandateId, notBeforeNs, notAfterNs, totalBudgetPaise, merchantAllowMask;
     public int  nConstraints, schemaVersion;
     public int[]  constraintSku = new int[PolicyKernel.MAXC];
     public long[] constraintUnit = new long[PolicyKernel.MAXC];
     public int[]  constraintQty = new int[PolicyKernel.MAXC];
+    public int[]  constraintCat = new int[PolicyKernel.MAXC];
+    public int    substPolicy, substMaxDeltaBp;
 
     public long nowNs;
     public int  merchantId, nLines;
     public int[]  sku       = new int[PolicyKernel.MAX_CART];
     public long[] unitPaise = new long[PolicyKernel.MAX_CART];
     public int[]  qty       = new int[PolicyKernel.MAX_CART];
+    public int[]  category  = new int[PolicyKernel.MAX_CART];
+    public int    textFlags;
     public int  recordedBits;
     public long recordedTotal, evalNs;
 
@@ -53,7 +60,10 @@ public final class DecisionPayload {
             d.constraintSku[i]  = b.getInt(C_SKU + 4 * i);
             d.constraintUnit[i] = b.getLong(C_UNIT + 8 * i);
             d.constraintQty[i]  = b.getInt(C_QTY + 4 * i);
+            d.constraintCat[i]  = b.getInt(C_CAT + 4 * i);
         }
+        d.substMaxDeltaBp = b.getShort(S_DELTA_BP) & 0xFFFF;
+        d.substPolicy     = b.get(S_POLICY) & 0xFF;
         d.nowNs      = b.getLong(NOW_NS);
         d.merchantId = b.getInt(MERCHANT);
         d.nLines     = b.getInt(N_LINES);
@@ -61,7 +71,9 @@ public final class DecisionPayload {
             d.sku[i]       = b.getInt(SKU + 4 * i);
             d.unitPaise[i] = b.getLong(UNIT + 8 * i);
             d.qty[i]       = b.getInt(QTY + 4 * i);
+            d.category[i]  = b.getInt(CAT + 4 * i);
         }
+        d.textFlags = b.getInt(TEXT_FLAGS);
         d.recordedBits  = b.getInt(REC_BITS);
         d.recordedTotal = b.getLong(REC_TOTAL);
         d.evalNs        = b.getLong(EVAL_NS);
