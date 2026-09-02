@@ -441,6 +441,12 @@ std::string Gateway::decision_json(const Decision& d) const {
     << ",\"agent_session_id\":" << d.agent_session_id
     << ",\"paid\":" << (d.paid ? "true" : "false")
     << ",\"payment_order_id\":\"" << d.payment.order_id << "\""
+    // Expose the call itself, not just its result: a real HTTPS round trip to
+    // api.razorpay.com should be visible as one, or a viewer cannot tell a live
+    // integration from a stub.
+    << ",\"payment_http_status\":" << d.payment.http_status
+    << ",\"payment_latency_ms\":" << (d.payment.latency_us / 1000)
+    << ",\"payment_error\":\"" << d.payment.error << "\""
     << ",\"rail\":\"" << (rail_ ? rail_->name() : "none") << "\""
     << ",\"verdict_bits\":" << d.verdict.bits
     << ",\"verdict_hex\":\"0x" << std::hex;

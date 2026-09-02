@@ -67,6 +67,10 @@ async function decide(mandate, lines, { execute = true, extra = {}, shuffle = fa
     agent_session_id: session, lines: ls, ...extra,
   });
   const url = '/api/decide' + (execute ? '?execute=1' : '');
+  // A live Razorpay call is ~180ms warm but seconds on a cold connection. Say what is
+  // happening rather than leaving the panel looking frozen.
+  verdictEl.className = 'verdict';
+  verdictEl.innerHTML = '<div class="empty">deciding… then submitting to the payment rail</div>';
   const j = await (await fetch(url, { method: 'POST', body })).json();
   render(j);
   await refreshAudit();
@@ -115,8 +119,17 @@ function render(j) {
   const chips = [];
   if (d.risk_bits) chips.push(`<span class="rchip">behavioural signal · risk 0x${d.risk_bits.toString(16)}</span>`);
   if (d.duplicate_suppressed) chips.push(`<span class="rchip">retry collapsed onto #${d.original_decision_id}</span>`);
-  if (d.paid) chips.push(`<span class="rchip pay">PAID · ${d.payment_order_id} · rail ${d.rail}</span>`);
-  else if (oc === 'ALLOW') chips.push('<span class="rchip payno">token issued, not executed</span>');
+  // Make a live rail call unmistakably a network call: endpoint, status, latency.
+  const live = d.rail === 'razorpay-test';
+  const host = live ? 'api.razorpay.com' : 'mock rail';
+  if (d.paid) {
+    chips.push(`<span class="rchip pay">PAID · ${d.payment_order_id}</span>`);
+    chips.push(`<span class="rchip pay">POST ${host}/v1/orders → ${d.payment_http_status} · ${d.payment_latency_ms} ms</span>`);
+  } else if (d.payment_http_status) {
+    chips.push(`<span class="rchip payno">POST ${host}/v1/orders → ${d.payment_http_status} · ${d.payment_error || 'failed'}</span>`);
+  } else if (oc === 'ALLOW') {
+    chips.push('<span class="rchip payno">token issued, not executed</span>');
+  }
 
   const gate = oc === 'ALLOW'
     ? (d.capability_issued ? 'capability token minted — single use, bound to this cart hash'

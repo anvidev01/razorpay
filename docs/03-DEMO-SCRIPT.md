@@ -56,8 +56,12 @@ order me lunch, a thali and a drink, under 500 rupees
 
 *Send to gateway.*
 
-> "Thirty-one nanoseconds to decide. Four milliseconds to make that decision durable —
-> deciding is instant, remembering is the slow part, and remembering is the point."
+> "Thirty-one nanoseconds to decide. Four milliseconds to make that decision durable.
+> And there — the actual call to Razorpay: seventy milliseconds.
+>
+> The check costs thirty-one nanoseconds. The payment it protects costs seventy
+> milliseconds. The safety layer is two million times faster than the thing it guards.
+> It is free."
 
 *Point at the audit panel filling in.*
 
@@ -175,6 +179,9 @@ java -cp control-plane/out com.razorpay.rig.ReplayAuditor wal/rig.wal
 - `./scripts/seed.sh` before each take, so the log starts empty.
 - If a take goes wrong mid-scenario, press **Reset demo** rather than restarting.
 - 1080p60, terminal at ~18pt.
+- **Click one scenario before you start recording.** The first Razorpay call of the
+  process pays a TLS handshake (~176 ms versus ~69 ms warm); doing it off camera keeps
+  the first take snappy.
 
 ## If you only get 90 seconds
 

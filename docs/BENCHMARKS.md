@@ -134,3 +134,22 @@ loopback HTTP ≈ 40–80 µs, Razorpay API round trip ≈ 80–300 ms.
 sub-microsecond policy decision and ~37 µs of amortised durable audit to a checkout
 that already costs ~200 ms." Not "microsecond checkout." The distinction is what
 makes the number defensible.
+
+## The payment rail, measured (Razorpay test mode)
+
+Live `POST api.razorpay.com/v1/orders`, from a laptop in India:
+
+| | latency |
+|---|---:|
+| first call (DNS + TLS handshake) | ~176 ms |
+| warm, connection reused | **69-95 ms** |
+| before connection reuse (fresh handle per order) | 163-200 ms, 3.4 s cold |
+
+The rail keeps one `CURL*` for the life of the process. A fresh handle per order paid a
+full DNS + TLS handshake every time, which on a cold connection was 3.4 seconds --
+enough to make the demo look frozen.
+
+**This is the number that matters for the pitch.** The policy kernel decides in ~31 ns.
+The network call it protects takes ~69 ms. The safety layer is roughly **two million
+times faster than the thing it guards**, so it is free in any sense a merchant cares
+about.

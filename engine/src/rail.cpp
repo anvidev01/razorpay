@@ -44,6 +44,15 @@ static std::string field(const std::string& body, const char* key) {
   return body.substr(a + 1, b - a - 1);
 }
 
+RazorpayTestRail::RazorpayTestRail(std::string key_id, std::string key_secret)
+    : key_id_(std::move(key_id)), key_secret_(std::move(key_secret)) {
+  curl_ = curl_easy_init();
+}
+
+RazorpayTestRail::~RazorpayTestRail() {
+  if (curl_) curl_easy_cleanup(static_cast<CURL*>(curl_));
+}
+
 PaymentResult RazorpayTestRail::create_order(std::int64_t amount_paise,
                                             const std::string& receipt,
                                             const std::string& notes_json) {
@@ -51,8 +60,9 @@ PaymentResult RazorpayTestRail::create_order(std::int64_t amount_paise,
   r.rail = "razorpay-test";
   const std::uint64_t t0 = mono_us();
 
-  CURL* c = curl_easy_init();
+  CURL* c = static_cast<CURL*>(curl_);
   if (!c) { r.error = "curl init failed"; return r; }
+  curl_easy_reset(c);
 
   char body[1024];
   std::snprintf(body, sizeof body,
@@ -74,8 +84,7 @@ PaymentResult RazorpayTestRail::create_order(std::int64_t amount_paise,
 
   const CURLcode rc = curl_easy_perform(c);
   curl_easy_getinfo(c, CURLINFO_RESPONSE_CODE, &r.http_status);
-  curl_slist_free_all(hdr);
-  curl_easy_cleanup(c);
+  curl_slist_free_all(hdr);   // the handle itself is kept for connection reuse
 
   r.latency_us = mono_us() - t0;
   if (rc != CURLE_OK) { r.error = curl_easy_strerror(rc); return r; }
