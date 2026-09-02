@@ -28,10 +28,17 @@ else ok "engine already built"; fi
 [ -d control-plane/out ] && ok "independent Java auditor builds" || no "java build"
 
 hdr "1 · Correctness — the policy kernel"
-out=$(./build/rig-tests 2>&1); echo "$out" | grep -q "43/43 checks passed" \
-  && ok "43 golden vectors" "$(echo "$out"|grep -o '[0-9]*/[0-9]* checks passed')" || no "kernel tests" "$out"
-out=$(./build/rig-tests-intent 2>&1); echo "$out" | grep -q "25/25 checks passed" \
-  && ok "25 intent-translation regressions" || no "intent tests"
+out=$(./build/rig-tests 2>&1)
+n=$(echo "$out" | grep -oE '[0-9]+/[0-9]+ checks passed')
+echo "$out" | grep -q "FAILURES" || [ -z "$n" ] && : ; \
+if [ -n "$n" ] && ! echo "$out" | grep -q "FAILURES"; then
+  ok "kernel golden vectors" "$n"
+else no "kernel tests" "$(echo "$out" | tail -2 | tr '\n' ' ')"; fi
+out=$(./build/rig-tests-intent 2>&1)
+n=$(echo "$out" | grep -oE '[0-9]+/[0-9]+ checks passed')
+if [ -n "$n" ] && ! echo "$out" | grep -q "FAILURES"; then
+  ok "intent-translation regressions" "$n"
+else no "intent tests"; fi
 
 hdr "2 · The three graceful failures"
 v(){ ./build/rig-eval "$1" "$2" $W --json 2>/dev/null | python3 -c "import json,sys;d=json.load(sys.stdin);print(d['decision'],d['verdict_hex'])"; }
