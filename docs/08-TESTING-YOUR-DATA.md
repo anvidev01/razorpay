@@ -1,5 +1,9 @@
 # 08 — Testing the Gateway on Your Own Data
 
+> To verify the project's own claims instead, run `./verify.sh` — 23 checks with
+> PASS/FAIL and a non-zero exit on failure. This page is about running it on
+> **your** data.
+
 Two JSON files: what the human authorised, and what the agent wants to buy.
 Templates with inline notes are in `fixtures/custom/`.
 

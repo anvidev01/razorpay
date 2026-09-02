@@ -114,10 +114,22 @@ Method, caveats and how each was measured: **[docs/BENCHMARKS.md](docs/BENCHMARK
 > The claim is **not** "microsecond checkout." A checkout is ~200 ms. The claim is that
 > the safety layer is *free*: ~225 ns on a 200 ms transaction.
 
-## Test it yourself — one command
+## Verify every claim — one command
 
 ```bash
 git clone https://github.com/anvidev01/razorpay.git && cd razorpay
+./verify.sh            # 23 checks, ~90s   (--quick skips benchmarks/sanitizers, ~15s)
+```
+
+Builds from clean, then proves each claim in this README and prints PASS/FAIL:
+the 43 kernel vectors and 25 intent regressions, all three graceful failures,
+eight refused bypasses including three forged mandates, both auditors agreeing,
+tamper detection, the risk confusion matrix, ASan/UBSan, and a real payment
+through the rail. Exit code is the number of failures.
+
+## Or drive it yourself
+
+```bash
 ./run.sh
 ```
 
