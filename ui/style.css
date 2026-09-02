@@ -275,3 +275,10 @@ button.danger:hover:not(:disabled){background:var(--red-soft);border-color:var(-
 .interp .src{font-family:var(--mono);font-size:10.5px;color:var(--muted);
   display:block;margin-top:6px}
 .interp.warn{background:var(--amber-soft);border-color:var(--amber)}
+
+/* ---------- who does what ---------- */
+.who-h,.who-a{font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;
+  padding:3px 8px;border-radius:20px;margin-right:9px;font-weight:600;
+  display:inline-block;vertical-align:2px}
+.who-h{background:var(--blue-soft);color:var(--blue-deep);border:1px solid var(--blue)}
+.who-a{background:var(--surface-2);color:var(--muted);border:1px solid var(--line-2)}

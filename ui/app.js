@@ -540,3 +540,60 @@ $('c-interpret').onclick = async () => {
 $('c-utter').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') $('c-interpret').click();
 });
+
+
+// ---------- the agent shopping unattended ----------
+// The point the two-button demo obscures: in production a human signs ONCE, and the
+// agent then transacts on its own. No person clicks anything per purchase. The human
+// hears from the gateway again only when a decision comes back REVIEW.
+const AUTO_BASKETS = [
+  { label: 'Tuesday lunch',        items: [['SKU_MEAL_THALI_001', 'FOOD_MAIN', 240, 1], ['SKU_DRINK_LIME_007', 'FOOD_DRINK', 60, 1]] },
+  { label: 'Wednesday lunch',      items: [['SKU_MEAL_DOSA_04', 'FOOD_MAIN', 180, 1], ['SKU_DRINK_COFFEE_09', 'FOOD_DRINK', 80, 1]] },
+  { label: 'Thursday lunch',       items: [['SKU_MEAL_BIRYANI_02', 'FOOD_MAIN', 320, 1], ['SKU_DRINK_LASSI_13', 'FOOD_DRINK', 90, 1]] },
+  { label: 'Friday — team order',  items: [['SKU_MEAL_PANEER_03', 'FOOD_MAIN', 280, 2], ['SKU_DRINK_MOJITO_12', 'FOOD_DRINK', 150, 2]] },
+  { label: 'Friday — second run',  items: [['SKU_MEAL_PIZZA_05', 'FOOD_MAIN', 350, 2], ['SKU_DRINK_SHAKE_11', 'FOOD_DRINK', 140, 2]] },
+];
+
+$('c-auto').onclick = async () => {
+  const btn = $('c-auto');
+  btn.disabled = true;
+  const mandate = $('c-mid').value.trim();
+  const merchant = $('c-cmerch').value.trim();
+  const session = ($('c-sess').value.trim() || 'sess_auto') + '_auto';
+
+  msg('sys', null, 'you signed once — the agent now transacts on its own, no further clicks');
+
+  for (const b of AUTO_BASKETS) {
+    const lines = b.items.map(([sku, category, rs, qty]) => ({
+      sku, category, unit_paise: Math.round(rs * 100), qty,
+    }));
+    const total = lines.reduce((s, l) => s + l.unit_paise * l.qty, 0);
+    msg('agent', 'agent · unattended', `${b.label} — ${rupees(total)}`
+      + cartHtml(lines.map((l) => ({ ...l, label: l.sku }))));
+
+    const j = await (await fetch('/api/decide?execute=1', {
+      method: 'POST',
+      body: JSON.stringify({ mandate_id: mandate, merchant, agent_session_id: session, lines }),
+    })).json();
+    render(j);
+    await refreshAudit();
+
+    const d = j.decision;
+    if (d.decision === 'REVIEW') {
+      msg('push', 'push notification',
+        `I paused a ${rupees(d.cart_total_paise)} order that looked unusual. `
+        + `Approve it below and I'll carry on.`);
+      hint('agent paused — this is the ONLY time a human is interrupted', '');
+      btn.disabled = false;
+      return;                       // the loop stops until the human answers
+    }
+    if (d.decision === 'DENY') {
+      msg('sys', null, `✗ refused: ${d.reasons.map((r) => r.code).join(', ')} — no money moved`);
+    } else if (d.paid) {
+      msg('sys', null, `✓ paid ${d.payment_order_id} — no human involved`);
+    }
+    await sleep(1400);
+  }
+  hint('five purchases, one signature, zero human clicks after it', 'good');
+  btn.disabled = false;
+};
