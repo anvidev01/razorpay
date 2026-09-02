@@ -87,7 +87,7 @@ EvidenceReport evidence_json(const std::string& wal, std::uint64_t want) {
 
   // Re-execute the decision from the recorded inputs. An evidence pack that merely
   // quotes the log proves nothing; this proves the verdict follows from the inputs.
-  const CartView cv{dp.sku_id, dp.unit_paise, dp.qty, dp.category_id,
+  const CartView cv{dp.sku_id, dp.unit_paise, dp.qty, dp.category_id, dp.recurring_paise,
                     dp.n_lines, dp.merchant_id, dp.text_flags, 0};
   const Verdict v = evaluate(dp.schema, cv, dp.now_ns);
   // Behavioural bits derive from CROSS-TRANSACTION state, so a single-record replay

@@ -35,6 +35,8 @@ public final class PolicyKernel {
     public static final int R_REVERSAL_EXCEEDS      = 1 << 19;
     public static final int R_REVERSAL_NO_PAYMENT   = 1 << 20;
     public static final int R_REVERSAL_DUPLICATE    = 1 << 21;
+    public static final int R_SUBSCRIPTION_UNDISCLOSED = 1 << 22;
+    public static final int R_RECURRING_EXCEEDS        = 1 << 23;
     public static final int SUBST_DENY = 0, SUBST_SAME_CATEGORY = 1, SUBST_ANY_IN_BUDGET = 2;
 
     /**
@@ -57,7 +59,8 @@ public final class PolicyKernel {
                         "R_DUPLICATE_CHARGE","R_VELOCITY_ANOMALY","R_NEW_MERCHANT",
                         "R_ODD_HOUR","R_MANDATE_UNKNOWN","R_REVERSAL_UNAUTHORISED",
                         "R_REVERSAL_EXCEEDS","R_REVERSAL_NO_PAYMENT",
-                        "R_REVERSAL_DUPLICATE"};
+                        "R_REVERSAL_DUPLICATE","R_SUBSCRIPTION_UNDISCLOSED",
+                        "R_RECURRING_EXCEEDS"};
         int n = Integer.bitCount(bits);
         String[] out = new String[n];
         int k = 0;
@@ -104,6 +107,13 @@ public final class PolicyKernel {
             int  sku = d.sku[i];
             long up  = d.unitPaise[i];
             long q   = Integer.toUnsignedLong(d.qty[i]);
+
+            // A recurring commitment sits outside the cart total, which is exactly how
+            // a 1-rupee trial that becomes 999 a month passes every price cap.
+            long rec = d.recurring[i];
+            if (rec > 0 && d.allowRecurring == 0) bits |= R_SUBSCRIPTION_UNDISCLOSED;
+            if (rec > 0 && d.allowRecurring != 0 && rec > d.maxRecurringPaise)
+                bits |= R_RECURRING_EXCEEDS;
 
             int cat = d.category[i];
             int ci  = findConstraint(d, sku);

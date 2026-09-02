@@ -117,6 +117,12 @@ function render(j) {
     </div>`).join('');
 
   const chips = [];
+  // The cart total does not include what this commits to after today, which is
+  // exactly how the trial trap works. Say it on the same line as the price.
+  if (d.recurring_paise > 0) {
+    chips.push('<span class="rchip">commits to ' + rupees(d.recurring_paise)
+      + ' every interval \u2014 not in the cart total</span>');
+  }
   if (d.risk_bits) chips.push(`<span class="rchip">behavioural signal · risk 0x${d.risk_bits.toString(16)}</span>`);
   if (d.duplicate_suppressed) chips.push(`<span class="rchip">retry collapsed onto #${d.original_decision_id}</span>`);
   // Make a live rail call unmistakably a network call: endpoint, status, latency.

@@ -63,6 +63,7 @@ struct DecisionPayload {
   std::int64_t  unit_paise[MAX_CART];
   std::uint32_t qty[MAX_CART];
   std::uint32_t category_id[MAX_CART];
+  std::int64_t  recurring_paise[MAX_CART];
   std::uint32_t text_flags;
   std::uint32_t recorded_bits;       // what the engine decided at the time
   std::int64_t  recorded_total;

@@ -1,0 +1,13 @@
+{
+  "mandate_id": "mnd_trial_trap",
+  "merchant": "appstore_in",
+  "agent_session_id": "sess_sub",
+  "lines": [
+    {
+      "sku": "SKU_TOOL_DESIGN_LIFETIME",
+      "category": "SOFTWARE",
+      "unit_paise": 45000,
+      "qty": 1
+    }
+  ]
+}

@@ -190,6 +190,7 @@ private:
   std::int64_t  last_up_[MAX_CART]{};
   std::uint32_t last_qty_[MAX_CART]{};
   std::uint32_t last_cat_[MAX_CART]{};
+  std::int64_t  last_rec_[MAX_CART]{};
   std::uint32_t last_n_        = 0;
   std::uint32_t last_merchant_ = 0;
   std::uint32_t last_flags_    = 0;

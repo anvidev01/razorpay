@@ -43,7 +43,12 @@ enum Reject : std::uint32_t {
   R_REVERSAL_EXCEEDS      = 1u << 19, // more than the original purchase
   R_REVERSAL_NO_PAYMENT   = 1u << 20, // the original never actually paid
   R_REVERSAL_DUPLICATE    = 1u << 21, // this purchase was already reversed
-  R_BIT_COUNT             = 22
+  // --- recurring commitments. A cart total bounds a ONE-OFF cost; a subscription's
+  // real cost is unbounded, so it has to be authorised on its own terms. This is the
+  // dark pattern where a 1-rupee "trial" commits you to 999 a month.
+  R_SUBSCRIPTION_UNDISCLOSED = 1u << 22, // mandate authorised no recurring charge at all
+  R_RECURRING_EXCEEDS        = 1u << 23, // recurring charge above the authorised ceiling
+  R_BIT_COUNT                = 24
 };
 
 // Three outcomes, not two. A hard intent violation is a DENY. A behavioural signal
@@ -60,7 +65,7 @@ inline constexpr std::uint32_t HARD_DENY_MASK =
     R_ARITH_OVERFLOW | R_REPLAY_NONCE |
     R_SCHEMA_VERSION | R_ENGINE_RESOURCE | R_SUBSTITUTION_DENIED | R_SUBSTITUTION_DELTA |
     R_REVERSAL_UNAUTHORISED | R_REVERSAL_EXCEEDS | R_REVERSAL_NO_PAYMENT |
-    R_REVERSAL_DUPLICATE |
+    R_REVERSAL_DUPLICATE | R_SUBSCRIPTION_UNDISCLOSED | R_RECURRING_EXCEEDS |
     // A duplicate is deterministic, not probabilistic: the same basket was already
     // decided. It must never be reviewable into a second charge.
     R_DUPLICATE_CHARGE;
@@ -118,7 +123,8 @@ struct alignas(128) IntentSchema {
   std::uint32_t category_id[MAXC];       // interned category, for substitution matching
   std::uint16_t subst_max_delta_bp;      // basis points a substitute may exceed the cap
   std::uint8_t  subst_policy;            // SubstPolicy
-  std::uint8_t  _pad1;
+  std::uint8_t  allow_recurring;         // 0 = one-off purchases only
+  std::int64_t  max_recurring_paise;     // ceiling on any single recurring charge
   std::uint8_t  integrity_tag[16];       // SipHash-2-4 over the record, checked per cart
 };
 
@@ -128,6 +134,7 @@ struct CartView {
   const std::int64_t*  unit_paise;
   const std::uint32_t* qty;
   const std::uint32_t* category_id;      // interned; 0 when the merchant sent none
+  const std::int64_t*  recurring_paise;  // per line: the ongoing charge, 0 for one-off
   std::uint32_t        n;
   std::uint32_t        merchant_id;      // interned
   std::uint32_t        text_flags;       // injection scan result from the parse boundary
@@ -145,6 +152,9 @@ struct LineVerdict {
 struct Verdict {
   std::uint32_t bits;                    // OR of all Reject bits
   std::int64_t  cart_total_paise;
+  // What this cart commits to AFTER today. The headline total does not include it,
+  // which is precisely how the dark pattern works.
+  std::int64_t  recurring_paise;
   std::uint32_t n_lines;
   LineVerdict   lines[MAX_CART];
   bool allowed() const noexcept { return bits == R_NONE; }

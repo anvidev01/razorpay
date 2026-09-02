@@ -1,0 +1,27 @@
+{
+  "mandate_id": "mnd_trial_trap",
+  "utterance": "buy the one-off design tool licence, under 500 rupees, no subscriptions",
+  "not_before_ns": 1788378847343947008,
+  "not_after_ns": 1788382507343947008,
+  "total_budget_paise": 50000,
+  "merchant_allow": [
+    "appstore_in"
+  ],
+  "substitution": {
+    "policy": "deny",
+    "max_delta_bp": 0
+  },
+  "recurring": {
+    "allow": false,
+    "max_per_interval_paise": 0
+  },
+  "constraints": [
+    {
+      "sku": "SKU_TOOL_DESIGN_LIFETIME",
+      "category": "SOFTWARE",
+      "max_unit_paise": 50000,
+      "max_qty": 1
+    }
+  ],
+  "schema_version": 1
+}

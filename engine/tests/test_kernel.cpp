@@ -41,14 +41,15 @@ static IntentSchema lunch_mandate(InternTable& t) {
 
 struct Cart {
   std::vector<std::uint32_t> sku, qty, cat;
-  std::vector<std::int64_t>  up;
+  std::vector<std::int64_t>  up, rec;
   std::uint32_t flags = 0;
   CartView view(std::uint32_t merchant) {
-    return CartView{sku.data(), up.data(), qty.data(), cat.data(),
+    return CartView{sku.data(), up.data(), qty.data(), cat.data(), rec.data(),
                     (std::uint32_t)sku.size(), merchant, flags, 0};
   }
-  void add(std::uint32_t s, std::int64_t u, std::uint32_t q, std::uint32_t c = 0){
-    sku.push_back(s); up.push_back(u); qty.push_back(q); cat.push_back(c); }
+  void add(std::uint32_t s, std::int64_t u, std::uint32_t q, std::uint32_t c = 0,
+           std::int64_t r = 0){
+    sku.push_back(s); up.push_back(u); qty.push_back(q); cat.push_back(c); rec.push_back(r); }
 };
 
 int main() {
@@ -134,6 +135,50 @@ int main() {
     CHECK(t2.intern("SKU_MEAL_THALI_001") == id, "intern is stable");
     CHECK(t2.name(id) == "SKU_MEAL_THALI_001",   "reverse lookup for audit");
     CHECK(t2.lookup("NEVER_SEEN") == InternTable::INVALID, "unknown sku -> INVALID");
+  }
+
+  // ---------------- hidden recurring commitments ----------------
+  // The cart total bounds a ONE-OFF cost. A subscription's real cost is unbounded, so
+  // a 1-rupee "trial" that becomes 999 a month passes every price and budget cap.
+  std::printf("\n== recurring commitments ==\n");
+  {
+    InternTable t5;
+    IntentSchema one_off{};
+    one_off.schema_version = SCHEMA_VER;
+    one_off.not_before_ns = 0; one_off.not_after_ns = ~0ull;
+    one_off.total_budget_paise = 50000;
+    const std::uint32_t shop = t5.intern("appstore");
+    one_off.merchant_allow_mask = 1ull << (shop - 1);
+    one_off.n_constraints = 1;
+    one_off.sku_id[0] = t5.intern("SKU_TOOL");
+    one_off.max_unit_paise[0] = 50000;
+    one_off.max_qty[0] = 1;
+    one_off.allow_recurring = 0;          // "spend up to X" means once
+
+    {   // the trap: Rs 1 today, Rs 999 a month
+      Cart c; c.add(t5.lookup("SKU_TOOL"), 100, 1, 0, 99900);
+      auto v = evaluate(one_off, c.view(shop), 1000);
+      CHECK(!v.allowed(),                        "a 1-rupee trial with a 999/mo tail is DENIED");
+      CHECK(v.bits & R_SUBSCRIPTION_UNDISCLOSED, "  -> as an undisclosed subscription");
+      CHECK(v.cart_total_paise == 100,           "  -> even though the cart total is Rs 1");
+      CHECK(v.recurring_paise == 99900,          "  -> the commitment is reported separately");
+    }
+    {   // a genuine one-off passes
+      Cart c; c.add(t5.lookup("SKU_TOOL"), 45000, 1);
+      CHECK(evaluate(one_off, c.view(shop), 1000).allowed(), "a real one-off purchase is allowed");
+    }
+    {   // recurring allowed, but bounded
+      IntentSchema sub = one_off;
+      sub.allow_recurring = 1;
+      sub.max_recurring_paise = 50000;   // up to Rs 500 a month
+      Cart ok; ok.add(t5.lookup("SKU_TOOL"), 100, 1, 0, 45000);
+      CHECK(evaluate(sub, ok.view(shop), 1000).allowed(), "an authorised Rs 450/mo plan passes");
+      Cart over; over.add(t5.lookup("SKU_TOOL"), 100, 1, 0, 99900);
+      auto v = evaluate(sub, over.view(shop), 1000);
+      CHECK(v.bits & R_RECURRING_EXCEEDS, "a Rs 999/mo plan above the ceiling is DENIED");
+      CHECK(!(v.bits & R_SUBSCRIPTION_UNDISCLOSED),
+            "  -> and reported as over-ceiling, not as undisclosed");
+    }
   }
 
   // ---------------- reversals are money actions too ----------------

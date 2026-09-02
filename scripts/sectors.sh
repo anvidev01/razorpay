@@ -21,7 +21,7 @@ col='$G' if v=='ALLOW' else '$R'
 print(f\"    {col}{v:6s}{'$Z'} {d['verdict_hex']}  Rs {d['cart_total_paise']/100:>9,.0f}   {codes}\")"
 }
 
-printf "\n${B}One engine, four industries${Z}  ${D}nothing changes but the fixtures${Z}\n"
+printf "\n${B}One engine, five industries${Z}  ${D}nothing changes but the fixtures${Z}\n"
 rm -f wal/sector_*.wal
 
 printf "\n${B}Online retail${Z}  ${D}an agent restocking phone accessories${Z}\n"
@@ -40,6 +40,12 @@ printf "\n${B}B2B procurement${Z}  ${D}an agent ordering office consumables${Z}\
 printf "  ${D}approved vendor${Z}\n";                         run procurement fixtures/sectors/procurement_intent.json fixtures/sectors/procurement_ok.json
 printf "  ${D}a cheaper unapproved vendor${Z}\n";             run procurement fixtures/sectors/procurement_intent.json fixtures/sectors/procurement_violation.json
 
-printf "\n${D}Four sectors, four different controls, one binary. The kernel has no\n"
+printf "\n${B}Subscriptions${Z}  ${D}the dark pattern: a cheap item with an expensive tail${Z}\n"
+printf "  ${D}a genuine one-off licence at Rs 450${Z}\n"
+run subscription fixtures/sectors/subscription_intent.json fixtures/sectors/subscription_ok.json
+printf "  ${D}Rs 1 today, Rs 999 every month${Z}\n"
+run subscription fixtures/sectors/subscription_intent.json fixtures/sectors/subscription_violation.json
+
+printf "\n${D}Five sectors, five different controls, one binary. The kernel has no\n"
 printf "concept of any of these industries -- only SKUs, categories, merchants,\n"
 printf "integer paise and quantities.${Z}\n\n"

@@ -35,6 +35,8 @@ const char* reject_name(std::uint32_t bit) noexcept {
     case R_REVERSAL_EXCEEDS:      return "R_REVERSAL_EXCEEDS";
     case R_REVERSAL_NO_PAYMENT:   return "R_REVERSAL_NO_PAYMENT";
     case R_REVERSAL_DUPLICATE:    return "R_REVERSAL_DUPLICATE";
+    case R_SUBSCRIPTION_UNDISCLOSED: return "R_SUBSCRIPTION_UNDISCLOSED";
+    case R_RECURRING_EXCEEDS:        return "R_RECURRING_EXCEEDS";
     default:                     return "R_UNKNOWN";
   }
 }
@@ -63,6 +65,8 @@ const char* reject_help(std::uint32_t bit) noexcept {
     case R_REVERSAL_EXCEEDS:      return "refund is larger than the purchase it reverses";
     case R_REVERSAL_NO_PAYMENT:   return "the original decision never resulted in a payment";
     case R_REVERSAL_DUPLICATE:    return "this purchase has already been reversed";
+    case R_SUBSCRIPTION_UNDISCLOSED: return "this commits to a recurring charge the mandate never authorised";
+    case R_RECURRING_EXCEEDS:        return "the recurring charge exceeds what was authorised per interval";
     default:                     return "unknown rejection";
   }
 }
@@ -92,6 +96,7 @@ Verdict evaluate(const IntentSchema& s, const CartView& c, std::uint64_t now_ns)
   Verdict v;
   v.bits             = 0;
   v.cart_total_paise = 0;
+  v.recurring_paise  = 0;
   v.n_lines          = c.n > MAX_CART ? MAX_CART : c.n;
 
   std::uint32_t bits = 0;
@@ -164,6 +169,14 @@ Verdict evaluate(const IntentSchema& s, const CartView& c, std::uint64_t now_ns)
     const bool of1 = __builtin_mul_overflow(up, static_cast<std::int64_t>(q), &line);
     const bool of2 = __builtin_add_overflow(total, line, &total);
     lb |= mask_if(of1 || of2, R_ARITH_OVERFLOW);
+
+    // A recurring commitment is not covered by the cart total, so it is checked on its
+    // own terms. A 1-rupee trial that becomes 999 a month passes every price cap.
+    const std::int64_t rec = c.recurring_paise ? c.recurring_paise[i] : 0;
+    lb |= mask_if(rec > 0 && !s.allow_recurring,           R_SUBSCRIPTION_UNDISCLOSED);
+    lb |= mask_if(rec > 0 && s.allow_recurring && rec > s.max_recurring_paise,
+                                                            R_RECURRING_EXCEEDS);
+    v.recurring_paise += rec > 0 ? rec : 0;
 
     v.lines[i].sku_id          = sku;
     v.lines[i].bits            = lb;

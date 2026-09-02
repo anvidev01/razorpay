@@ -86,6 +86,19 @@ ParseResult parse_intent(const std::string& json, InternTable& t, IntentSchema& 
         out.subst_max_delta_bp = static_cast<std::uint16_t>(bp);
     }
 
+    // Recurring commitments are refused unless the mandate says otherwise: the safe
+    // default for "spend up to X" is a one-off purchase, not a standing order.
+    out.allow_recurring     = 0;
+    out.max_recurring_paise = 0;
+    ondemand::object rec;
+    if (doc["recurring"].get_object().get(rec) == SUCCESS) {
+      bool allow = false;
+      if (rec["allow"].get_bool().get(allow) == SUCCESS) out.allow_recurring = allow ? 1 : 0;
+      std::int64_t cap = 0;
+      if (rec["max_per_interval_paise"].get_int64().get(cap) == SUCCESS)
+        out.max_recurring_paise = cap;
+    }
+
     std::uint32_t n = 0;
     for (auto c : doc["constraints"].get_array()) {
       if (n >= MAXC) { r.bits = R_ENGINE_RESOURCE; r.error = "too many constraints"; return r; }
@@ -138,7 +151,8 @@ ParseResult parse_cart(const std::string& json, InternTable& t, ScratchArena& ar
   auto* up  = arena.alloc<std::int64_t>(MAX_CART);
   auto* qty = arena.alloc<std::uint32_t>(MAX_CART);
   auto* cat = arena.alloc<std::uint32_t>(MAX_CART);
-  if (!sku || !up || !qty || !cat) {                  // arena exhausted -> deny
+  auto* rec = arena.alloc<std::int64_t>(MAX_CART);
+  if (!sku || !up || !qty || !cat || !rec) {                  // arena exhausted -> deny
     r.bits = R_ENGINE_RESOURCE;
     r.error = "arena exhausted";
     return r;
@@ -167,6 +181,11 @@ ParseResult parse_cart(const std::string& json, InternTable& t, ScratchArena& ar
       qty[n] = static_cast<std::uint32_t>(line["qty"].get_uint64());
       std::string_view cs;
       cat[n] = (line["category"].get_string().get(cs) == SUCCESS) ? t.intern(cs) : 0u;
+      // What this line commits to after today. A merchant that omits it is simply
+      // saying "one-off", and if that turns out to be false the mandate was signed
+      // against a cart that misrepresented itself -- which the evidence pack records.
+      std::int64_t rp = 0;
+      rec[n] = (line["recurring_paise"].get_int64().get(rp) == SUCCESS) ? rp : 0;
 
       // Injection telemetry, taken HERE because this is the last place the text
       // exists -- everything downstream sees only uint32 ids. Detection is
@@ -181,6 +200,7 @@ ParseResult parse_cart(const std::string& json, InternTable& t, ScratchArena& ar
     if (doc["note"].get_string().get(topnote) == SUCCESS) flags |= scan_text(topnote).bits;
 
     out.sku_id = sku; out.unit_paise = up; out.qty = qty; out.category_id = cat;
+    out.recurring_paise = rec;
     out.n = n; out.text_flags = flags;
     cart_hash  = canonical_cart_hash(out);
     r.ok = true;

@@ -209,3 +209,47 @@ from an instruction the customer cryptographically signed."
 - [Chargebacks in agentic commerce — Checkout.com](https://www.checkout.com/blog/chargebacks-in-agentic-commerce-how-merchants-can-stay-ahead)
 - [Can AI solve e-grocery's erratic out-of-stock substitutions? — RetailWire](https://retailwire.com/discussion/can-ai-solve-e-grocerys-erratic-out-of-stock-substitutions/)
 - [AI Shopping for Grocery: 2026 Retailer Playbook — Paz.ai](https://www.paz.ai/for/grocery-brands)
+
+---
+
+## 5. Blind to WHAT IT COMMITS TO — the recurring tail
+
+A cart total bounds a **one-off** cost. A subscription's real cost is unbounded, and it
+sits outside the total entirely.
+
+```
+mandate : one-off software licence, up to Rs 500, no subscriptions
+cart    : "Design Pro -- 1 rupee first month"   unit_paise 100
+                                                recurring_paise 99900
+
+cart total       Rs 1.00      <- under every cap, under the budget
+real commitment  Rs 999/mo    <- nowhere in the total
+```
+
+Every price check passes. The budget check passes. A limit-only rail approves it, and so
+would any gateway that reasons purely about the amount charged today.
+
+**The control:** a recurring commitment must be authorised *on its own terms*.
+
+```json
+"recurring": { "allow": false, "max_per_interval_paise": 0 }
+```
+
+Absent from a mandate, this defaults to **deny** — because the safe reading of "spend up
+to ₹500" is a purchase, not a standing order.
+
+| outcome | code |
+|---|---|
+| the mandate authorised no recurring charge at all | `R_SUBSCRIPTION_UNDISCLOSED` |
+| recurring charge above the authorised per-interval ceiling | `R_RECURRING_EXCEEDS` |
+
+A mandate that *does* permit subscriptions bounds them: `allow: true` with
+`max_per_interval_paise: 50000` passes a ₹450/month plan and refuses a ₹999/month one —
+reported as over-ceiling rather than undisclosed, because those are different failures.
+
+The verdict also reports `recurring_paise` separately from `cart_total_paise`, so the
+number that is *not* in the total is visible next to the one that is.
+
+**Why this belongs with the other four.** It is the same shape as the blender: the money
+moved is not the money authorised. The difference is that here the gap is in *time*
+rather than in the basket, which is why a cart-total check alone cannot see it.

@@ -196,6 +196,7 @@ Decision Gateway::decide(const std::string& cart_json, std::uint64_t now_ns) {
   for (std::uint32_t i = 0; i < last_n_; ++i) {
     last_sku_[i] = cart.sku_id[i]; last_up_[i] = cart.unit_paise[i]; last_qty_[i] = cart.qty[i];
     last_cat_[i] = cart.category_id ? cart.category_id[i] : 0u;
+    last_rec_[i] = cart.recurring_paise ? cart.recurring_paise[i] : 0;
   }
   d.amount_paise = d.verdict.cart_total_paise;
 
@@ -234,6 +235,7 @@ Decision Gateway::decide(const std::string& cart_json, std::uint64_t now_ns) {
     dp.unit_paise[i]  = cart.unit_paise[i];
     dp.qty[i]         = cart.qty[i];
     dp.category_id[i] = cart.category_id ? cart.category_id[i] : 0u;
+    dp.recurring_paise[i] = cart.recurring_paise ? cart.recurring_paise[i] : 0;
   }
   dp.text_flags = cart.text_flags;
   dp.agent_session_id = d.agent_session_id;
@@ -416,7 +418,8 @@ bool Gateway::execute(Decision& d, std::uint64_t now_ns) {
 
 double Gateway::measure_last_kernel_ns(int batch, int rounds) const {
   if (!last_n_) return 0.0;
-  const CartView c{last_sku_, last_up_, last_qty_, last_cat_, last_n_, last_merchant_, last_flags_, 0};
+  const CartView c{last_sku_, last_up_, last_qty_, last_cat_, last_rec_,
+                   last_n_, last_merchant_, last_flags_, 0};
   std::uint32_t sink = 0;
   for (int i = 0; i < 20000; ++i) sink ^= evaluate(last_schema_, c, last_now_).bits;  // warm
 
@@ -463,6 +466,7 @@ std::string Gateway::decision_json(const Decision& d) const {
   o.width(4); o.fill('0'); o << d.verdict.bits << std::dec << "\""
     << ",\"eval_ns\":" << d.eval_ns
     << ",\"cart_total_paise\":" << d.verdict.cart_total_paise
+    << ",\"recurring_paise\":" << d.verdict.recurring_paise
     << ",\"wal_seq\":" << d.wal_seq
     << ",\"commit_us\":" << d.commit_us
     << ",\"cart_hash\":\"" << hex(d.cart_hash) << "\""

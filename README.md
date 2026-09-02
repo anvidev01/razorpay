@@ -58,7 +58,7 @@ Auto-blocking on a probabilistic score is how a risk system destroys good revenu
 is why behavioural signals escalate instead of blocking — and why the false-positive cost
 is measurable: **[docs/07 — Honest Risk Metrics](docs/07-RISK-METRICS.md)**.
 
-## One engine, four industries
+## One engine, five industries
 
 The kernel has no concept of any sector. It reasons about SKU ids, category ids,
 merchant ids, integer paise and quantities — nothing else. Same binary, four
@@ -74,6 +74,7 @@ industries, four different controls, nothing changed but the fixtures:
 | **SaaS licensing** | 30 seats as 3 lines of 10, against a 25 cap | `R_QTY_EXCEEDED` |
 | **Travel** | a second return flight blows the trip budget | `R_CART_TOTAL_EXCEEDED` |
 | **B2B procurement** | switches to a cheaper unapproved vendor | `R_MERCHANT_NOT_ALLOWED` |
+| **Subscriptions** | ₹1 today, ₹999 every month — cart total ₹1 | `R_SUBSCRIPTION_UNDISCLOSED` |
 
 Food ordering is one worked example in `fixtures/`, not the product. Any merchant
 Razorpay serves expresses their intent as SKUs, caps, categories and a vendor list.

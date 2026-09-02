@@ -9,7 +9,7 @@ import java.nio.ByteOrder;
  *   sizeof(IntentSchema)=384  sizeof(DecisionPayload)=1536  MAXC=16  MAX_CART=64
  */
 public final class DecisionPayload {
-    public static final int SIZE = 1920;
+    public static final int SIZE = 2432;
     private static final int SCHEMA = 0;
     // IntentSchema (sizeof 512)
     private static final int MANDATE_ID = SCHEMA + 0,   NOT_BEFORE = SCHEMA + 8,
@@ -18,13 +18,14 @@ public final class DecisionPayload {
                              SCHEMA_VER = SCHEMA + 44,  C_SKU      = SCHEMA + 48,
                              C_UNIT     = SCHEMA + 112, C_QTY      = SCHEMA + 240,
                              C_CAT      = SCHEMA + 304, S_DELTA_BP = SCHEMA + 368,
-                             S_POLICY   = SCHEMA + 370;
+                             S_POLICY   = SCHEMA + 370, S_ALLOW_REC = SCHEMA + 371,
+                             S_MAX_REC  = SCHEMA + 376;
     // DecisionPayload (sizeof 1920)
     private static final int NOW_NS = 512, MERCHANT = 520, N_LINES = 524,
                              SKU = 528, UNIT = 784, QTY = 1296, CAT = 1552,
-                             TEXT_FLAGS = 1808, REC_BITS = 1812, REC_TOTAL = 1816,
-                             EVAL_NS = 1824, IDEM_KEY = 1840,
-                             AGENT_SESSION = 1872, RISK_BITS = 1880, OUTCOME = 1884;
+                             RECURRING = 1808, TEXT_FLAGS = 2320, REC_BITS = 2324,
+                             REC_TOTAL = 2328, EVAL_NS = 2336, IDEM_KEY = 2352,
+                             AGENT_SESSION = 2384, RISK_BITS = 2392, OUTCOME = 2396;
 
     public long mandateId, notBeforeNs, notAfterNs, totalBudgetPaise, merchantAllowMask;
     public int  nConstraints, schemaVersion;
@@ -32,7 +33,8 @@ public final class DecisionPayload {
     public long[] constraintUnit = new long[PolicyKernel.MAXC];
     public int[]  constraintQty = new int[PolicyKernel.MAXC];
     public int[]  constraintCat = new int[PolicyKernel.MAXC];
-    public int    substPolicy, substMaxDeltaBp;
+    public int    substPolicy, substMaxDeltaBp, allowRecurring;
+    public long   maxRecurringPaise;
 
     public long nowNs;
     public int  merchantId, nLines;
@@ -40,6 +42,7 @@ public final class DecisionPayload {
     public long[] unitPaise = new long[PolicyKernel.MAX_CART];
     public int[]  qty       = new int[PolicyKernel.MAX_CART];
     public int[]  category  = new int[PolicyKernel.MAX_CART];
+    public long[] recurring = new long[PolicyKernel.MAX_CART];
     public int    textFlags;
     public int  recordedBits, riskBits, outcome;
     public long agentSessionId;
@@ -66,6 +69,8 @@ public final class DecisionPayload {
         }
         d.substMaxDeltaBp = b.getShort(S_DELTA_BP) & 0xFFFF;
         d.substPolicy     = b.get(S_POLICY) & 0xFF;
+        d.allowRecurring  = b.get(S_ALLOW_REC) & 0xFF;
+        d.maxRecurringPaise = b.getLong(S_MAX_REC);
         d.nowNs      = b.getLong(NOW_NS);
         d.merchantId = b.getInt(MERCHANT);
         d.nLines     = b.getInt(N_LINES);
@@ -74,6 +79,7 @@ public final class DecisionPayload {
             d.unitPaise[i] = b.getLong(UNIT + 8 * i);
             d.qty[i]       = b.getInt(QTY + 4 * i);
             d.category[i]  = b.getInt(CAT + 4 * i);
+            d.recurring[i] = b.getLong(RECURRING + 8 * i);
         }
         d.textFlags = b.getInt(TEXT_FLAGS);
         d.recordedBits  = b.getInt(REC_BITS);

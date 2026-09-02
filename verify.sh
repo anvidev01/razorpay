@@ -70,6 +70,8 @@ rm -f wal/verify_sec_*.wal
   && ok "travel booking" "second flight breaks the budget 0x0008" || no "travel sector"
 [ "$(sec procurement ok)" = "0x0000" ] && [ "$(sec procurement violation)" = "0x0010" ] \
   && ok "B2B procurement" "unapproved vendor denied 0x0010" || no "procurement sector"
+[ "$(sec subscription ok)" = "0x0000" ] && [ "$(sec subscription violation)" = "0x400000" ] \
+  && ok "hidden subscription" "Rs 1 today / Rs 999 a month denied 0x400000" || no "subscription trap"
 
 hdr "3 · Gating — bypasses and forgeries"
 out=$(./build/rig-attack 2>&1)
