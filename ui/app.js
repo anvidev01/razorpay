@@ -334,3 +334,142 @@ document.querySelectorAll('.tab[data-jump]').forEach((t) => {
 fetch('/api/health').then((r) => r.json()).then((j) => { $('a-rail').textContent = j.rail; });
 refreshAudit();
 setInterval(refreshAudit, 3000);
+
+
+// ================= COMPOSE YOUR OWN ORDER =================
+// Lets anyone -- you, or a judge -- construct a mandate and a cart live and watch the
+// engine decide. Rupees in the form, paise on the wire: the engine never sees a float.
+
+const rupeesToPaise = (r) => Math.round(parseFloat(r || '0') * 100);
+const rulesBox = $('c-rules'), linesBox = $('c-lines');
+
+function ruleRow(sku = '', cat = '', maxRs = '', qty = '') {
+  const d = document.createElement('div');
+  d.className = 'rrow';
+  d.innerHTML = `
+    <label>SKU<input class="r-sku" value="${sku}" placeholder="SKU_MEAL_A"></label>
+    <label>Category<input class="r-cat" value="${cat}" placeholder="FOOD_MAIN"></label>
+    <label>Max ₹/unit<input class="r-max" type="number" min="0" value="${maxRs}"></label>
+    <label>Max qty<input class="r-qty" type="number" min="1" value="${qty}"></label>
+    <button class="x" title="remove">✕</button>`;
+  d.querySelector('.x').onclick = () => d.remove();
+  return d;
+}
+
+function lineRow(sku = '', cat = '', unitRs = '', qty = 1, name = '') {
+  const d = document.createElement('div');
+  d.className = 'rrow';
+  d.innerHTML = `
+    <label>SKU<input class="l-sku" value="${sku}" placeholder="SKU_MEAL_A"></label>
+    <label>Category<input class="l-cat" value="${cat}" placeholder="FOOD_MAIN"></label>
+    <label>₹/unit<input class="l-unit" type="number" min="0" value="${unitRs}"></label>
+    <label>Qty<input class="l-qty" type="number" min="1" value="${qty}"></label>
+    <label>Item text (optional)<input class="l-name" value="${name}" placeholder="scanned for injection"></label>
+    <button class="x" title="remove">✕</button>`;
+  d.querySelector('.x').onclick = () => d.remove();
+  return d;
+}
+
+// Prefilled so it is one click to try, and obvious what to edit.
+[['SKU_MEAL_A', 'FOOD_MAIN', 300, 2],
+ ['SKU_DRINK_A', 'FOOD_DRINK', 90, 4]].forEach((r) => rulesBox.appendChild(ruleRow(...r)));
+[['SKU_MEAL_A', 'FOOD_MAIN', 280, 1, ''],
+ ['SKU_DRINK_A', 'FOOD_DRINK', 80, 2, '']].forEach((r) => linesBox.appendChild(lineRow(...r)));
+
+$('c-addrule').onclick = () => rulesBox.appendChild(ruleRow());
+$('c-addline').onclick = () => linesBox.appendChild(lineRow());
+
+function hint(text, kind = '') {
+  $('c-hint').className = 'hint ' + kind;
+  $('c-hint').textContent = text;
+}
+
+$('c-sign').onclick = async () => {
+  const mins = parseInt($('c-ttl').value || '30', 10);
+  const now = Date.now();
+  const constraints = [...rulesBox.querySelectorAll('.rrow')].map((r) => {
+    const o = {
+      sku: r.querySelector('.r-sku').value.trim(),
+      max_unit_paise: rupeesToPaise(r.querySelector('.r-max').value),
+      max_qty: parseInt(r.querySelector('.r-qty').value || '1', 10),
+    };
+    const c = r.querySelector('.r-cat').value.trim();
+    if (c) o.category = c;
+    return o;
+  }).filter((o) => o.sku);
+
+  if (!constraints.length) { hint('add at least one item rule', 'bad'); return; }
+  if (constraints.length > 16) { hint('max 16 item rules per mandate', 'bad'); return; }
+
+  const mandate = {
+    mandate_id: $('c-mid').value.trim(),
+    not_before_ns: (now - 60_000) * 1e6,          // 60s of clock slack
+    not_after_ns: (now + mins * 60_000) * 1e6,
+    total_budget_paise: rupeesToPaise($('c-budget').value),
+    merchant_allow: $('c-merch').value.split(',').map((x) => x.trim()).filter(Boolean),
+    substitution: {
+      policy: $('c-sub').value,
+      max_delta_bp: Math.round(parseFloat($('c-delta').value || '0') * 100),
+    },
+    constraints,
+    schema_version: 1,
+  };
+  const j = await (await fetch('/api/admit', { method: 'POST', body: JSON.stringify(mandate) })).json();
+  if (j.ok) {
+    hint(`mandate signed (Ed25519) and admitted · valid ${mins} min · budget ₹${$('c-budget').value}`, 'good');
+    $('c-signed').textContent = '✓ signed';
+    msg('sys', null, `mandate ${mandate.mandate_id} signed by the human · ₹${$('c-budget').value} cap · ${mins} min TTL`);
+  } else {
+    hint('rejected at admission: ' + (j.error || 'unknown'), 'bad');
+    $('c-signed').textContent = '';
+  }
+};
+
+$('c-send').onclick = async () => {
+  const lines = [...linesBox.querySelectorAll('.rrow')].map((r) => {
+    const o = {
+      sku: r.querySelector('.l-sku').value.trim(),
+      unit_paise: rupeesToPaise(r.querySelector('.l-unit').value),
+      qty: parseInt(r.querySelector('.l-qty').value || '1', 10),
+    };
+    const c = r.querySelector('.l-cat').value.trim();
+    const n = r.querySelector('.l-name').value.trim();
+    if (c) o.category = c;
+    if (n) o.name = n;
+    return o;
+  }).filter((o) => o.sku);
+
+  if (!lines.length) { hint('add at least one cart line', 'bad'); return; }
+
+  const cart = {
+    mandate_id: $('c-mid').value.trim(),
+    merchant: $('c-cmerch').value.trim(),
+    agent_session_id: $('c-sess').value.trim(),
+    lines,
+  };
+  const total = lines.reduce((s, l) => s + l.unit_paise * l.qty, 0);
+  msg('user', 'you', `Submitting a cart of ${lines.length} line(s), ${rupees(total)} at ${cart.merchant}.`
+    + cartHtml(lines.map((l) => ({ ...l, label: l.sku }))));
+
+  const url = '/api/decide' + ($('c-exec').checked ? '?execute=1' : '');
+  const j = await (await fetch(url, { method: 'POST', body: JSON.stringify(cart) })).json();
+  render(j);
+  await refreshAudit();
+
+  const d = j.decision;
+  if (d.decision === 'ALLOW' && d.paid) hint(`ALLOW ${d.verdict_hex} · paid ${d.payment_order_id} via ${d.rail}`, 'good');
+  else if (d.decision === 'ALLOW') hint(`ALLOW ${d.verdict_hex} · token minted, not executed`, 'good');
+  else if (d.decision === 'REVIEW') hint(`REVIEW ${d.verdict_hex} · answer the step-up card below`, '');
+  else hint(`DENY ${d.verdict_hex} · ${d.reasons.map((r) => r.code).join(', ')}`, 'bad');
+  if (d.error) hint(`${d.decision} · ${d.error}`, 'bad');
+};
+
+$('m-scn').onclick = () => {
+  $('m-scn').classList.add('on'); $('m-com').classList.remove('on');
+  $('scenarios').hidden = false; $('composer').hidden = true;
+};
+$('m-com').onclick = () => {
+  $('m-com').classList.add('on'); $('m-scn').classList.remove('on');
+  $('scenarios').hidden = true; $('composer').hidden = false;
+  hint('edit the mandate, press Sign & admit, then send a cart against it');
+};

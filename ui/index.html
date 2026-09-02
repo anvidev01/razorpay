@@ -75,8 +75,54 @@
         <div><div class="eyebrow">Agent</div><h3>Ordering assistant</h3></div>
         <span class="chip" id="mandate-state">2 mandates active</span>
       </div>
+      <div class="modetabs">
+        <button class="mt on" id="m-scn">Scripted scenarios</button>
+        <button class="mt" id="m-com">Compose your own order</button>
+      </div>
       <div class="chat" id="chat"></div>
       <div class="controls" id="scenarios"></div>
+
+      <div class="composer" id="composer" hidden>
+        <div class="csect">
+          <div class="secttl">1 · The mandate <span>what the human authorises</span></div>
+          <div class="frow">
+            <label>Mandate id<input id="c-mid" value="mnd_live_01"></label>
+            <label>Budget ₹<input id="c-budget" type="number" min="1" value="500"></label>
+            <label>Valid for (min)<input id="c-ttl" type="number" min="1" value="30"></label>
+          </div>
+          <div class="frow">
+            <label>Merchants (comma separated)<input id="c-merch" value="swiggy, zomato"></label>
+            <label>Substitution
+              <select id="c-sub">
+                <option value="deny">exact SKUs only</option>
+                <option value="same_category" selected>same category</option>
+                <option value="any_in_budget">any item in budget</option>
+              </select></label>
+            <label>Allowed uplift %<input id="c-delta" type="number" min="0" value="20"></label>
+          </div>
+          <div class="rules" id="c-rules"></div>
+          <div class="crow">
+            <button class="btn-quiet sm" id="c-addrule">+ item rule</button>
+            <button class="btn-primary sm" id="c-sign">Sign &amp; admit mandate</button>
+            <span class="mono tiny" id="c-signed"></span>
+          </div>
+        </div>
+
+        <div class="csect">
+          <div class="secttl">2 · The cart <span>what the agent wants to buy</span></div>
+          <div class="frow">
+            <label>Merchant<input id="c-cmerch" value="swiggy"></label>
+            <label>Agent session<input id="c-sess" value="sess_live_01"></label>
+          </div>
+          <div class="rules" id="c-lines"></div>
+          <div class="crow">
+            <button class="btn-quiet sm" id="c-addline">+ cart line</button>
+            <label class="chk"><input type="checkbox" id="c-exec" checked> execute payment on ALLOW</label>
+            <button class="btn-primary" id="c-send">Send to gateway →</button>
+          </div>
+          <div class="hint" id="c-hint"></div>
+        </div>
+      </div>
     </div>
 
     <div class="col">
