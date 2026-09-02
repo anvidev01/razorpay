@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Razorpay Intent Gateway</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="app">
+
+  <section class="pane">
+    <div class="phead">
+      <div>
+        <div class="eyebrow">Agent</div>
+        <div class="ptitle">Swiggy ordering assistant</div>
+      </div>
+      <div class="eyebrow" id="mandate-state">no mandate</div>
+    </div>
+    <div class="chat" id="chat"></div>
+    <div class="controls">
+      <button class="primary" id="b1">1 · Order lunch</button>
+      <button id="b2" disabled>2 · Add smoothie thing</button>
+      <button id="b3" disabled>3 · Auto-repair</button>
+      <button id="b4" disabled>4 · Approve blender (MFA)</button>
+      <button id="reset">Reset</button>
+    </div>
+  </section>
+
+  <section class="pane right" id="right">
+    <div>
+      <div class="eyebrow" style="margin-bottom:9px">Policy engine · deterministic C++ kernel</div>
+      <div class="verdict" id="verdict">
+        <div class="empty">no decision yet — the engine has not been asked anything</div>
+      </div>
+    </div>
+    <div class="wal">
+      <div class="walhead">
+        <div class="eyebrow">Write-ahead audit log · SHA-256 chained</div>
+        <span class="chip" id="chain">—</span>
+      </div>
+      <div class="walrows" id="wal"><div class="empty">log empty</div></div>
+    </div>
+  </section>
+
+</div>
+<script src="/app.js"></script>
+</body>
+</html>
