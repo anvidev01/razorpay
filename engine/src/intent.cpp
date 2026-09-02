@@ -269,27 +269,93 @@ IntentDraft translate_local(const std::string& utterance, const std::string& cat
     return d;
   }
   // Anything the person named that this catalogue cannot satisfy must be REPORTED,
-  // not quietly swapped for something else. Silently serving lime soda when someone
-  // asked for a mojito is precisely the unrequested substitution this whole project
-  // exists to catch -- the translator does not get an exemption.
+  // not quietly swapped. An enumerated food-word list cannot work here -- it silently
+  // approves every dish the list forgot ("chicken tikka" became "Chicken biryani"
+  // because "chicken" matched and "tikka" was invisible). So instead: any word the
+  // person typed that appears NOWHERE in this catalogue is unknown, and if it sits
+  // next to a matched word it QUALIFIES that match into a different dish, so the
+  // match is dropped rather than substituted.
   {
-    static const char* kFoodWords[] = {
-      "mojito","shake","smoothie","lassi","pizza","dosa","paneer","burger","pasta",
-      "sandwich","noodles","momos","salad","soup","ice cream","brownie","cake",
-      "juice","beer","wine","chai","tea","curd","paratha","idli","vada","samosa"};
-    std::vector<std::string> missing;
-    for (const char* w : kFoodWords) {
-      if (low.find(w) == std::string::npos) continue;
-      bool served = false;
-      for (auto& p : picks) {
-        std::string nl = p.name;
+    // vocabulary this merchant can actually talk about
+    std::vector<std::string> vocab;
+    try {
+      padded_string p2(catalog_json);
+      ondemand::parser vp;
+      auto vdoc = vp.iterate(p2);
+      for (auto it : vdoc["items"].get_array()) {
+        std::string_view nm;
+        it["name"].get_string().get(nm);
+        std::string nl(nm);
         std::transform(nl.begin(), nl.end(), nl.begin(), ::tolower);
-        if (nl.find(w) != std::string::npos) { served = true; break; }
+        std::istringstream ws(nl);
+        for (std::string w; ws >> w;) if (w.size() > 2) vocab.push_back(w);
+        for (auto kw : it["keywords"].get_array()) {
+          std::string_view k;
+          if (kw.get_string().get(k) != SUCCESS) continue;
+          std::istringstream ks{std::string(k)};
+          for (std::string w; ks >> w;) if (w.size() > 2) vocab.push_back(w);
+        }
       }
-      if (!served) missing.push_back(w);
+    } catch (const simdjson_error&) { /* vocabulary stays empty; nothing is flagged */ }
+
+    static const char* kStop[] = {
+      "buy","get","order","please","want","need","some","the","and","with","for","under",
+      "over","below","within","budget","total","rupees","rupee","each","one","two","three",
+      "four","five","six","seven","eight","nine","ten","different","category","categories",
+      "should","other","also","plus","from","that","this","them","they","have","has","cost",
+      "less","than","than","around","about","maximum","max","limit","spend","upto","only",
+      "make","sure","would","like","could","give","bring","send","thousand","hundred"};
+
+    // tokenise, keeping word positions so we can test adjacency
+    std::vector<std::string> words;
+    std::vector<std::size_t> starts;
+    for (std::size_t i = 0; i < low.size();) {
+      if (!std::isalpha(static_cast<unsigned char>(low[i]))) { ++i; continue; }
+      const std::size_t b = i;
+      while (i < low.size() && std::isalpha(static_cast<unsigned char>(low[i]))) ++i;
+      words.push_back(low.substr(b, i - b));
+      starts.push_back(b);
     }
-    for (std::size_t i = 0; i < missing.size(); ++i)
-      d.unmatched += (i ? ", " : "") + missing[i];
+    const auto word_index_of_char = [&](std::size_t cpos) -> long {
+      for (std::size_t w = 0; w < starts.size(); ++w)
+        if (starts[w] >= cpos) return static_cast<long>(w);
+      return static_cast<long>(words.size());
+    };
+
+    std::vector<std::string> unknown;
+    std::vector<long>        unknown_at;
+    for (std::size_t w = 0; w < words.size(); ++w) {
+      const std::string& t = words[w];
+      if (t.size() < 3) continue;
+      bool stop = false;
+      for (const char* sw : kStop) if (t == sw) { stop = true; break; }
+      if (stop) continue;
+      bool known = false;
+      for (const auto& v : vocab)
+        if (v.find(t) != std::string::npos || t.find(v) != std::string::npos) { known = true; break; }
+      if (!known) { unknown.push_back(t); unknown_at.push_back(static_cast<long>(w)); }
+    }
+
+    // An unknown word beside a matched one makes it a DIFFERENT dish. Drop the match.
+    std::vector<std::string> refused;
+    for (std::size_t u = 0; u < unknown.size(); ++u) {
+      bool qualified = false;
+      for (auto it = picks.begin(); it != picks.end();) {
+        const long pw = word_index_of_char(it->pos);
+        if (std::labs(pw - unknown_at[u]) <= 2) {
+          // report the phrase the way it was typed, not reversed
+          const std::string& hit = words[std::min<std::size_t>(
+              static_cast<std::size_t>(pw), words.size() - 1)];
+          refused.push_back(unknown_at[u] < pw ? unknown[u] + " " + hit
+                                               : hit + " " + unknown[u]);
+          it = picks.erase(it);
+          qualified = true;
+        } else ++it;
+      }
+      if (!qualified) refused.push_back(unknown[u]);
+    }
+    for (std::size_t i = 0; i < refused.size(); ++i)
+      d.unmatched += (i ? ", " : "") + refused[i];
   }
 
   if (picks.empty()) {

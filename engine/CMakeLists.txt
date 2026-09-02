@@ -33,9 +33,12 @@ foreach(tool rig_eval rig_replay rig_gateway rig_attack rig_load rig_evidence ri
 endforeach()
 
 add_executable(rig-tests tests/test_kernel.cpp)
+add_executable(rig-tests-intent tests/test_intent.cpp)
+target_link_libraries(rig-tests-intent PRIVATE rigcore)
 target_link_libraries(rig-tests PRIVATE rigcore)
 enable_testing()
 add_test(NAME kernel COMMAND rig-tests)
+add_test(NAME intent COMMAND rig-tests-intent ${CMAKE_SOURCE_DIR}/../fixtures/catalog.json)
 
 add_executable(bench-engine-kernel bench/bench_engine_kernel.cpp)
 target_link_libraries(bench-engine-kernel PRIVATE rigcore)
