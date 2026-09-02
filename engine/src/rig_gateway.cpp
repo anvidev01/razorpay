@@ -4,6 +4,7 @@
 #include "rig/evidence.hpp"
 #include "rig/intent.hpp"
 #include <map>
+#include <cctype>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/time.h>
@@ -69,6 +70,37 @@ static std::string json_str(const std::string& b, const char* key, const char* d
   auto e = b.find('"', a + 1); if (e == std::string::npos) return dflt;
   return b.substr(a + 1, e - a - 1);
 }
+// Case-insensitive header lookup; the value is the rest of the line, trimmed.
+static std::string header_value(const std::string& req, const char* name) {
+  std::string lower = req, key = name;
+  for (auto& ch : lower) ch = static_cast<char>(::tolower((unsigned char)ch));
+  for (auto& ch : key)   ch = static_cast<char>(::tolower((unsigned char)ch));
+  auto p = lower.find("\r\n" + key + ":");
+  if (p == std::string::npos) return {};
+  p = req.find(':', p + 2) + 1;
+  const auto e = req.find("\r\n", p);
+  std::string v = req.substr(p, e - p);
+  while (!v.empty() && (v.front() == ' ' || v.front() == '\t')) v.erase(v.begin());
+  while (!v.empty() && (v.back() == ' ' || v.back() == '\r')) v.pop_back();
+  return v;
+}
+
+static bool unhex(const std::string& h, std::uint8_t* out, std::size_t n) {
+  if (h.size() != n * 2) return false;
+  for (std::size_t i = 0; i < n; ++i) {
+    auto nib = [](char ch) -> int {
+      if (ch >= '0' && ch <= '9') return ch - '0';
+      if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
+      if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
+      return -1;
+    };
+    const int hi = nib(h[2 * i]), lo = nib(h[2 * i + 1]);
+    if (hi < 0 || lo < 0) return false;
+    out[i] = static_cast<std::uint8_t>((hi << 4) | lo);
+  }
+  return true;
+}
+
 static std::uint64_t query_u64(const std::string& path, const char* key) {
   const std::string k = std::string(key) + "=";
   auto p = path.find(k);
@@ -199,7 +231,7 @@ static int run(int argc, char** argv) {
   std::map<std::uint64_t, Decision> live;   // decisions awaiting confirm / execute
 
   // One user device for the whole session: it signs, the gateway verifies.
-  UserDevice device("user_phone_9f21");
+  UserDevice device("user_phone_9f21", "wal/device.key");
 
   auto admit_default = [&](Gateway& g) {
     g.enroll_device(device.public_key(), device.label());
@@ -418,7 +450,24 @@ static int run(int argc, char** argv) {
 
     } else if (method == "POST" && path == "/api/admit") {
       std::string err;
-      const bool ok = gw->admit_mandate(body, device.sign(body), device.public_key(), err);
+      // A real user device is remote: it signs on the phone and sends the signature.
+      // If the caller supplies one, verify THAT rather than signing on their behalf --
+      // signing for them would make the whole check theatre.
+      std::array<std::uint8_t, 32> pub{};
+      Sig512 sig{};
+      const std::string hp_pub = header_value(req, "X-Device-Pubkey");
+      const std::string hp_sig = header_value(req, "X-Device-Signature");
+      bool ok;
+      if (!hp_pub.empty() && !hp_sig.empty()) {
+        if (!unhex(hp_pub, pub.data(), 32) || !unhex(hp_sig, sig.data(), 64)) {
+          respond(c, 400, "application/json",
+                  R"({"ok":false,"error":"malformed X-Device-Pubkey / X-Device-Signature"})");
+          ::close(c); continue;
+        }
+        ok = gw->admit_mandate(body, sig, pub, err);
+      } else {
+        ok = gw->admit_mandate(body, device.sign(body), device.public_key(), err);
+      }
       respond(c, ok ? 200 : 400, "application/json",
               std::string("{\"ok\":") + (ok ? "true" : "false") + ",\"error\":\"" + err + "\"}");
     } else if (method == "GET" && path.rfind("/api/wal", 0) == 0) {

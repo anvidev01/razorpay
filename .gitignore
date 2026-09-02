@@ -12,3 +12,4 @@ bench-results/
 # secrets -- never committed
 .env
 .env.local
+wal/device.key

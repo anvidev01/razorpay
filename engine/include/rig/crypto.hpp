@@ -30,6 +30,10 @@ std::uint32_t crc32c(const void* data, std::size_t len) noexcept;
 class Signer {
 public:
   Signer();                       // generates a fresh keypair
+  // Loads a 32-byte raw Ed25519 private key, or generates and writes one if absent.
+  // The user's device key must SURVIVE restarts, or a signature made by rig-sign
+  // could never match what the gateway enrolled.
+  explicit Signer(const std::string& key_path);
   ~Signer();
   Signer(const Signer&)            = delete;
   Signer& operator=(const Signer&) = delete;
@@ -54,7 +58,10 @@ bool verify_detached(const std::uint8_t pub[32], const void* msg, std::size_t le
 class UserDevice {
 public:
   explicit UserDevice(std::string label) : label_(std::move(label)) {}
+  UserDevice(std::string label, const std::string& key_path)
+      : key_(key_path), label_(std::move(label)) {}
   Sig512                       sign(const std::string& mandate_json) const;
+  Sig512                       sign(const void* p, std::size_t n) const;
   std::array<std::uint8_t, 32> public_key() const { return key_.public_key(); }
   const std::string&           label() const noexcept { return label_; }
   std::string                  fingerprint() const;   // first 8 bytes of the pubkey

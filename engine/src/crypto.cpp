@@ -2,6 +2,8 @@
 #include <openssl/evp.h>
 #include <cstring>
 #include <cstdio>
+#include <sys/stat.h>
+#include <cstdio>
 #include <stdexcept>
 
 namespace rig {
@@ -109,6 +111,34 @@ Signer::Signer() {
   pkey_ = k;
 }
 
+Signer::Signer(const std::string& key_path) {
+  std::uint8_t raw[32];
+  if (std::FILE* f = std::fopen(key_path.c_str(), "rb")) {
+    const std::size_t n = std::fread(raw, 1, sizeof raw, f);
+    std::fclose(f);
+    if (n == sizeof raw) {
+      pkey_ = EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519, nullptr, raw, sizeof raw);
+      if (pkey_) return;
+    }
+  }
+  // No usable key on disk: mint one and persist it, owner-readable only.
+  EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_ED25519, nullptr);
+  EVP_PKEY* k = nullptr;
+  if (!ctx || EVP_PKEY_keygen_init(ctx) <= 0 || EVP_PKEY_keygen(ctx, &k) <= 0) {
+    if (ctx) EVP_PKEY_CTX_free(ctx);
+    throw std::runtime_error("ed25519: keygen");
+  }
+  EVP_PKEY_CTX_free(ctx);
+  pkey_ = k;
+  std::size_t n = sizeof raw;
+  EVP_PKEY_get_raw_private_key(k, raw, &n);
+  if (std::FILE* f = std::fopen(key_path.c_str(), "wb")) {
+    std::fwrite(raw, 1, sizeof raw, f);
+    std::fclose(f);
+    ::chmod(key_path.c_str(), 0600);
+  }
+}
+
 Signer::~Signer() { if (pkey_) EVP_PKEY_free(static_cast<EVP_PKEY*>(pkey_)); }
 
 Sig512 Signer::sign(const void* msg, std::size_t len) const {
@@ -157,6 +187,8 @@ bool verify_detached(const std::uint8_t pub[32], const void* msg, std::size_t le
   EVP_PKEY_free(pk);
   return ok;
 }
+
+Sig512 UserDevice::sign(const void* p, std::size_t n) const { return key_.sign(p, n); }
 
 Sig512 UserDevice::sign(const std::string& mandate_json) const {
   // Sign the EXACT bytes the human approved, not a re-serialisation of them. If the
