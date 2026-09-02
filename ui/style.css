@@ -228,6 +228,10 @@ button.danger:hover:not(:disabled){background:var(--red-soft);border-color:var(-
   padding:12px 20px;border-top:1px solid var(--line);background:var(--surface-2)}
 .modal{position:fixed;inset:0;background:rgba(13,33,73,.55);display:flex;
   align-items:center;justify-content:center;padding:28px;z-index:60}
+/* A class selector beats the UA's [hidden]{display:none}, so the modal would render
+   permanently and Close would appear to do nothing. Restate it explicitly. */
+.modal[hidden]{display:none}
+[hidden]{display:none !important}
 .modalbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;
   max-width:900px;width:100%;max-height:82vh;display:flex;flex-direction:column;
   box-shadow:0 24px 60px -20px rgba(13,33,73,.5)}

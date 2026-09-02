@@ -163,13 +163,18 @@ async function refreshAudit() {
   $('auditsum').textContent =
     `${j.allow} allow · ${j.review} review · ${j.deny} deny · ${j.paid} paid · ${j.dupes} retries collapsed`;
 
+  // Recompute from the log each poll. Holding a stale seq means the evidence button
+  // asks for a decision that no longer exists after a reset.
+  const decs = j.rows.filter((r) => r.type === 'POLICY_DECISION');
+  lastDecisionSeq = decs.length ? decs[decs.length - 1].seq : 0;
+  $('ev-btn').disabled = lastDecisionSeq === 0;
+
   if (!j.rows.length) { walEl.innerHTML = '<div class="empty">log empty</div>'; return; }
   walEl.innerHTML = j.rows.map((r) => {
     const isNew = !seen.has(r.seq);
     const tone = r.kind === 'good' ? 'style="color:var(--green)"'
       : r.kind === 'warn' ? 'style="color:var(--amber)"'
         : r.kind === 'bad' ? 'style="color:var(--red)"' : '';
-    if (r.type === 'POLICY_DECISION') lastDecisionSeq = r.seq;
     return `<div class="walrow ${r.type === 'POLICY_DECISION' ? 'dec' : ''} ${isNew ? 'new' : ''}">
       <span class="seq">${r.seq}</span>
       <span class="ty" ${tone}>${r.type}</span>
@@ -177,7 +182,6 @@ async function refreshAudit() {
   }).join('');
   j.rows.forEach((r) => seen.add(r.seq));
   walEl.scrollTop = walEl.scrollHeight;
-  $('ev-btn').disabled = lastDecisionSeq === 0;
 }
 
 // ---------- scenarios ----------
@@ -289,19 +293,35 @@ $('reset').onclick = async () => {
 
 // ---------- evidence ----------
 async function showEvidence() {
-  if (!lastDecisionSeq) return;
-  const r = await fetch('/api/evidence?seq=' + lastDecisionSeq);
-  const txt = await r.text();
-  let pretty = txt;
-  try { pretty = JSON.stringify(JSON.parse(txt), null, 2); } catch (e) { /* show raw */ }
+  // Opening an empty box is worse than saying why it is empty.
+  if (!lastDecisionSeq) {
+    $('ev-title').textContent = 'Evidence pack';
+    $('ev-body').textContent =
+      'No decision recorded yet.\n\n' +
+      'An evidence pack is built for one specific policy decision, so run a scenario\n' +
+      'first (try "1 · Order lunch"), then reopen this.';
+    $('ev-modal').hidden = false;
+    return;
+  }
   $('ev-title').textContent = `Evidence pack — decision seq ${lastDecisionSeq}`;
-  $('ev-body').textContent = pretty;
+  $('ev-body').textContent = 'loading…';
   $('ev-modal').hidden = false;
+  try {
+    const txt = await (await fetch('/api/evidence?seq=' + lastDecisionSeq)).text();
+    let pretty = txt;
+    try { pretty = JSON.stringify(JSON.parse(txt), null, 2); } catch (e) { /* show raw */ }
+    $('ev-body').textContent = pretty;
+  } catch (e) {
+    $('ev-body').textContent = 'could not load the evidence pack: ' + e;
+  }
 }
+
+function closeEvidence() { $('ev-modal').hidden = true; }
 $('ev-btn').onclick = showEvidence;
 $('nav-ev').onclick = (e) => { e.preventDefault(); showEvidence(); };
-$('ev-close').onclick = () => { $('ev-modal').hidden = true; };
-$('ev-modal').onclick = (e) => { if (e.target === $('ev-modal')) $('ev-modal').hidden = true; };
+$('ev-close').onclick = closeEvidence;
+$('ev-modal').onclick = (e) => { if (e.target === $('ev-modal')) closeEvidence(); };
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeEvidence(); });
 
 document.querySelectorAll('.tab[data-jump]').forEach((t) => {
   t.onclick = () => {
