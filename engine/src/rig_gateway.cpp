@@ -1,6 +1,8 @@
 // rig-gateway: minimal HTTP/1.1 server exposing the engine to the demo UI.
 // Single-threaded and deliberately small -- the interesting code is the engine.
 #include "rig/gateway.hpp"
+#include "rig/evidence.hpp"
+#include <map>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -38,6 +40,113 @@ static void respond(int fd, int code, const char* ctype, const std::string& body
     << "Cache-Control: no-store\r\n"
     << "Access-Control-Allow-Origin: *\r\n\r\n" << body;
   send_all(fd, o.str());
+}
+
+// Tiny field readers so the server has no JSON dependency of its own.
+static std::uint64_t json_u64(const std::string& b, const char* key, std::uint64_t dflt = 0) {
+  const std::string k = std::string("\"") + key + "\"";
+  auto p = b.find(k); if (p == std::string::npos) return dflt;
+  p = b.find(':', p + k.size()); if (p == std::string::npos) return dflt;
+  return std::strtoull(b.c_str() + p + 1, nullptr, 10);
+}
+static bool json_bool(const std::string& b, const char* key, bool dflt = false) {
+  const std::string k = std::string("\"") + key + "\"";
+  auto p = b.find(k); if (p == std::string::npos) return dflt;
+  p = b.find(':', p + k.size()); if (p == std::string::npos) return dflt;
+  return b.compare(b.find_first_not_of(" \t", p + 1), 4, "true") == 0;
+}
+static std::string json_str(const std::string& b, const char* key, const char* dflt = "") {
+  const std::string k = std::string("\"") + key + "\"";
+  auto p = b.find(k); if (p == std::string::npos) return dflt;
+  p = b.find(':', p + k.size()); if (p == std::string::npos) return dflt;
+  auto a = b.find('"', p); if (a == std::string::npos) return dflt;
+  auto e = b.find('"', a + 1); if (e == std::string::npos) return dflt;
+  return b.substr(a + 1, e - a - 1);
+}
+static std::uint64_t query_u64(const std::string& path, const char* key) {
+  const std::string k = std::string(key) + "=";
+  auto p = path.find(k);
+  return p == std::string::npos ? 0 : std::strtoull(path.c_str() + p + k.size(), nullptr, 10);
+}
+
+// Renders the readable audit trail the UI shows -- same content as rig-audit.
+static std::string audit_json(const std::string& path) {
+  std::vector<std::string> rows;
+  std::uint64_t allow = 0, review = 0, deny = 0, paid = 0, dupes = 0;
+  const ChainReport rep = wal_scan(path, [&](const WalRecord& r) {
+    const auto t = static_cast<RecType>(r.hdr.type);
+    char buf[900];
+    std::string detail, kind = "info";
+    if (t == RecType::POLICY_DECISION && r.payload.size() == sizeof(DecisionPayload)) {
+      DecisionPayload dp; std::memcpy(&dp, r.payload.data(), sizeof dp);
+      const auto oc = static_cast<Outcome>(dp.outcome);
+      if (oc == Outcome::ALLOW) { ++allow; kind = "good"; }
+      else if (oc == Outcome::REVIEW) { ++review; kind = "warn"; }
+      else { ++deny; kind = "bad"; }
+      std::string reasons;
+      for (int b = 0; b < R_BIT_COUNT; ++b) {
+        const std::uint32_t bit = 1u << b;
+        if (!(dp.recorded_bits & bit)) continue;
+        if (!reasons.empty()) reasons += ", ";
+        reasons += reject_name(bit);
+      }
+      std::snprintf(buf, sizeof buf, "%s 0x%04X  Rs %.2f  %u lines%s%s",
+        outcome_name(oc), dp.recorded_bits, dp.recorded_total / 100.0, dp.n_lines,
+        reasons.empty() ? "" : "  |  ", reasons.c_str());
+      detail = buf;
+    } else if (t == RecType::MANDATE_ISSUED) {
+      kind = "good"; detail = "human signed an intent mandate (Ed25519)";
+    } else if (t == RecType::CART_PROPOSED) {
+      detail = "agent proposed a cart (" + std::to_string(r.payload.size()) + " bytes)";
+    } else if (t == RecType::CAPABILITY_ISSUED) {
+      kind = "good"; detail = "payment token minted (single use, cart-bound)";
+    } else if (t == RecType::CAPABILITY_DENIED) {
+      kind = "bad";  detail = "no token -- cannot reach the rail";
+    } else if (t == RecType::STEP_UP_REQUIRED) {
+      kind = "warn"; detail = "escalated to the human (not blocked)";
+    } else if (t == RecType::HUMAN_CONFIRMED) {
+      struct HC { std::uint64_t id, at; std::uint8_t ok; char ref[32]; std::uint8_t cart[32]; };
+      if (r.payload.size() >= sizeof(HC)) {
+        HC hc; std::memcpy(&hc, r.payload.data(), sizeof hc);
+        kind = hc.ok ? "good" : "bad";
+        std::snprintf(buf, sizeof buf, "human %s (ref %s) bound to decision #%llu",
+          hc.ok ? "APPROVED" : "DECLINED", hc.ref, (unsigned long long)hc.id);
+        detail = buf;
+      }
+    } else if (t == RecType::PAYMENT_ATTEMPTED) {
+      detail = "submitting to the payment rail";
+    } else if (t == RecType::PAYMENT_RESULT) {
+      struct PR { std::uint64_t id; std::uint8_t ok; long status; char order[40]; };
+      if (r.payload.size() >= sizeof(PR)) {
+        PR pr; std::memcpy(&pr, r.payload.data(), sizeof pr);
+        kind = pr.ok ? "good" : "bad";
+        if (pr.ok) ++paid;
+        std::snprintf(buf, sizeof buf, "%s  http %ld  %s",
+          pr.ok ? "PAID" : "FAILED", pr.status, pr.order);
+        detail = buf;
+      }
+    } else if (t == RecType::DUPLICATE_SUPPRESSED) {
+      kind = "warn"; ++dupes;
+      detail = "agent retry collapsed onto the original decision -- no second charge";
+    } else if (t == RecType::REMEDIATION) {
+      detail = "remediation recorded";
+    }
+    char row[1100];
+    std::snprintf(row, sizeof row,
+      R"({"seq":%llu,"type":"%s","kind":"%s","hash":"%s","detail":"%s"})",
+      (unsigned long long)r.hdr.seq, rectype_name(t), kind.c_str(),
+      hex(r.this_hash).substr(0, 12).c_str(), detail.c_str());
+    rows.emplace_back(row);
+    return true;
+  });
+  std::ostringstream o;
+  o << R"({"intact":)" << (rep.intact ? "true" : "false")
+    << R"(,"records":)" << rep.records
+    << R"(,"allow":)" << allow << R"(,"review":)" << review << R"(,"deny":)" << deny
+    << R"(,"paid":)" << paid << R"(,"dupes":)" << dupes << R"(,"rows":[)";
+  for (std::size_t i = 0; i < rows.size(); ++i) { if (i) o << ","; o << rows[i]; }
+  o << "]}";
+  return o.str();
 }
 
 static std::string wal_json(const std::string& path, std::size_t tail) {
@@ -78,11 +187,22 @@ static int run(int argc, char** argv) {
     else if (a == "--ui" && i + 1 < argc) ui_dir = argv[++i];
   }
 
-  auto gw = std::make_unique<Gateway>(wal_path);
-  { std::string err;
+  std::map<std::uint64_t, Decision> live;   // decisions awaiting confirm / execute
+
+  auto admit_default = [&](Gateway& g) {
+    std::string err;
     const std::string intent = slurp("fixtures/lunch_intent.json");
-    if (!intent.empty() && !gw->admit_mandate(intent, err))
-      std::fprintf(stderr, "warning: default mandate not admitted: %s\n", err.c_str()); }
+    if (!intent.empty() && !g.admit_mandate(intent, err))
+      std::fprintf(stderr, "warning: lunch mandate not admitted: %s\n", err.c_str());
+    const std::string groc = slurp("fixtures/grocery_intent.json");
+    if (!groc.empty() && !g.admit_mandate(groc, err))
+      std::fprintf(stderr, "warning: grocery mandate not admitted: %s\n", err.c_str());
+  };
+
+  auto gw = std::make_unique<Gateway>(wal_path);
+  admit_default(*gw);
+  { std::string err; (void)err;
+  }
 
   const int srv = ::socket(AF_INET, SOCK_STREAM, 0);
   int one = 1; ::setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, &one, sizeof one);
@@ -117,13 +237,53 @@ static int run(int argc, char** argv) {
     const auto hp   = req.find("\r\n\r\n");
     const std::string body = hp == std::string::npos ? "" : req.substr(hp + 4);
 
-    if (method == "POST" && path == "/api/decide") {
-      const Decision d = gw->decide(body, now_ns());
+    if (method == "POST" && path.rfind("/api/decide", 0) == 0) {
+      const bool want_exec = path.find("execute=1") != std::string::npos;
+      Decision d = gw->decide(body, now_ns());
+      if (want_exec && d.has_pct) gw->execute(d, now_ns());
+      const double kns = gw->measure_last_kernel_ns(500, 101);
+      live[d.decision_id] = d;
       std::ostringstream o;
       o << "{\"decision\":" << gw->decision_json(d)
         << ",\"repair\":" << gw->repair_hint_json(d)
-        << ",\"kernel_ns_batched\":" << gw->measure_last_kernel_ns(500, 101) << "}";
+        << ",\"kernel_ns_batched\":" << kns << "}";
       respond(c, 200, "application/json", o.str());
+
+    } else if (method == "POST" && path == "/api/confirm") {
+      // The human's out-of-band answer to a REVIEW, then execute if approved.
+      const std::uint64_t id = json_u64(body, "decision_id");
+      const bool approved    = json_bool(body, "approved");
+      const std::string ref  = json_str(body, "ref", "mfa_device_9f21");
+      Decision out;
+      if (!gw->confirm(id, approved, ref, now_ns(), out)) {
+        respond(c, 400, "application/json",
+                R"({"ok":false,"error":"no decision awaiting confirmation with that id"})");
+      } else {
+        if (out.has_pct) gw->execute(out, now_ns());
+        live[out.decision_id] = out;
+        std::ostringstream o;
+        o << "{\"ok\":true,\"approved\":" << (approved ? "true" : "false")
+          << ",\"decision\":" << gw->decision_json(out) << "}";
+        respond(c, 200, "application/json", o.str());
+      }
+
+    } else if (method == "GET" && path.rfind("/api/audit", 0) == 0) {
+      respond(c, 200, "application/json", audit_json(wal_path));
+
+    } else if (method == "GET" && path.rfind("/api/evidence", 0) == 0) {
+      const std::uint64_t seq = query_u64(path, "seq");
+      const auto r = evidence_json(wal_path, seq);
+      respond(c, r.found ? 200 : 404, "application/json", r.json);
+
+    } else if (method == "POST" && path == "/api/reset") {
+      // Drop the gateway (releases the WAL lock), truncate, rebuild. Demo repeatability.
+      live.clear();
+      gw.reset();
+      ::truncate(wal_path.c_str(), 0);
+      gw = std::make_unique<Gateway>(wal_path);
+      admit_default(*gw);
+      respond(c, 200, "application/json", R"({"ok":true})");
+
     } else if (method == "POST" && path == "/api/admit") {
       std::string err;
       const bool ok = gw->admit_mandate(body, err);
@@ -132,7 +292,9 @@ static int run(int argc, char** argv) {
     } else if (method == "GET" && path.rfind("/api/wal", 0) == 0) {
       respond(c, 200, "application/json", wal_json(wal_path, 40));
     } else if (method == "GET" && path == "/api/health") {
-      respond(c, 200, "application/json", "{\"ok\":true}");
+      std::ostringstream o;
+      o << "{\"ok\":true,\"rail\":\"" << gw->rail_name() << "\"}";
+      respond(c, 200, "application/json", o.str());
     } else if (method == "GET") {
       std::string f = (path == "/" ? "/index.html" : path);
       if (f.find("..") != std::string::npos) { respond(c, 400, "text/plain", "no"); ::close(c); continue; }
