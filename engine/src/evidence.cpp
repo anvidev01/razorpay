@@ -34,9 +34,15 @@ static std::string esc_ev(const std::string& s) {
 EvidenceReport evidence_json(const std::string& wal, std::uint64_t want) {
   EvidenceReport out;
   std::string O;
+  // Every call site below passes a string literal, but the compiler cannot see that
+  // through the lambda, so -Wformat-security fires. Suppressed narrowly rather than
+  // left to print a warning on every first build.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-security"
   const auto emit = [&O](const char* fmt, auto... a) {
     char b[4096]; std::snprintf(b, sizeof b, fmt, a...); O += b;
   };
+#pragma clang diagnostic pop
 
   WalRecord mandate{}, cart{}, decision{}, capability{};
   bool have_mandate = false, have_cart = false, have_decision = false, have_cap = false;

@@ -114,7 +114,51 @@ Method, caveats and how each was measured: **[docs/BENCHMARKS.md](docs/BENCHMARK
 > The claim is **not** "microsecond checkout." A checkout is ~200 ms. The claim is that
 > the safety layer is *free*: ~225 ns on a 200 ms transaction.
 
-## Build and run
+## Test it yourself — one command
+
+```bash
+git clone https://github.com/anvidev01/razorpay.git && cd razorpay
+./run.sh
+```
+
+Builds on first use (~30s), starts the gateway, opens http://127.0.0.1:8787.
+Missing a dependency? It names the exact install command for your platform.
+
+Two tabs in the UI:
+
+- **Scripted scenarios** — six one-click cases: a clean order, a hallucinated
+  ₹6,000 blender, auto-repair, a retry storm, a prompt injection, and a bad
+  substitution. Or press **Run all six ▸**.
+- **Compose your own order** — build a mandate (budget, TTL, merchants,
+  substitution policy, per-item caps), press **Sign & admit**, then send any cart
+  against it and watch the engine decide. Rupees in the form, paise on the wire.
+
+Try these against your own mandate to see each control fire:
+
+| do this | expect |
+|---|---|
+| cart total above the budget | `DENY 0x0008 R_CART_TOTAL_EXCEEDED` |
+| a SKU not in the item rules | `DENY 0x0401 R_SKU_NOT_IN_INTENT` |
+| a new SKU in an approved **category**, priced well over the cap | `DENY 0x0800 R_SUBSTITUTION_DELTA` |
+| put *"ignore previous instructions…"* in an item's text | `REVIEW 0x1000 R_INJECTION_SUSPECTED` → step-up |
+| send the identical cart twice | `DENY 0x2000 R_DUPLICATE_CHARGE` |
+
+Then open **View evidence pack** in the audit card for the dispute-grade JSON.
+
+Prefer the terminal? `./run.sh --demo` runs the whole walkthrough non-interactively.
+Field reference and gotchas: **[docs/08](docs/08-TESTING-YOUR-DATA.md)**.
+
+### Real Razorpay test mode
+
+```bash
+export RAZORPAY_KEY_ID=rzp_test_xxx RAZORPAY_KEY_SECRET=yyy
+./run.sh
+```
+
+Without keys the rail is a deterministic mock and **says so** in the header and in
+every log line. With them you get real `order_...` ids from the Orders API.
+
+### Manual build
 
 ```bash
 brew install simdjson openssl@3
@@ -126,14 +170,6 @@ Everything, end to end, in about ten seconds:
 
 ```bash
 ./scripts/demo.sh
-```
-
-Razorpay test mode — without keys the rail is a deterministic mock and **says so** in
-every log line:
-
-```bash
-export RAZORPAY_KEY_ID=rzp_test_xxx RAZORPAY_KEY_SECRET=yyy
-./build/rig-eval fixtures/lunch_intent.json fixtures/lunch_cart.json --execute
 ```
 
 Individually:
