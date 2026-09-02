@@ -24,6 +24,11 @@ public:
   virtual PaymentResult create_order(std::int64_t amount_paise,
                                      const std::string& receipt,
                                      const std::string& notes_json) = 0;
+  // Reverse a captured payment. Razorpay refunds a PAYMENT, not an order -- an order
+  // nobody has paid has nothing to give back, which the rail will say plainly.
+  virtual PaymentResult refund(const std::string& payment_id,
+                               std::int64_t amount_paise,
+                               const std::string& notes_json) = 0;
   virtual const char* name() const noexcept = 0;
 };
 
@@ -32,6 +37,8 @@ class MockRail final : public PaymentRail {
 public:
   PaymentResult create_order(std::int64_t amount_paise, const std::string& receipt,
                              const std::string& notes_json) override;
+  PaymentResult refund(const std::string& payment_id, std::int64_t amount_paise,
+                       const std::string& notes_json) override;
   const char* name() const noexcept override { return "mock"; }
 private:
   std::uint64_t seq_ = 1;
@@ -46,6 +53,8 @@ public:
   ~RazorpayTestRail() override;
   PaymentResult create_order(std::int64_t amount_paise, const std::string& receipt,
                              const std::string& notes_json) override;
+  PaymentResult refund(const std::string& payment_id, std::int64_t amount_paise,
+                       const std::string& notes_json) override;
   const char* name() const noexcept override { return "razorpay-test"; }
 private:
   std::string key_id_, key_secret_;

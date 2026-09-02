@@ -31,6 +31,10 @@ const char* reject_name(std::uint32_t bit) noexcept {
     case R_NEW_MERCHANT:         return "R_NEW_MERCHANT";
     case R_ODD_HOUR:             return "R_ODD_HOUR";
     case R_MANDATE_UNKNOWN:      return "R_MANDATE_UNKNOWN";
+    case R_REVERSAL_UNAUTHORISED: return "R_REVERSAL_UNAUTHORISED";
+    case R_REVERSAL_EXCEEDS:      return "R_REVERSAL_EXCEEDS";
+    case R_REVERSAL_NO_PAYMENT:   return "R_REVERSAL_NO_PAYMENT";
+    case R_REVERSAL_DUPLICATE:    return "R_REVERSAL_DUPLICATE";
     default:                     return "R_UNKNOWN";
   }
 }
@@ -55,6 +59,10 @@ const char* reject_help(std::uint32_t bit) noexcept {
     case R_NEW_MERCHANT:         return "merchant never used by this agent before";
     case R_ODD_HOUR:             return "outside this agent's normal active hours";
     case R_MANDATE_UNKNOWN:      return "no mandate with this id has been signed and admitted";
+    case R_REVERSAL_UNAUTHORISED: return "a refund must be signed by the human's device, not requested by the agent";
+    case R_REVERSAL_EXCEEDS:      return "refund is larger than the purchase it reverses";
+    case R_REVERSAL_NO_PAYMENT:   return "the original decision never resulted in a payment";
+    case R_REVERSAL_DUPLICATE:    return "this purchase has already been reversed";
     default:                     return "unknown rejection";
   }
 }

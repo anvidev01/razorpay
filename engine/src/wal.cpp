@@ -24,6 +24,8 @@ const char* rectype_name(RecType t) noexcept {
     case RecType::DUPLICATE_SUPPRESSED: return "DUPLICATE_SUPPRESSED";
     case RecType::STEP_UP_REQUIRED:  return "STEP_UP_REQUIRED";
     case RecType::HUMAN_CONFIRMED:   return "HUMAN_CONFIRMED";
+    case RecType::REVERSAL_REQUESTED: return "REVERSAL_REQUESTED";
+    case RecType::REVERSAL_RESULT:    return "REVERSAL_RESULT";
     default:                         return "UNKNOWN";
   }
 }

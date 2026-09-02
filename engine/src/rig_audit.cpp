@@ -109,6 +109,39 @@ static int run(int argc, char** argv) {
         detail = "agent retry collapsed onto the original decision -- no second charge";
         break;
       }
+      case RecType::REVERSAL_REQUESTED: {
+        struct Req { std::uint64_t rid, of; std::int64_t amt; std::uint32_t bits; char why[64]; };
+        if (r.payload.size() >= sizeof(Req)) {
+          Req q; std::memcpy(&q, r.payload.data(), sizeof q);
+          col = q.bits ? R : Y;
+          std::string codes;
+          for (int b = 0; b < static_cast<int>(R_BIT_COUNT); ++b) {
+            const std::uint32_t bit = 1u << b;
+            if (!(q.bits & bit)) continue;
+            if (!codes.empty()) codes += ", ";
+            codes += reject_name(bit);
+          }
+          std::snprintf(buf, sizeof buf, "refund Rs %.2f of decision #%llu -- %s%s%s",
+            q.amt / 100.0, (unsigned long long)q.of,
+            q.bits ? "REFUSED: " : "authorised", q.bits ? codes.c_str() : "",
+            q.why[0] && !q.bits ? "" : "");
+          detail = buf;
+        }
+        break;
+      }
+      case RecType::REVERSAL_RESULT: {
+        struct Res { std::uint64_t of; std::int64_t amt; std::uint8_t ok; long status;
+                     char ref[40]; char err[96]; };
+        if (r.payload.size() >= sizeof(Res)) {
+          Res s2; std::memcpy(&s2, r.payload.data(), sizeof s2);
+          col = s2.ok ? G : R;
+          std::snprintf(buf, sizeof buf, "%s  http %ld  %s",
+            s2.ok ? "REFUNDED" : "refund failed", s2.status,
+            s2.ok ? s2.ref : (s2.err[0] ? s2.err : "no reason recorded"));
+          detail = buf;
+        }
+        break;
+      }
       case RecType::REMEDIATION: detail = "remediation recorded"; break;
       default: detail = ""; break;
     }

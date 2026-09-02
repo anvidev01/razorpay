@@ -31,6 +31,8 @@ enum class RecType : std::uint8_t {
   DUPLICATE_SUPPRESSED = 10,
   STEP_UP_REQUIRED  = 11,   // REVIEW: engine asked the human before moving money
   HUMAN_CONFIRMED   = 12,   // the human's out-of-band answer, bound to a decision
+  REVERSAL_REQUESTED = 13,  // a refund was asked for, and by whom
+  REVERSAL_RESULT    = 14,  // what the rail did about it
 };
 const char* rectype_name(RecType t) noexcept;
 

@@ -36,7 +36,14 @@ enum Reject : std::uint32_t {
   // validity window was wrong when they had simply never signed the mandate, which
   // sent them checking budgets and clocks instead of pressing the sign button.
   R_MANDATE_UNKNOWN      = 1u << 17,  // nothing has been signed under this id
-  R_BIT_COUNT            = 18
+  // --- reversals. A refund moves money too, so it is policed like a purchase.
+  // In an agentic setting it is the MORE dangerous direction: an agent that can
+  // trigger refunds can drain a merchant to accounts it chooses.
+  R_REVERSAL_UNAUTHORISED = 1u << 18, // not signed by the human's enrolled device
+  R_REVERSAL_EXCEEDS      = 1u << 19, // more than the original purchase
+  R_REVERSAL_NO_PAYMENT   = 1u << 20, // the original never actually paid
+  R_REVERSAL_DUPLICATE    = 1u << 21, // this purchase was already reversed
+  R_BIT_COUNT             = 22
 };
 
 // Three outcomes, not two. A hard intent violation is a DENY. A behavioural signal
@@ -52,6 +59,8 @@ inline constexpr std::uint32_t HARD_DENY_MASK =
     R_MERCHANT_NOT_ALLOWED | R_MANDATE_EXPIRED | R_MANDATE_UNKNOWN |
     R_ARITH_OVERFLOW | R_REPLAY_NONCE |
     R_SCHEMA_VERSION | R_ENGINE_RESOURCE | R_SUBSTITUTION_DENIED | R_SUBSTITUTION_DELTA |
+    R_REVERSAL_UNAUTHORISED | R_REVERSAL_EXCEEDS | R_REVERSAL_NO_PAYMENT |
+    R_REVERSAL_DUPLICATE |
     // A duplicate is deterministic, not probabilistic: the same basket was already
     // decided. It must never be reviewable into a second charge.
     R_DUPLICATE_CHARGE;

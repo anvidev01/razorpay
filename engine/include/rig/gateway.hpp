@@ -28,6 +28,22 @@ struct Confirmation {
   char          human_ref[32]{};   // e.g. the MFA/device reference the human used
 };
 
+// A reversal is a money action in the opposite direction, and in an agentic setting it
+// is the more dangerous one: an agent that can trigger refunds can drain a merchant to
+// accounts of its choosing. So it is policed exactly like a purchase.
+struct Reversal {
+  bool          authorised   = false;
+  std::uint32_t bits         = 0;       // Reject bits explaining a refusal
+  std::uint64_t reversal_id  = 0;
+  std::uint64_t of_decision  = 0;
+  std::int64_t  amount_paise = 0;
+  std::int64_t  original_paise = 0;
+  std::uint64_t wal_seq      = 0;
+  std::string   payment_ref;            // what the rail was asked to reverse
+  PaymentResult payment{};
+  std::string   error;
+};
+
 struct Decision {
   bool          parsed        = false;
   Outcome       outcome       = Outcome::DENY;
@@ -94,6 +110,16 @@ public:
   bool confirm(std::uint64_t decision_id, bool approved, const std::string& human_ref,
                std::uint64_t now_ns, Decision& out);
 
+  // Reverse a completed purchase. The request must carry a signature from the ENROLLED
+  // DEVICE over "reverse:<decision_id>:<amount>" -- an agent cannot authorise its own
+  // refund, which is the control that matters here.
+  Reversal reverse(std::uint64_t decision_id, std::int64_t amount_paise,
+                   const Sig512& sig, const std::array<std::uint8_t, 32>& pub,
+                   const std::string& reason, std::uint64_t now_ns,
+                   const std::string& payment_id_override = "");
+
+  std::string reversal_json(const Reversal& r) const;
+
   // Executes an authorised decision against the payment rail. Requires a valid PCT,
   // so there is no path from the agent to money that skips the engine.
   bool execute(Decision& d, std::uint64_t now_ns);
@@ -134,6 +160,17 @@ private:
     bool          live = false;
   };
   Pending pending_[64]{};
+
+  // Completed purchases, so a reversal can be bounded by what was actually paid.
+  struct Paid {
+    std::int64_t  amount_paise = 0;
+    std::int64_t  reversed_paise = 0;
+    char          order_id[40]{};
+    bool          live = false;
+  };
+  std::unordered_map<std::uint64_t, Paid> paid_;
+  std::uint64_t next_reversal_ = 1;
+  void rebuild_payments();
   std::unordered_map<std::uint64_t, std::uint32_t> by_id_;
   std::uint8_t                 tag_key_[16]{};
   std::array<std::uint8_t, 32> enrolled_pub_{};

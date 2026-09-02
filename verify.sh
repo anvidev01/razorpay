@@ -62,6 +62,37 @@ echo "$out" | grep -q "all bypasses refused" \
 echo "$out" | grep -q "unenrolled device"        && ok "mandate forged by another device refused" || no "forgery: device"
 echo "$out" | grep -q "does not cover this mandate" && ok "mandate altered after signing refused" || no "forgery: tamper"
 
+hdr "3b · Reversals are money actions too"
+# The WAL takes one writer, and a killed process does not release its lock instantly.
+pkill -f "rig-gateway --port 8798" 2>/dev/null; sleep 0.5; rm -f wal/verify_rev.wal
+env -u RAZORPAY_KEY_ID -u RAZORPAY_KEY_SECRET \
+  nohup ./build/rig-gateway --port 8798 --wal wal/verify_rev.wal >/tmp/verify_rev.log 2>&1 </dev/null &
+for i in $(seq 1 60); do curl -s -m 1 http://127.0.0.1:8798/api/health >/dev/null 2>&1 && break; sleep 0.2; done
+
+rid=$(curl -s -m 20 -X POST "http://127.0.0.1:8798/api/decide?execute=1" \
+  -d '{"mandate_id":"mnd_8f21c4","merchant":"swiggy","agent_session_id":"vrev","lines":[{"sku":"SKU_MEAL_THALI_001","unit_paise":24000,"qty":1}]}' \
+  | python3 -c "import json,sys;print(json.load(sys.stdin)['decision']['decision_id'])" 2>/dev/null)
+
+# Build the payload OUTSIDE the call. Escaped quotes nested inside $( ) inside " " were
+# being eaten, so amount_paise arrived as 0 and every check failed for the wrong reason.
+rev() {                       # $1 = amount in paise, $2 = query suffix
+  local payload
+  payload=$(printf '{"decision_id":%s,"amount_paise":%s}' "$rid" "$1")
+  curl -s -m 20 -X POST "http://127.0.0.1:8798/api/reverse$2" -d "$payload" 2>/dev/null
+}
+
+rev 24000 "?as=agent" | grep -q R_REVERSAL_UNAUTHORISED \
+  && ok "an agent cannot authorise its own refund" "signed by a non-enrolled key" \
+  || no "reversal auth"
+rev 99000 "" | grep -q R_REVERSAL_EXCEEDS \
+  && ok "a refund cannot exceed the purchase" || no "reversal bound"
+rev 24000 "" | grep -q '"authorised":true' \
+  && ok "the human's device can authorise a refund" "and it reaches the rail" \
+  || no "reversal happy path"
+rev 100 "" | grep -q R_REVERSAL_DUPLICATE \
+  && ok "a purchase cannot be refunded twice" || no "reversal duplicate"
+pkill -f "rig-gateway --port 8798" 2>/dev/null
+
 hdr "4 · Explainability — audit trail and replay"
 rm -f wal/verify_a.wal
 ./build/rig-eval fixtures/lunch_intent.json fixtures/lunch_cart.json --wal wal/verify_a.wal --execute >/dev/null 2>&1

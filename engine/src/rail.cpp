@@ -25,6 +25,21 @@ PaymentResult MockRail::create_order(std::int64_t amount_paise, const std::strin
   return r;
 }
 
+PaymentResult MockRail::refund(const std::string& payment_id, std::int64_t amount_paise,
+                               const std::string&) {
+  PaymentResult r;
+  r.rail = "mock";
+  const std::uint64_t t0 = mono_us();
+  char buf[64];
+  std::snprintf(buf, sizeof buf, "rfnd_MOCK%010llu", (unsigned long long)seq_++);
+  r.ok          = amount_paise > 0 && !payment_id.empty();
+  r.order_id    = r.ok ? buf : "";
+  r.http_status = r.ok ? 200 : 400;
+  r.error       = r.ok ? "" : "refund needs a payment id and a positive amount";
+  r.latency_us  = mono_us() - t0;
+  return r;
+}
+
 static std::size_t sink(void* p, std::size_t sz, std::size_t n, void* ud) {
   static_cast<std::string*>(ud)->append(static_cast<char*>(p), sz * n);
   return sz * n;
@@ -92,6 +107,50 @@ PaymentResult RazorpayTestRail::create_order(std::int64_t amount_paise,
     r.order_id = field(resp, "id");
     r.ok       = !r.order_id.empty();
     if (!r.ok) r.error = "200 but no order id in response";
+  } else {
+    r.error = field(resp, "description");
+    if (r.error.empty()) r.error = "http " + std::to_string(r.http_status);
+  }
+  return r;
+}
+
+PaymentResult RazorpayTestRail::refund(const std::string& payment_id,
+                                       std::int64_t amount_paise,
+                                       const std::string& notes_json) {
+  PaymentResult r;
+  r.rail = "razorpay-test";
+  const std::uint64_t t0 = mono_us();
+  CURL* c = static_cast<CURL*>(curl_);
+  if (!c) { r.error = "curl init failed"; return r; }
+  curl_easy_reset(c);
+
+  char body[512];
+  std::snprintf(body, sizeof body, R"({"amount":%lld,"notes":%s})",
+                (long long)amount_paise, notes_json.empty() ? "{}" : notes_json.c_str());
+  const std::string url =
+      "https://api.razorpay.com/v1/payments/" + payment_id + "/refund";
+
+  std::string resp;
+  curl_slist* hdr = curl_slist_append(nullptr, "Content-Type: application/json");
+  curl_easy_setopt(c, CURLOPT_URL, url.c_str());
+  curl_easy_setopt(c, CURLOPT_POST, 1L);
+  curl_easy_setopt(c, CURLOPT_POSTFIELDS, body);
+  curl_easy_setopt(c, CURLOPT_HTTPHEADER, hdr);
+  curl_easy_setopt(c, CURLOPT_USERNAME, key_id_.c_str());
+  curl_easy_setopt(c, CURLOPT_PASSWORD, key_secret_.c_str());
+  curl_easy_setopt(c, CURLOPT_WRITEFUNCTION, sink);
+  curl_easy_setopt(c, CURLOPT_WRITEDATA, &resp);
+  curl_easy_setopt(c, CURLOPT_TIMEOUT_MS, 8000L);
+
+  const CURLcode rc = curl_easy_perform(c);
+  curl_easy_getinfo(c, CURLINFO_RESPONSE_CODE, &r.http_status);
+  curl_slist_free_all(hdr);
+  r.latency_us = mono_us() - t0;
+  if (rc != CURLE_OK) { r.error = curl_easy_strerror(rc); return r; }
+  if (r.http_status == 200) {
+    r.order_id = field(resp, "id");           // rfnd_...
+    r.ok       = !r.order_id.empty();
+    if (!r.ok) r.error = "200 but no refund id in response";
   } else {
     r.error = field(resp, "description");
     if (r.error.empty()) r.error = "http " + std::to_string(r.http_status);

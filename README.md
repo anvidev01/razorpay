@@ -124,6 +124,7 @@ of blocking. Method and assumptions: **[docs/07 appendix](docs/07-RISK-METRICS.m
 | Human step-up + confirmation record | `src/gateway.cpp` | Intent, Liability | gated | 01 |
 | Hash-chained WAL | `src/wal.cpp` | Liability | audit trail | 01 |
 | Capability tokens | `include/rig/pct.hpp` | Behaviour, Liability | gated | 01 |
+| Reversals (device-signed refunds) | `src/gateway.cpp` | Liability | bounded, gated | 01 |
 | Razorpay test-mode rail | `src/rail.cpp` | — | — | **01** |
 | Readable audit trail | `src/rig_audit.cpp` | Liability | audit trail | 01 |
 | Dispute evidence pack | `src/rig_evidence.cpp` | Liability | audit trail | 01 / 02 |

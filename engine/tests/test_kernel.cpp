@@ -136,6 +136,25 @@ int main() {
     CHECK(t2.lookup("NEVER_SEEN") == InternTable::INVALID, "unknown sku -> INVALID");
   }
 
+  // ---------------- reversals are money actions too ----------------
+  // A refund moves money in the opposite direction, and in an agentic setting it is the
+  // MORE dangerous direction: an agent that can trigger refunds can drain a merchant.
+  std::printf("\n== reversal policy ==\n");
+  {
+    CHECK((HARD_DENY_MASK & R_REVERSAL_UNAUTHORISED) != 0,
+          "an unsigned refund request is refused, not escalated");
+    CHECK((HARD_DENY_MASK & R_REVERSAL_EXCEEDS) != 0,
+          "refunding more than was paid is refused");
+    CHECK((HARD_DENY_MASK & R_REVERSAL_NO_PAYMENT) != 0,
+          "refunding an unpaid decision is refused");
+    CHECK((HARD_DENY_MASK & R_REVERSAL_DUPLICATE) != 0,
+          "double refunds are refused");
+    CHECK((REVIEW_MASK & R_REVERSAL_UNAUTHORISED) == 0,
+          "  -> none of these escalate; a refund is never a judgement call");
+    CHECK(std::string(reject_help(R_REVERSAL_UNAUTHORISED)).find("human") != std::string::npos,
+          "the refusal names the human device as the required signer");
+  }
+
   // ---------------- stateful bits must not fail a reproducibility check ----------
   // The evidence pack compared the FULL recorded verdict against a single-record
   // replay, so a decision carrying a behavioural bit reported "does not reproduce"

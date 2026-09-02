@@ -252,3 +252,64 @@ against `order_...` resolves to a decision that can be re-executed:
 
 That closes the liability loop: from a disputed charge you reach the human's signed
 intent, and from the signed intent you reach the charge.
+
+---
+
+## Reversals are money actions too
+
+A refund moves money in the opposite direction, and in an agentic setting it is the
+**more** dangerous direction: an agent that can trigger refunds can drain a merchant to
+accounts it chooses. So a reversal is policed exactly like a purchase.
+
+### The control that matters
+
+A refund request must carry an Ed25519 signature from the **enrolled human device** over
+a narrow challenge:
+
+```
+reverse:<decision_id>:<amount_paise>
+```
+
+Naming both the decision and the amount means a signature authorising one refund cannot
+be replayed against a different purchase or a larger sum. **The agent cannot sign it** —
+it holds no key, exactly as with the original mandate.
+
+### Four bounds, all deterministic
+
+| refused when | code |
+|---|---|
+| not signed by the enrolled device | `R_REVERSAL_UNAUTHORISED` |
+| larger than the purchase it reverses | `R_REVERSAL_EXCEEDS` |
+| the original decision never paid | `R_REVERSAL_NO_PAYMENT` |
+| the purchase was already reversed | `R_REVERSAL_DUPLICATE` |
+
+None of these escalate to `REVIEW`. A refund is arithmetic, not a judgement call.
+
+Partial refunds are supported and accumulate: ₹120 + ₹120 against a ₹240 purchase both
+succeed; a third is refused. Only a refund the rail **accepted** consumes the allowance —
+a failed refund leaves it intact.
+
+### In the audit trail
+
+```
+ 7  PAYMENT_RESULT       PAID  http 200  order_MOCK0000000001
+ 8  REVERSAL_REQUESTED   refund Rs 120.00 of decision #1 -- authorised
+ 9  REVERSAL_RESULT      REFUNDED  http 200  rfnd_MOCK0000000002
+10  REVERSAL_REQUESTED   refund Rs 120.00 of decision #1 -- authorised
+11  REVERSAL_RESULT      REFUNDED  http 200  rfnd_MOCK0000000003
+12  REVERSAL_REQUESTED   refund Rs 1.00 of decision #1 -- REFUSED: R_REVERSAL_DUPLICATE
+```
+
+The request is durable **before** the rail is called, so a refund that crashes mid-flight
+is still on record. Payment state is rebuilt from the log on startup, so a restart cannot
+forget a payment and allow it to be refunded twice.
+
+### A limitation, stated plainly
+
+Razorpay refunds a **payment**, not an order. Orders created by this gateway have no
+payments against them — completing one needs a real customer at a real checkout — so
+against the live test rail the refund call returns a genuine
+`"... is not a valid id"` error, which is recorded rather than hidden. The **policy
+layer is fully exercised**: all four bounds are enforced before the rail is ever reached,
+and pass against the deterministic rail where a refund does complete. Supply a real
+`payment_id` and the same code path issues a real refund.

@@ -169,6 +169,34 @@ static std::string audit_json(const std::string& path) {
     } else if (t == RecType::DUPLICATE_SUPPRESSED) {
       kind = "warn"; ++dupes;
       detail = "agent retry collapsed onto the original decision -- no second charge";
+    } else if (t == RecType::REVERSAL_REQUESTED) {
+      struct Req { std::uint64_t rid, of; std::int64_t amt; std::uint32_t bits; char why[64]; };
+      if (r.payload.size() >= sizeof(Req)) {
+        Req q; std::memcpy(&q, r.payload.data(), sizeof q);
+        kind = q.bits ? "bad" : "warn";
+        std::string codes;
+        for (int b = 0; b < static_cast<int>(R_BIT_COUNT); ++b) {
+          const std::uint32_t bit = 1u << b;
+          if (!(q.bits & bit)) continue;
+          if (!codes.empty()) codes += ", ";
+          codes += reject_name(bit);
+        }
+        std::snprintf(buf, sizeof buf, "refund Rs %.2f of decision #%llu -- %s%s",
+          q.amt / 100.0, (unsigned long long)q.of,
+          q.bits ? "REFUSED: " : "authorised by the human", codes.c_str());
+        detail = buf;
+      }
+    } else if (t == RecType::REVERSAL_RESULT) {
+      struct Res { std::uint64_t of; std::int64_t amt; std::uint8_t ok; long status;
+                   char ref[40]; char err[96]; };
+      if (r.payload.size() >= sizeof(Res)) {
+        Res s2; std::memcpy(&s2, r.payload.data(), sizeof s2);
+        kind = s2.ok ? "good" : "bad";
+        std::snprintf(buf, sizeof buf, "%s  http %ld  %s",
+          s2.ok ? "REFUNDED" : "refund failed", s2.status,
+          s2.ok ? s2.ref : (s2.err[0] ? s2.err : "no reason recorded"));
+        detail = buf;
+      }
     } else if (t == RecType::REMEDIATION) {
       detail = "remediation recorded";
     }
@@ -438,6 +466,32 @@ static int run(int argc, char** argv) {
         << ",\"unmatched\":\"" << d.unmatched << "\""
         << ",\"draft\":" << (d.mandate_json.empty() ? "null" : d.mandate_json) << "}";
       respond(c, 200, "application/json", o.str());
+
+    } else if (method == "POST" && path.rfind("/api/reverse", 0) == 0) {
+      // A refund is a money action in the opposite direction. It must be signed by the
+      // human's device over "reverse:<decision>:<amount>" -- ?as=agent signs with a
+      // throwaway key instead, to demonstrate the control rather than assert it.
+      const std::uint64_t did = json_u64(body, "decision_id");
+      const std::int64_t  amt = static_cast<std::int64_t>(json_u64(body, "amount_paise"));
+      const std::string   why = json_str(body, "reason", "customer disputed the charge");
+      const std::string   pid = json_str(body, "payment_id", "");
+      const bool as_agent = path.find("as=agent") != std::string::npos;
+
+      char chal[96];
+      std::snprintf(chal, sizeof chal, "reverse:%llu:%lld",
+                    (unsigned long long)did, (long long)amt);
+      const std::string challenge = chal;
+
+      Reversal rv;
+      if (as_agent) {
+        UserDevice rogue("agent_self_service");
+        rv = gw->reverse(did, amt, rogue.sign(challenge.data(), challenge.size()),
+                         rogue.public_key(), why, now_ns(), pid);
+      } else {
+        rv = gw->reverse(did, amt, device.sign(challenge.data(), challenge.size()),
+                         device.public_key(), why, now_ns(), pid);
+      }
+      respond(c, 200, "application/json", gw->reversal_json(rv));
 
     } else if (method == "POST" && path == "/api/reset") {
       // Drop the gateway (releases the WAL lock), truncate, rebuild. Demo repeatability.

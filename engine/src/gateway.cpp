@@ -16,6 +16,7 @@ Gateway::Gateway(std::string wal_path)
   for (int i = 0; i < 16; ++i) tag_key_[i] = static_cast<std::uint8_t>(0xA5 ^ (i * 31));
   rail_ = make_rail(rail_name_);
   rebuild_idempotency();
+  rebuild_payments();
 }
 
 // An agent retrying after the gateway restarted must still not be charged twice, so
@@ -397,6 +398,13 @@ bool Gateway::execute(Decision& d, std::uint64_t now_ns) {
   wal_->append(RecType::PAYMENT_RESULT, &res, sizeof res);
   wal_->commit();
 
+  if (d.paid) {   // remember what was actually taken, so a refund can be bounded by it
+    Paid pd;
+    pd.live = true;
+    pd.amount_paise = d.amount_paise;
+    std::snprintf(pd.order_id, sizeof pd.order_id, "%s", d.payment.order_id.c_str());
+    paid_[d.decision_id] = pd;
+  }
   if (d.paid) {   // only completed payments shape the behavioural baseline
     const std::time_t secs = static_cast<std::time_t>(now_ns / 1000000000ull);
     std::tm tmv{}; localtime_r(&secs, &tmv);
@@ -525,6 +533,153 @@ std::string Gateway::repair_hint_json(const Decision& d) const {
   }
   o << "],\"resubmit_ok\":" << (first ? "false" : "true")
     << ",\"escalate\":{\"path\":\"new_mandate\",\"requires\":\"user_mfa\"}}";
+  return o.str();
+}
+
+}  // namespace rig
+
+namespace rig {
+
+// Canonical bytes the human's device signs to authorise a refund. Deliberately narrow:
+// it names the decision and the amount, so a signature for one refund cannot be replayed
+// against another decision or a larger sum.
+static std::string esc_str(const std::string& in) {
+  std::string o;
+  for (char c : in) {
+    if (c == '"' || c == '\\') { o += '\\'; o += c; }
+    else if (static_cast<unsigned char>(c) < 0x20) o += ' ';
+    else o += c;
+  }
+  return o;
+}
+
+static std::string reversal_challenge(std::uint64_t decision_id, std::int64_t amount) {
+  char b[96];
+  std::snprintf(b, sizeof b, "reverse:%llu:%lld",
+                (unsigned long long)decision_id, (long long)amount);
+  return b;
+}
+
+void Gateway::rebuild_payments() {
+  // Which decisions actually resulted in money moving, and how much. Rebuilt from the
+  // log so a restart cannot forget a payment and let it be refunded twice.
+  struct PR { std::uint64_t id; std::uint8_t ok; long status; char order[40]; char err[80]; };
+  std::unordered_map<std::uint64_t, std::int64_t> amounts;
+  wal_scan(wal_path_, [&](const WalRecord& r) {
+    const auto t = static_cast<RecType>(r.hdr.type);
+    if (t == RecType::POLICY_DECISION && r.payload.size() == sizeof(DecisionPayload)) {
+      DecisionPayload dp; std::memcpy(&dp, r.payload.data(), sizeof dp);
+      amounts[r.hdr.seq] = dp.recorded_total;
+    } else if (t == RecType::PAYMENT_RESULT && r.payload.size() >= sizeof(PR)) {
+      PR pr; std::memcpy(&pr, r.payload.data(), sizeof pr);
+      if (!pr.ok) return true;
+      Paid p;
+      p.live = true;
+      std::snprintf(p.order_id, sizeof p.order_id, "%s", pr.order);
+      for (const auto& [seq, amt] : amounts) if (seq < r.hdr.seq) p.amount_paise = amt;
+      paid_[pr.id] = p;
+    } else if (t == RecType::REVERSAL_RESULT && r.payload.size() >= 24) {
+      std::uint64_t of = 0; std::int64_t amt = 0;
+      std::memcpy(&of, r.payload.data(), 8);
+      std::memcpy(&amt, r.payload.data() + 8, 8);
+      auto it = paid_.find(of);
+      if (it != paid_.end()) it->second.reversed_paise += amt;
+    }
+    return true;
+  });
+}
+
+Reversal Gateway::reverse(std::uint64_t decision_id, std::int64_t amount_paise,
+                          const Sig512& sig, const std::array<std::uint8_t, 32>& pub,
+                          const std::string& reason, std::uint64_t now_ns,
+                          const std::string& payment_id_override) {
+  Reversal rv;
+  rv.reversal_id  = next_reversal_++;
+  rv.of_decision  = decision_id;
+  rv.amount_paise = amount_paise;
+
+  // 1. THE control. A refund must be authorised by the human's enrolled device. An
+  //    agent asking for its own refund is the drain-the-merchant attack, and it is
+  //    refused here rather than anywhere downstream.
+  const std::string challenge = reversal_challenge(decision_id, amount_paise);
+  if (!device_enrolled_ || pub != enrolled_pub_ ||
+      !verify_detached(pub.data(), challenge.data(), challenge.size(), sig)) {
+    rv.bits  |= R_REVERSAL_UNAUTHORISED;
+    rv.error  = "a refund must be signed by the enrolled device over \"" + challenge + "\"";
+  }
+
+  // 2. There must be something to give back.
+  auto it = paid_.find(decision_id);
+  if (it == paid_.end() || !it->second.live) {
+    rv.bits |= R_REVERSAL_NO_PAYMENT;
+    if (rv.error.empty()) rv.error = "decision " + std::to_string(decision_id)
+                                   + " never resulted in a payment";
+  } else {
+    rv.original_paise = it->second.amount_paise;
+    rv.payment_ref    = payment_id_override.empty() ? it->second.order_id
+                                                    : payment_id_override;
+    // 3. Never more than was taken.
+    if (amount_paise <= 0 || amount_paise > it->second.amount_paise)
+      rv.bits |= R_REVERSAL_EXCEEDS;
+    // 4. Never twice. Only meaningful once something HAS been reversed -- otherwise an
+    //    over-large request reported both EXCEEDS and DUPLICATE, and "already reversed"
+    //    is simply false when nothing has been.
+    if (it->second.reversed_paise > 0 &&
+        it->second.reversed_paise + amount_paise > it->second.amount_paise)
+      rv.bits |= R_REVERSAL_DUPLICATE;
+  }
+
+  struct Req { std::uint64_t rid, of; std::int64_t amt; std::uint32_t bits; char why[64]; } req{};
+  req.rid = rv.reversal_id; req.of = decision_id; req.amt = amount_paise; req.bits = rv.bits;
+  std::snprintf(req.why, sizeof req.why, "%s", reason.c_str());
+  rv.wal_seq = wal_->append(RecType::REVERSAL_REQUESTED, &req, sizeof req);
+  wal_->commit();                       // the request is durable before anything moves
+
+  if (rv.bits) return rv;               // refused; nothing reaches the rail
+
+  char notes[256];
+  std::snprintf(notes, sizeof notes,
+    R"({"reversal_id":"%llu","of_decision":"%llu","gateway":"intent-gateway"})",
+    (unsigned long long)rv.reversal_id, (unsigned long long)decision_id);
+  rv.payment    = rail_->refund(rv.payment_ref, amount_paise, notes);
+  rv.authorised = true;
+
+  struct Res { std::uint64_t of; std::int64_t amt; std::uint8_t ok; long status;
+               char ref[40]; char err[96]; } res{};
+  res.of = decision_id; res.amt = amount_paise; res.ok = rv.payment.ok ? 1 : 0;
+  res.status = rv.payment.http_status;
+  std::snprintf(res.ref, sizeof res.ref, "%s", rv.payment.order_id.c_str());
+  std::snprintf(res.err, sizeof res.err, "%s", rv.payment.error.c_str());
+  wal_->append(RecType::REVERSAL_RESULT, &res, sizeof res);
+  wal_->commit();
+
+  if (rv.payment.ok) it->second.reversed_paise += amount_paise;
+  return rv;
+}
+
+std::string Gateway::reversal_json(const Reversal& r) const {
+  std::ostringstream o;
+  o << "{\"reversal_id\":" << r.reversal_id
+    << ",\"of_decision\":" << r.of_decision
+    << ",\"authorised\":" << (r.authorised ? "true" : "false")
+    << ",\"amount_paise\":" << r.amount_paise
+    << ",\"original_paise\":" << r.original_paise
+    << ",\"wal_seq\":" << r.wal_seq
+    << ",\"payment_ref\":\"" << r.payment_ref << "\""
+    << ",\"refund_id\":\"" << r.payment.order_id << "\""
+    << ",\"http_status\":" << r.payment.http_status
+    << ",\"rail_error\":\"" << esc_str(r.payment.error) << "\""
+    << ",\"error\":\"" << esc_str(r.error) << "\""
+    << ",\"reasons\":[";
+  bool first = true;
+  for (int b = 0; b < static_cast<int>(R_BIT_COUNT); ++b) {
+    const std::uint32_t bit = 1u << b;
+    if (!(r.bits & bit)) continue;
+    if (!first) o << ",";
+    first = false;
+    o << "{\"code\":\"" << reject_name(bit) << "\",\"detail\":\"" << reject_help(bit) << "\"}";
+  }
+  o << "]}";
   return o.str();
 }
 
