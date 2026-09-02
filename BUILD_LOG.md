@@ -109,3 +109,121 @@ tamper demo, HTTP server, and the vanilla-JS demo UI.
 **Crypto verified against published vectors, not just "it runs":** SipHash-2-4-128 of
 the empty input under the reference key = `a3817f04ba25a8e66df67214c7550293`;
 CRC32C("123456789") = `e3069283`; SHA-256("abc") = `ba7816bf…f20015ad`.
+
+---
+
+## Phase 1 — the engine (02 Sep, 05:59–06:17)
+
+Nine commits: zero-allocation core, deterministic kernel, hash-chained WAL with
+recovery and an exclusive-writer lock, simdjson ingest, capability tokens, gateway
+orchestration with group commit, the auditor and bypass suite, the loopback UI, and an
+**independent Java implementation of the same policy**.
+
+The Java auditor exists so "explainable" is checkable rather than asserted: it shares no
+code with the C++ engine and must agree bit-for-bit on every recorded decision.
+
+**Estimates replaced with measurements** the same day — every number in the docs comes
+from a benchmark that ships in the repo.
+
+## Phase 2 — the four agentic blind spots (12:30)
+
+Researched first, built second. All four confirmed real and current, with sources in
+`docs/06`. NPCI's Reserve Pay cap is exactly ₹10,000/90 days; Razorpay + NPCI announced
+agentic payments on Claude in Feb 2026.
+
+Built: substitution policy (the ₹180-organic-for-₹60-toned case), injection telemetry
+(explicitly *not* the security boundary), semantic idempotency that survives restart,
+and the dispute evidence pack.
+
+## Phase 3 — three outcomes, and Track 02 (13:26–14:10)
+
+ALLOW / REVIEW / DENY instead of a binary, so a probabilistic signal escalates to the
+human rather than killing a legitimate sale. Human step-up with a confirmation record
+bound to the cart hash. Payment execution through the rail.
+
+**Bug found by driving the real UI:** `execute()` passed merchant id 0 to `observe()`,
+so the behavioural baseline never learned any merchant and `R_NEW_MERCHANT` fired
+forever. The Track 02 detector was useless outside its own harness.
+
+## Phase 4 — making it usable (15:11–16:21)
+
+Compose-your-own-order, a one-command runner, and natural language → draft mandate
+(the model proposes, the human signs — the model holds no key).
+
+**The translator broke three times, each caught by using it:**
+1. "mojito" silently became a lime soda — an unrequested substitution, the exact failure
+   this project exists to prevent, in my own code.
+2. My fix used a hardcoded food-word list, so "chicken tikka" became chicken biryani.
+   Replaced with a rule derived from the merchant's own catalogue vocabulary.
+3. That fix over-corrected: an unknown dish two words away killed a *valid* neighbour
+   ("suji halwa with mojito" dropped the mojito). Adjacency tightened to immediate.
+
+25 regression tests pin all three.
+
+## Phase 5 — security audit (16:39)
+
+Tested the running system rather than reading it. Six findings, detail in `docs/09`.
+
+**Critical:** quantity caps were enforced *per line*, and the agent chooses how many
+lines it sends — ten lines of qty 1 bought ten of a max-one item, `ALLOW 0x0000`. The
+core claim of the project, silently broken.
+
+**High:** the mandate was signed *and* verified with the gateway's own key, so it only
+proved the gateway agreed with itself. A separate `UserDevice` now holds the signing
+key; the gateway is enrolled with the public half and cannot sign. Three forgeries are
+demonstrated refused. Also `Access-Control-Allow-Origin: *` on a money endpoint, and
+evidence packs emitting malformed JSON above 4 KB.
+
+## Phase 6 — production readiness (18:12–19:50)
+
+`./verify.sh` — one command, 27 checks, non-zero exit on failure.
+
+**The project was macOS-only.** `clock_gettime_nsec_np` and `F_FULLFSYNC` are Darwin
+extensions and CMake hardcoded Homebrew paths, so a judge following the Debian
+instructions in `run.sh` could not build it at all. Portable clock layer, cross-platform
+CMake, CI on Ubuntu *and* macOS.
+
+Real Razorpay test-mode integration verified end to end: an order created, then **read
+back out of `api.razorpay.com`** carrying `mandate_id`, `decision_id` and `wal_seq`.
+Traceability is bidirectional — from a disputed charge to the signed intent, and back.
+
+Connection reuse took the rail from 3.4 s cold / 163–200 ms steady to 176 ms cold /
+**69–95 ms warm**.
+
+## Phase 7 — the Track 02 bar, taken literally (20:13)
+
+The bar says *"precision and recall on a held-out test set."* Mine were 24 hand-written
+cases I had **also tuned the thresholds against**, reporting precision 1.00 / FPR 0.00.
+
+On a proper held-out split that same detector scored **precision 0.278, FPR 12.1%**.
+The earlier numbers were fiction.
+
+Root cause was design, not tuning: firing on *any* single signal made `R_NEW_MERCHANT`
+an accusation, and 906 legitimate transactions in the set were at a merchant the agent
+had not used before. Signals are now weighted and must corroborate.
+
+```
+held-out: precision 0.908  recall 0.301  FPR 0.002  (0.20% of good traffic prompted)
+train F1 0.401 vs test 0.452 — no meaningful overfitting
+```
+
+Recall 0.30 is reported as the honest number, with the full tradeoff curve.
+
+**Two harness bugs found alongside it**, both of which would have produced misleading
+numbers: a failed threshold sweep silently reported untuned defaults as chosen, and a
+`printf` format mismatch read a pointer as a double and segfaulted. The build had no
+warning flags. It does now — `-Wall -Wextra -Wformat=2`, zero warnings — which also
+surfaced dead code behind the "3 meals of different category" complaint.
+
+---
+
+## What this log is for
+
+Every entry above that begins with a bug is one I introduced and then found by
+**using the thing**, not by reading it. The `max_qty` bypass, the fictional metrics and
+the silent substitutions were all in code I had already called finished.
+
+That is the argument for the architecture, not an embarrassment to it: the layer above
+the kernel drifts, so the kernel has to check the cart — and the numbers have to come
+from data the tuning never saw.
+
