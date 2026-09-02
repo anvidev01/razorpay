@@ -19,7 +19,7 @@ if(NOT OPENSSL_PREFIX)
 endif()
 
 add_library(rigcore STATIC
-  src/kernel.cpp src/crypto.cpp src/wal.cpp src/parse.cpp src/pct.cpp src/gateway.cpp src/rail.cpp)
+  src/kernel.cpp src/crypto.cpp src/wal.cpp src/parse.cpp src/pct.cpp src/gateway.cpp src/rail.cpp src/evidence.cpp)
 target_include_directories(rigcore PUBLIC include ${SIMDJSON_PREFIX}/include ${OPENSSL_PREFIX}/include)
 target_link_directories(rigcore PUBLIC ${SIMDJSON_PREFIX}/lib ${OPENSSL_PREFIX}/lib)
 target_link_libraries(rigcore PUBLIC simdjson crypto curl)
