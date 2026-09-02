@@ -493,7 +493,10 @@ $('c-interpret').onclick = async () => {
 
   if (!j.ok) {
     box.className = 'interp warn';
-    box.textContent = 'could not interpret that: ' + (j.note || 'no match');
+    box.innerHTML = `<b>Cannot draft a mandate:</b> ${j.note || 'no match'}`
+      + (j.unmatched ? `<span class="src">this merchant does not sell: ${j.unmatched}</span>` : '')
+      + `<span class="src">refusing is the correct answer here — quietly substituting
+         something else is the exact failure this project exists to prevent</span>`;
     return;
   }
   const d = j.draft;
@@ -524,6 +527,12 @@ $('c-interpret').onclick = async () => {
     <span class="src">${src} · this is a DRAFT — review the fields below, nothing is
     signed until you press Sign &amp; admit</span>`;
   if (j.note) box.innerHTML += `<span class="src">note: ${j.note}</span>`;
+  // Never let an unavailable item pass silently -- say what could not be sourced.
+  if (j.unmatched) {
+    box.className = 'interp warn';
+    box.innerHTML += `<span class="src"><b>not in this merchant's catalogue:</b>
+      ${j.unmatched} — left out of the mandate rather than swapped for something else</span>`;
+  }
   msg('user', 'you', utterance);
   msg('agent', 'assistant', `I read that as: ${d.interpretation}. Confirm and I'll get it signed.`);
 };

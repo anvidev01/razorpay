@@ -292,6 +292,7 @@ static int run(int argc, char** argv) {
         << ",\"output_tokens\":" << d.output_tokens
         << ",\"interpretation\":\"" << d.interpretation << "\""
         << ",\"note\":\"" << d.error << "\""
+        << ",\"unmatched\":\"" << d.unmatched << "\""
         << ",\"draft\":" << (d.mandate_json.empty() ? "null" : d.mandate_json) << "}";
       respond(c, 200, "application/json", o.str());
 

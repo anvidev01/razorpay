@@ -21,6 +21,7 @@ struct IntentDraft {
   std::string interpretation;// one line shown to the human before they confirm
   std::string mandate_json;  // the DRAFT mandate, unsigned
   std::string error;
+  std::string unmatched;     // words the person asked for that this catalogue has no item for
   std::uint64_t latency_ms = 0;
   int         input_tokens  = 0;
   int         output_tokens = 0;

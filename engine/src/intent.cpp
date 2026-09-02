@@ -203,7 +203,9 @@ IntentDraft translate_local(const std::string& utterance, const std::string& cat
       nums.push_back(std::atof(n.c_str()));
       i = j;
     }
-    for (double v : nums) budget = std::max(budget, v);
+    // "2 drinks" is a quantity, not a budget. Only amounts that could plausibly be
+    // money count; anything smaller is a count and must not become the cap.
+    for (double v : nums) if (v >= 50) budget = std::max(budget, v);
 
     // Spelled-out amounts: "rupees thousand", "five hundred", "two thousand".
     // Without this, "under the budget of rupees thousand" silently loses the budget --
@@ -266,15 +268,67 @@ IntentDraft translate_local(const std::string& utterance, const std::string& cat
     d.error = e.what();
     return d;
   }
-  if (picks.empty()) { d.error = "no catalogue item matched that request"; return d; }
+  // Anything the person named that this catalogue cannot satisfy must be REPORTED,
+  // not quietly swapped for something else. Silently serving lime soda when someone
+  // asked for a mojito is precisely the unrequested substitution this whole project
+  // exists to catch -- the translator does not get an exemption.
+  {
+    static const char* kFoodWords[] = {
+      "mojito","shake","smoothie","lassi","pizza","dosa","paneer","burger","pasta",
+      "sandwich","noodles","momos","salad","soup","ice cream","brownie","cake",
+      "juice","beer","wine","chai","tea","curd","paratha","idli","vada","samosa"};
+    std::vector<std::string> missing;
+    for (const char* w : kFoodWords) {
+      if (low.find(w) == std::string::npos) continue;
+      bool served = false;
+      for (auto& p : picks) {
+        std::string nl = p.name;
+        std::transform(nl.begin(), nl.end(), nl.begin(), ::tolower);
+        if (nl.find(w) != std::string::npos) { served = true; break; }
+      }
+      if (!served) missing.push_back(w);
+    }
+    for (std::size_t i = 0; i < missing.size(); ++i)
+      d.unmatched += (i ? ", " : "") + missing[i];
+  }
 
-  // Collapse to ONE item per category. "two meals and a drink" means two of some
-  // main and one of some drink -- not two of every main on the menu. A specific
+  if (picks.empty()) {
+    d.error = "nothing in this merchant's catalogue matches that request";
+    return d;
+  }
+
+  // If a category has a NAMED item ("mojito", "shake"), drop the generic match in
+  // that same category. Asking for "2 drinks, a shake and a mojito" must not also
+  // add a lime soda because the word "drink" appeared.
+  {
+    std::vector<std::string> specific_cats;
+    for (auto& p : picks)
+      if (p.specific) specific_cats.push_back(p.cat);
+    picks.erase(std::remove_if(picks.begin(), picks.end(), [&](const Pick& p) {
+      return !p.specific && std::find(specific_cats.begin(), specific_cats.end(), p.cat)
+                            != specific_cats.end();
+    }), picks.end());
+  }
+
+  // "3 meals of DIFFERENT category each" / "a variety" means keep the distinct
+  // matches rather than collapsing them.
+  const bool wants_variety =
+      low.find("different") != std::string::npos ||
+      low.find("variety")   != std::string::npos ||
+      low.find("assorted")  != std::string::npos ||
+      low.find(" each")     != std::string::npos;
+
+  // Otherwise collapse to ONE item per category: "two meals and a drink" means two of
+  // some main and one of some drink -- not two of every main on the menu. A specific
   // word ("biryani") wins its category; otherwise the cheapest option does.
+  // Every item the person NAMED is kept, even several in one category -- "a pizza,
+  // a dosa and a lassi" is three items, not one main and one drink. Only generic
+  // matches ("meal", "drink") collapse to a single representative per category.
   std::vector<Pick> uniq;
   for (auto& p : picks) {
+    if (p.specific) { uniq.push_back(p); continue; }
     auto f = std::find_if(uniq.begin(), uniq.end(),
-                          [&](const Pick& u) { return u.cat == p.cat; });
+                          [&](const Pick& u) { return u.cat == p.cat && !u.specific; });
     if (f == uniq.end()) { uniq.push_back(p); continue; }
     const bool better = (p.specific && !f->specific) ||
                         (p.specific == f->specific && p.price < f->price);
