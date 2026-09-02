@@ -48,7 +48,7 @@ else()                                   # Homebrew layout
   target_link_libraries(rigcore PUBLIC simdjson)
 endif()
 
-foreach(tool rig_eval rig_replay rig_gateway rig_attack rig_load rig_evidence rig_audit rig_riskeval wal_dump)
+foreach(tool rig_eval rig_replay rig_gateway rig_attack rig_load rig_evidence rig_audit rig_riskeval rig_intent wal_dump)
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/${tool}.cpp)
     string(REPLACE "_" "-" bin ${tool})
     add_executable(${bin} src/${tool}.cpp)
