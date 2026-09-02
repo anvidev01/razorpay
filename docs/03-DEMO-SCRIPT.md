@@ -1,39 +1,53 @@
-# 03 — The 5-Minute Pitch
+# 03 — The 5-Minute Recording Script
 
-Two windows, side by side. **Left**: the UI at `http://127.0.0.1:8787`.
-**Right**: a terminal, font large enough to read on a phone.
+**Track 01 · AI Growth & Agentic Commerce**
 
-**Before you record**
+Read this out loud. Every number in it is checked by `./verify.sh` (40/40) — if a
+claim here ever stops being true, verification fails before the video does.
+
+**Setup:** left = UI at `http://127.0.0.1:8787`, right = terminal at ~18pt. 1080p60.
 
 ```bash
-cp .env.example .env        # put the real Razorpay test key in it
-./verify.sh                 # 25 checks; if anything fails, do not record yet
-./run.sh                    # header must read `rail razorpay-test`, not `mock`
+./scripts/seed.sh     # fresh WAL, mandate windows refreshed
+./verify.sh           # must read 40 passed, 0 failed
+./run.sh              # header must read `rail razorpay-test`, NOT `mock`
 ```
 
-If the header says `mock`, the key is not loading — a judge will notice, and it
-undercuts the one claim Track 01 asks for by name.
+Click one scenario **before** recording — the first Razorpay call pays a TLS
+handshake (~176 ms vs ~69 ms warm).
+
+| | segment | ends |
+|---|---|---|
+| 0:00 | The gap in agentic payments | 0:30 |
+| 0:30 | The mandate — what a human actually signs | 1:00 |
+| 1:00 | Happy path, live on Razorpay | 1:35 |
+| 1:35 | Three ways agents lose money | 2:25 |
+| 2:25 | The subscription trap, and asking a human | 2:55 |
+| 2:55 | Try to get around it | 3:25 |
+| 3:25 | One engine, five industries | 3:50 |
+| 3:50 | Prove it after the fact | 4:25 |
+| 4:25 | Numbers, and the bug I found in myself | 5:00 |
 
 ---
 
-## 0:00 – 0:35 · The problem
+## 0:00 – 0:30 · The gap
 
-> "NPCI is rolling out agentic payments on UPI. Razorpay and NPCI announced it on
-> Claude in February — Zomato, Swiggy, Zepto. The rail blocks up to ten thousand
-> rupees and checks two things: is this a registered agent, and is it under the
-> limit.
+> "**Agentic commerce** is shipping. NPCI is rolling out **agentic payments on UPI**;
+> Razorpay announced **Agent Pay**. Google has **AP2**, OpenAI has **ACP**. Every one of
+> them answers the same two questions: is this a **registered agent**, and is it under
+> the **transaction limit**.
 >
-> Both necessary. Neither looks at the cart.
+> Both necessary. Neither one looks at the cart.
 >
-> So if your agent orders a six-thousand-rupee blender instead of a four-hundred-rupee
-> lunch, six thousand is less than ten thousand — and every system in the chain
-> approves it."
-
-*On screen: the hero line, "bounded by what the human agreed to".*
+> So when an **autonomous agent** orders a six-thousand-rupee blender instead of a
+> four-hundred-rupee lunch — six thousand is under the ten-thousand limit, the agent is
+> registered, and **every system in the chain approves it.**
+>
+> I built the layer that reads the cart."
 
 ---
 
-## 0:35 – 1:05 · What the human actually authorises
+## 0:30 – 1:00 · The mandate
 
 *Compose your own order → type it live.*
 
@@ -41,163 +55,204 @@ undercuts the one claim Track 01 asks for by name.
 order me lunch, a thali and a drink, under 500 rupees
 ```
 
-> "The assistant drafts. It does **not** authorise. I read one plain-English sentence
-> back — two items, these ceilings, this budget — and **I** press sign. The signing key
-> is on the user's device. The gateway holds only the public half and cannot sign a
-> mandate at all."
+> "The **LLM drafts**. It does not **authorise**. What comes back is a **scoped
+> mandate** in plain English — two items, these **price ceilings**, this **budget**,
+> these merchants, expires in an hour. I read it, and **I** sign it.
+>
+> Signed with **Ed25519**, on the user's device. The gateway is enrolled with **only the
+> public half — it cannot sign a mandate at all.** That's the difference between a
+> shared secret and a real signature: a system that can verify but not forge."
 
-*Press **Sign & admit**. Point at the `HUMAN · once` badge.*
+*Press **Sign & admit**. Point at `HUMAN · once`.*
 
-> "Once. Not per purchase."
+> "**Once.** Not per purchase. That's what makes it **agentic** and not just checkout
+> with extra steps."
 
 ---
 
-## 1:05 – 1:45 · The happy path, and the receipt
+## 1:00 – 1:35 · Happy path
 
 *Send to gateway.*
 
-> "Thirty-one nanoseconds to decide. Four milliseconds to make that decision durable.
-> And there — the actual call to Razorpay: seventy milliseconds.
+> "**Thirty-one nanoseconds** to decide — a **deterministic, branch-free policy kernel**,
+> no allocation, no floats, integer paise only. Four milliseconds to make that decision
+> **durable**. Then the real call to **Razorpay Orders API**: sixty-nine milliseconds.
 >
-> The check costs thirty-one nanoseconds. The payment it protects costs seventy
-> milliseconds. The safety layer is two million times faster than the thing it guards.
-> It is free."
+> The check costs thirty-one nanoseconds. The payment it guards costs sixty-nine
+> milliseconds. **The safety layer is two million times faster than the thing it
+> protects. It is free.**"
 
-*Point at the audit panel filling in.*
+*Point at the audit panel.*
 
-> "Mandate signed. Cart proposed. Decision. Token minted. Payment attempted. Paid —
-> that's a real order id from Razorpay test mode. Every money action, in order, with
-> the reason."
+> "Mandate signed. Cart proposed. Decision. **Capability token** minted. Payment
+> attempted. Paid — a real **order id from Razorpay test mode**. Every money action, in
+> order, with its reason. And the token is minted **only after the decision is durable**
+> — you can never have a payment this log doesn't explain."
 
 ---
 
-## 1:45 – 2:40 · Three failures, handled
+## 1:35 – 2:25 · Three ways agents lose money
 
 *Scripted scenarios tab.*
 
-**Blender** — `2 · Hallucinated item`
+**`2 · Hallucinated item`**
 
-> "`DENY`, `0x000D`. Three reasons at once — the kernel never stops at the first, so
-> you get the whole story. And no token exists, so this cart *cannot* reach the rail."
+> "**DENY**, `0x000D`. **Three reasons at once** — the kernel never stops at the first
+> failure, so you get the whole story, not the first complaint. And **no capability token
+> exists**, so this cart physically cannot reach the rail."
 
-**Auto-repair** — `3`
+**`3 · Auto-repair`**
 
-> "The agent drops it and resubmits. **The lunch still arrives.** Blocking isn't the
-> product; blocking without breaking the user's actual goal is."
+> "The agent drops the bad line and resubmits. **The lunch still arrives.** Blocking
+> isn't the product — blocking *without breaking the user's goal* is. That's the
+> difference between a **guardrail** and an outage."
 
-**Retry storm** — `4`
+**`4 · Retry storm`**
 
-> "Checkout times out. A human clicks retry — same bytes. An agent **regenerates** the
-> request: reordered lines, new client ref. Every rail sees a new order and charges
-> twice. We key on the canonical cart, so it collapses. One charge."
+> "Checkout times out. A human retries with the same bytes. An **agent regenerates** —
+> reordered lines, new client reference. Every rail sees a brand-new order and **charges
+> twice**. We key on the **canonical cart hash**, so it collapses. **Semantic
+> idempotency.** One charge."
 
 ---
 
-## 2:40 – 3:20 · When it isn't sure, it asks
+## 2:25 – 2:55 · Subscriptions, and asking a human
 
-*Scenario `5 · Hidden instructions`.*
+**`6 · Hidden subscription`**
 
-> "Hidden text on the merchant page. Every item here is inside the mandate — only the
-> text is hostile. So this is `REVIEW`, not `DENY`."
+> "One rupee today. **Nine hundred ninety-nine every month after.** The cart total is one
+> rupee — under budget, correct merchant, real SKU. **Every limit-based check passes.**
+> We deny it `0x400000`, because the mandate authorised a purchase, not a **recurring
+> commitment**."
 
-*Point at the step-up card.*
+**`5 · Hidden instructions`**
 
-> "A behavioural signal is probabilistic. Auto-blocking on a guess turns every false
-> positive into a lost sale. Here it costs one tap."
+> "**Prompt injection** on the merchant page. Every item is inside the mandate — only the
+> text is hostile. So this is **REVIEW**, not DENY."
 
 *Press **Approve · MFA**.*
 
-> "Human answer recorded, bound to this decision **and** this cart hash. Token minted.
-> Paid. That binding is what a chargeback turns on."
+> "A behavioural signal is **probabilistic**. Auto-blocking a guess turns every false
+> positive into a lost sale. Here it costs one tap — **human-in-the-loop**, recorded, and
+> bound to this decision **and** this cart hash. That binding is what a **chargeback**
+> turns on."
 
 ---
 
-## 3:20 – 4:00 · Try to get around it
+## 2:55 – 3:25 · Try to get around it
 
-*Terminal: `./build/rig-attack`*
+*Terminal: `./build/rig-attack` — let the wall of REFUSED sit for two seconds.*
 
-> "Eight ways to move money without permission."
+> "Eight ways to move money without permission. **All eight refused. Exactly one
+> legitimate payment authorised.**"
 
-*Let the list land, then read three:*
+*Read three:*
 
-> "Forge the mandate with another device — refused, wrong key. Raise the budget after
-> signing — refused, the signature covers the exact bytes. Skip the gateway entirely —
-> there is no token, and the executor accepts nothing else.
+> "Sign the mandate with a **different device** — refused, unenrolled key. **Raise the
+> budget after signing** — refused, the signature covers the exact bytes. **Skip the
+> gateway entirely** — there's no token, and the executor accepts nothing else. Replay a
+> used one — **nonce already burned**.
 >
-> The agent holds no Razorpay credentials. Getting around this isn't a prompt
-> engineering problem. It's forging Ed25519."
+> The agent holds **no Razorpay credentials at any point.** Getting around this isn't a
+> prompt-engineering problem. It's forging Ed25519."
 
 ---
 
-## 4:00 – 4:35 · Prove it afterwards
+## 3:25 – 3:50 · One engine, five industries
 
-*Terminal:*
+*Terminal: `./scripts/sectors.sh`*
+
+> "Same binary, five sectors, five different controls. **Online retail** — a sixty-two
+> thousand rupee tablet in an accessories restock, denied. **SaaS** — thirty seats split
+> across three lines against a twenty-five seat cap; **aggregate quantity**, because the
+> agent chooses how many lines it sends. **Travel** — second flight breaks the budget.
+> **B2B procurement** — unapproved vendor. **Subscriptions** — the trap you just saw.
+>
+> **Nothing changed but the fixtures.** There is not one food concept in the kernel.
+> This is **payments infrastructure**, not a shopping demo."
+
+---
+
+## 3:50 – 4:25 · Prove it afterwards
 
 ```bash
 ./build/rig-replay wal/rig.wal
 java -cp control-plane/out com.razorpay.rig.ReplayAuditor wal/rig.wal
 ```
 
-> "The C++ engine replays its own log. Then a **Java re-implementation that shares no
-> code with it** replays the same log and agrees bit for bit. Zero divergences."
+> "The C++ engine **replays its own log** from recorded inputs. Then a **Java
+> re-implementation that shares no code with it** replays the same log and agrees bit for
+> bit. **Zero divergences.** Two independent implementations of the same policy."
 
-*`./scripts/tamper.sh` — one bit.*
+*`./scripts/tamper.sh` — flip one bit.*
 
-> "Flip one bit anywhere and the chain refuses to verify."
+> "**Hash-chained, tamper-evident write-ahead log.** Change one bit anywhere and the
+> chain refuses to verify. A database row you can edit quietly; this you cannot."
 
-*UI: **View evidence pack**.*
+*UI → **View evidence pack**.*
 
-> "For a dispute: what the human approved, which device signed it, what the agent
-> proposed, what was decided and why — and section six **re-runs the decision** and
-> confirms it matches. Today the merchant absorbs these losses because none of that
-> exists."
-
----
-
-## 4:35 – 5:00 · Close
-
-> "Thirty-one nanoseconds on a two-hundred-millisecond checkout. The safety layer is
-> free.
->
-> I audited my own engine and found a real one: quantity caps were enforced per line,
-> and the *agent* chooses how many lines it sends — so ten lines of one bought ten of a
-> max-one item. Fixed, and pinned in the tests. That bug is the argument for the whole
-> project: the layer above the kernel drifts, so the kernel has to check the cart.
->
-> Clone it and run `./verify.sh`. Twenty-five checks, and it exits non-zero if any of
-> this was a lie."
+> "For a **dispute**: what the human approved, which device signed it, what the agent
+> proposed, what was decided and why — and section six **re-runs the decision and
+> confirms it still matches**. Today the merchant absorbs these losses because none of
+> this exists."
 
 ---
 
-## If a judge asks "is the Razorpay integration actually real?"
+## 4:25 – 5:00 · The numbers, and the bug
+
+> "On a **held-out test set** — split by session, thresholds tuned on train only —
+> **precision 0.908, false-positive rate 0.002.** Against an aggressive blocker, the
+> gateway nets **fifty thousand four hundred forty-five rupees ahead**, because in
+> payments a **false positive is a lost sale**, not a free win.
+>
+> And I audited my own engine and found a real bug. **Quantity caps were enforced
+> per line** — and the *agent* decides how many lines it sends. So ten lines of one item
+> bought ten of a max-one item, and it returned **ALLOW**. Fixed, and pinned in the tests.
+>
+> **That bug is the argument for the entire project.** The layer above the kernel drifts.
+> So the kernel has to check the cart.
+>
+> Clone it and run `./verify.sh` — **forty checks, and it exits non-zero if any of this
+> was a lie.**"
+
+---
+
+## If a judge asks "is the Razorpay integration real?"
 
 ```bash
 ./scripts/prove-razorpay.sh
 ```
 
-It creates an order, then reads it back **out of Razorpay's API** with your audit
-metadata attached, and shows that a denied cart creates no order at all. Reading the
-record back from their servers is the part nothing local can fake.
+Creates an order, then **reads it back out of Razorpay's API** with `mandate_id`,
+`decision_id` and `wal_seq` in the notes — and shows a denied cart creates **no order at
+all**. Reading the record back off their servers is the part nothing local can fake.
 
-Worth saying out loud during the demo: **only three of the seven steps contact
-Razorpay.** The denials, the duplicate and the step-up never do — that is the whole
-point, and the UI now says so explicitly rather than leaving it invisible.
+Say out loud: **only three of the seven steps ever contact Razorpay.** The denials, the
+duplicate and the step-up never do. That's the point, and the UI says so explicitly.
 
 ## Recording notes
 
-- **Rehearse the verdict numbers.** `0x000D` blender, `0x0800` substitution,
-  `0x2000` duplicate, `0x1000` injection. Saying them from memory reads as fluency.
-- **Do not narrate the UI.** Say what it *means*, not what it shows.
-- **Let `rig-attack` sit on screen** for two seconds before speaking. The wall of
-  REFUSED is the strongest single frame in the video.
-- `./scripts/seed.sh` before each take, so the log starts empty.
-- If a take goes wrong mid-scenario, press **Reset demo** rather than restarting.
-- 1080p60, terminal at ~18pt.
-- **Click one scenario before you start recording.** The first Razorpay call of the
-  process pays a TLS handshake (~176 ms versus ~69 ms warm); doing it off camera keeps
-  the first take snappy.
+- **Rehearse the hex codes.** `0x000D` blender · `0x0800` substitution · `0x2000`
+  duplicate · `0x1000` injection · `0x400000` subscription. From memory, it reads as
+  fluency.
+- **Don't narrate the UI.** Say what it *means*, not what it shows.
+- `./scripts/seed.sh` before every take.
+- Mid-scenario fumble → press **Reset demo**, don't restart.
 
 ## If you only get 90 seconds
 
-Blender denied with three reasons → step-up approved and paid → `rig-attack` →
-both auditors agreeing. That is the whole thesis: **bounded, gated, explainable.**
+Blender denied with three reasons → hidden subscription denied → `rig-attack` →
+both auditors agreeing. That is the thesis: **bounded, gated, explainable.**
+
+## Keyword coverage
+
+Track 01 language this script says out loud, for a skim-reading judge:
+
+agentic commerce · agentic payments on UPI · NPCI · Agent Pay · AP2 · ACP · autonomous
+agent · registered agent · transaction limit · scoped mandate · Ed25519 · asymmetric
+signing · capability token · human-in-the-loop · guardrail · prompt injection · recurring
+commitment · semantic idempotency · canonical cart hash · deterministic policy kernel ·
+branch-free · integer paise · durable · hash-chained · tamper-evident · write-ahead log ·
+deterministic replay · zero divergences · held-out test set · precision · false-positive
+rate · chargeback · dispute evidence · Razorpay Orders API · test mode · payments
+infrastructure · bounded, gated, explainable
