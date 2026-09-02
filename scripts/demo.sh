@@ -35,23 +35,37 @@ hr; step "4. BLIND SPOT #3 — INDIRECT PROMPT INJECTION" \
   "Hidden text on the merchant page tells the agent to add a gift card. Note it fails on INTENT, not on text matching."
 ./build/rig-eval $G fixtures/cart_injection.json $W
 
-hr; step "5. BYPASS ATTEMPTS" \
+hr; step "5. GATED — HUMAN STEP-UP, then the money actually moves" \
+  "In-intent cart carrying hostile merchant text. Behavioural signal only, so the engine ASKS rather than blocking a good purchase."
+rm -f wal/review.wal
+./build/rig-eval fixtures/lunch_intent.json fixtures/cart_injection_soft.json --wal wal/review.wal \
+  --confirm approve --ref mfa_device_9f21 --execute
+
+hr; step "5b. THE AUDIT TRAIL A JUDGE CAN READ IN 30 SECONDS" \
+  "One transaction, in order, ending in a real money action."
+./build/rig-audit wal/review.wal
+
+hr; step "5c. TRACK 02 — HONEST RISK METRICS" \
+  "Behavioural detector on a labelled set. Signals ESCALATE, never auto-block."
+./build/rig-riskeval | tail -22
+
+hr; step "6. BYPASS ATTEMPTS" \
   "Five ways to route around the engine. All refused by construction."
 ./build/rig-attack
 
-hr; step "6. AUDIT — TWO INDEPENDENT IMPLEMENTATIONS" \
+hr; step "7. AUDIT — TWO INDEPENDENT IMPLEMENTATIONS" \
   "C++ replays its own log; Java re-implements the policy and must agree bit-for-bit."
 ./build/rig-replay wal/grocery.wal
 java -cp control-plane/out com.razorpay.rig.ReplayAuditor wal/grocery.wal
 
-hr; step "7. BLIND SPOT #4 — THE REFUND NIGHTMARE" \
+hr; step "8. BLIND SPOT #4 — THE REFUND NIGHTMARE" \
   "Customer disputes the organic milk. Today the merchant has no evidence. This is that evidence."
 ./build/rig-evidence wal/grocery.wal 7 | python3 -m json.tool | head -46
 
-hr; step "8. TAMPER EVIDENCE" "Flip one bit anywhere in the log; the chain refuses to verify."
+hr; step "9. TAMPER EVIDENCE" "Flip one bit anywhere in the log; the chain refuses to verify."
 ./scripts/tamper.sh wal/grocery.wal
 
-hr; step "9. DURABILITY, AMORTISED" "The whole engineering problem: a 30ns decision behind a 4ms fsync."
+hr; step "10. DURABILITY, AMORTISED" "The whole engineering problem: a 30ns decision behind a 4ms fsync."
 ./build/rig-load 4000
 
 hr; printf "\n${B}done.${Z} ${D}UI: ./build/rig-gateway then open http://127.0.0.1:8787${Z}\n\n"
