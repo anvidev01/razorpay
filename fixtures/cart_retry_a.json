@@ -1,0 +1,9 @@
+{
+  "mandate_id": "mnd_grocery_7c",
+  "merchant": "bigbasket",
+  "client_ref": "req_a1b2c3",
+  "lines": [
+    { "sku": "SKU_MILK_TONED_1L", "category": "DAIRY_MILK", "unit_paise": 6000, "qty": 2 },
+    { "sku": "SKU_EGGS_TRAY_12",  "category": "EGGS",       "unit_paise": 8500, "qty": 1 }
+  ]
+}

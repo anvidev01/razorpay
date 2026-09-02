@@ -1,0 +1,9 @@
+{
+  "mandate_id": "mnd_grocery_7c", "merchant": "bigbasket",
+  "_note": "THE SUBSTITUTION PROBLEM: Rs 60 toned milk out of stock, agent grabbed Rs 180 organic",
+  "lines": [
+    { "sku": "SKU_MILK_ORGANIC_1L", "category": "DAIRY_MILK",   "unit_paise": 18000, "qty": 1 },
+    { "sku": "SKU_BREAD_WHOLE",     "category": "BAKERY_BREAD", "unit_paise": 4500,  "qty": 1 }
+  ],
+  "_expected": "0x0800 R_SUBSTITUTION_DELTA -- right category, 3x the approved price"
+}

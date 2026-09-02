@@ -2,6 +2,7 @@ build/
 *.o
 *.dSYM/
 wal/*.log
+wal/*.wal
 wal/*.seg
 *.class
 control-plane/out/

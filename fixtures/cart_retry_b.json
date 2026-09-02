@@ -1,0 +1,10 @@
+{
+  "_note": "SAME BASKET, regenerated after a timeout: different key order, different whitespace, reordered lines, a display name added, a fresh client_ref. A syntactic matcher sees a new order and charges twice.",
+  "client_ref": "req_z9y8x7",
+  "merchant": "bigbasket",
+  "mandate_id": "mnd_grocery_7c",
+  "lines": [
+    { "qty": 1, "name": "Farm Eggs (tray of 12)", "unit_paise": 8500, "category": "EGGS", "sku": "SKU_EGGS_TRAY_12" },
+    { "qty": 2, "name": "Toned Milk 1L",          "unit_paise": 6000, "category": "DAIRY_MILK", "sku": "SKU_MILK_TONED_1L" }
+  ]
+}

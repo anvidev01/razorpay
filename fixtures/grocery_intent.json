@@ -1,0 +1,18 @@
+{
+  "mandate_id": "mnd_grocery_7c",
+  "utterance": "order my usual weekly groceries, under 1000 rupees, sensible swaps are fine if something is out of stock",
+  "subject_agent": "agent_bigbasket_v2",
+  "not_before_ns": 0,
+  "not_after_ns": 4102444800000000000,
+  "total_budget_paise": 100000,
+  "merchant_allow": ["bigbasket", "zepto"],
+  "substitution": { "policy": "same_category", "max_delta_bp": 2000 },
+  "constraints": [
+    { "sku": "SKU_MILK_TONED_1L",  "category": "DAIRY_MILK",   "max_unit_paise": 6000, "max_qty": 3 },
+    { "sku": "SKU_BREAD_WHOLE",    "category": "BAKERY_BREAD", "max_unit_paise": 5000, "max_qty": 2 },
+    { "sku": "SKU_EGGS_TRAY_12",   "category": "EGGS",         "max_unit_paise": 9000, "max_qty": 2 },
+    { "sku": "SKU_RICE_SONA_5KG",  "category": "STAPLE_RICE",  "max_unit_paise": 45000, "max_qty": 1 }
+  ],
+  "schema_version": 1,
+  "sig_alg": "ed25519"
+}
