@@ -109,10 +109,23 @@ c++ -std=c++20 -O2 -DRIG_FORCE_PORTABLE_CLOCK -Iengine/include /tmp/rig_port.cpp
   && ok "portable clock + durable flush" "the branch Linux compiles, run here too" || no "portable clock"
 
 hdr "6 · Memory safety"
+# Build the whole core under sanitizers, not just the kernel: the tests now exercise
+# mandate parsing too, and a partial link makes this check silently untestable.
 SSL=$(brew --prefix openssl@3 2>/dev/null || echo /usr)
-c++ -std=c++20 -O1 -g -fsanitize=address,undefined -Iengine/include -I"$SSL/include" \
-   engine/src/kernel.cpp engine/tests/test_kernel.cpp -o /tmp/rig_san 2>/dev/null \
-   && /tmp/rig_san >/dev/null 2>&1 && ok "ASan + UBSan clean" || no "sanitizers"
+SJ=$(brew --prefix simdjson 2>/dev/null || echo /usr)
+SAN_FLAGS="-std=c++20 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer
+           -Iengine/include -I$SSL/include -I$SJ/include
+           -L$SSL/lib -L$SJ/lib -lcrypto -lcurl -lsimdjson"
+if c++ $SAN_FLAGS engine/src/kernel.cpp engine/src/parse.cpp engine/src/crypto.cpp \
+        engine/src/intent.cpp engine/tests/test_kernel.cpp -o /tmp/rig_san 2>/dev/null \
+   && /tmp/rig_san >/dev/null 2>&1; then
+  ok "ASan + UBSan clean" "kernel + parser + crypto"
+else no "sanitizers"; fi
+if c++ $SAN_FLAGS engine/src/kernel.cpp engine/src/parse.cpp engine/src/crypto.cpp \
+        engine/src/intent.cpp engine/tests/test_intent.cpp -o /tmp/rig_san_i 2>/dev/null \
+   && /tmp/rig_san_i fixtures/catalog.json >/dev/null 2>&1; then
+  ok "ASan + UBSan clean (intent suite)" "the natural-language path too"
+else no "sanitizers (intent)"; fi
 
 hdr "7 · Performance (measured, not claimed)"
 # Report what this machine measures rather than asserting a fixed number -- the
