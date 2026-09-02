@@ -68,7 +68,7 @@ static int run(int argc, char** argv) {
         detail = buf;
         std::printf("  %s%-4llu %-9s %s%-22s %s%s%s\n", D, (unsigned long long)r.hdr.seq,
           hhmmss(r.hdr.wall_ns).c_str(), col, rectype_name(t), detail.c_str(), Z, "");
-        for (int b = 0; b < R_BIT_COUNT; ++b) {
+        for (int b = 0; b < static_cast<int>(R_BIT_COUNT); ++b) {
           const std::uint32_t bit = 1u << b;
           if (!(dp.recorded_bits & bit)) continue;
           std::printf("  %s     %-9s %-22s  |- %-24s %s%s\n", D, "", "",

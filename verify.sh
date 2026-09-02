@@ -75,11 +75,14 @@ echo "$tam" | grep -qi "broken" \
   || no "tamper detection"
 
 hdr "5 · Track 02 — honest risk metrics"
-out=$(./build/rig-riskeval 2>&1)
-echo "$out" | grep -q "precision 1.00" \
-  && ok "detector measured on a labelled set" "$(echo "$out"|grep -o 'precision.*')" || no "risk eval"
-echo "$out" | grep -q "false positive(s) => 0 extra" \
-  && ok "zero false positives; signals REVIEW, never DENY" || no "risk fp"
+out=$(./build/rig-riskeval 2>&1); rc=$?
+echo "$out" | grep -q "held out" \
+  && ok "measured on a HELD-OUT test set" "$(echo "$out" | sed 's/\x1b\[[0-9;]*m//g' | grep -A1 'TEST ' | head -1 | awk '{print "precision "$6"  recall "$7"  FPR "$8}')" \
+  || no "held-out evaluation"
+echo "$out" | grep -q "no meaningful overfitting" \
+  && ok "train/test gap within tolerance" "tuning never saw the test split" || no "overfitting check"
+[ $rc -eq 0 ] && ok "held-out metrics inside the operating envelope" \
+              || no "risk detector out of envelope"
 
 if [ "$QUICK" = "0" ]; then
 hdr "5b · Portability"
@@ -127,6 +130,13 @@ case "$r" in
   *) no "end-to-end payment" "$r" ;;
 esac
 [ "$rail" = "mock" ] && printf "  ${Y}note${Z}  rail is the offline mock. For real test-mode order ids:\n        ${D}export RAZORPAY_KEY_ID=rzp_test_xxx RAZORPAY_KEY_SECRET=yyy${Z}\n"
+curl -s -m 5 http://127.0.0.1:8799/.well-known/agent-commerce | python3 -c "
+import json,sys;d=json.load(sys.stdin)
+assert d['protocol'] and d['endpoints']['decide'] and len(d['reject_codes'])>10" 2>/dev/null \
+  && ok "agent-readable discovery document" "/.well-known/agent-commerce" || no "discovery doc"
+curl -s -m 5 http://127.0.0.1:8799/api/catalog | python3 -c "
+import json,sys;assert len(json.load(sys.stdin)['items'])>0" 2>/dev/null \
+  && ok "machine-readable catalogue" "/api/catalog" || no "catalogue endpoint"
 curl -s -m 3 -D- -o /dev/null http://127.0.0.1:8799/api/health | grep -qi "access-control-allow-origin" \
   && no "CORS wildcard present" || ok "no CORS wildcard on the money API"
 pkill -f "rig-gateway --port 8799" 2>/dev/null

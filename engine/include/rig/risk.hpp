@@ -43,6 +43,19 @@ struct RiskLimits {
   // tuned to human cadence and miss it entirely.
   std::uint64_t burst_window_ns    = 600ull * 1000000000ull;   // 10 minutes
   std::uint32_t max_txn_in_burst   = 3;
+  // WEIGHTED SCORING. Firing on ANY single signal put the false-positive rate at 12%
+  // on held-out data, because a first-time merchant is ordinary behaviour -- 906 of the
+  // legitimate transactions in the evaluation set were at a merchant the agent had not
+  // used before. A weak signal must corroborate, not accuse on its own.
+  std::uint32_t w_burst          = 3;   // strong: humans cannot buy 4x in 10 minutes
+  std::uint32_t w_velocity       = 2;   // moderate: sustained rate or spend
+  std::uint32_t w_new_merchant   = 1;   // weak on its own
+  std::uint32_t w_odd_hour       = 1;   // weak on its own
+  std::uint32_t flag_threshold   = 3;   // score at or above this asks the human
+  // A never-seen merchant only counts once the agent HAS an established narrow
+  // pattern; before that there is nothing to deviate from.
+  std::uint32_t merchant_min_txns  = 8;
+  std::uint32_t merchant_max_known = 3;
   // Hour tolerance: flag only hours genuinely far from anything observed, so a lunch
   // at 15:00 instead of 13:00 is not treated as suspicious.
   int           hour_tolerance     = 2;
@@ -54,9 +67,12 @@ public:
 
   // Returns risk bits. Pure w.r.t. the profile it is given; the caller commits the
   // update only after the decision, so a denied cart never poisons the baseline.
+  // Returns the reject bits when the weighted score clears the threshold, else 0.
+  // `raw_out` (optional) always receives every signal that fired, so the audit log can
+  // record what was observed even when it was not enough to interrupt anyone.
   std::uint32_t assess(const AgentProfile& p, std::uint32_t merchant_id,
                        std::int64_t amount_paise, std::uint64_t now_ns,
-                       int local_hour) const noexcept {
+                       int local_hour, std::uint32_t* raw_out = nullptr) const noexcept {
     std::uint32_t bits = 0;
     // No baseline yet -> no opinion. Firing on the first transaction an agent ever
     // makes is the classic cold-start false positive.
@@ -68,7 +84,12 @@ public:
 
     if (txns + 1 > lim_.max_txn_in_window)                    bits |= R_VELOCITY_ANOMALY;
     if (spend + amount_paise > lim_.max_spend_in_window)      bits |= R_VELOCITY_ANOMALY;
-    if (merchant_id >= 1 && merchant_id <= 64 &&
+    // Count known merchants; a wide-ranging agent has no "unusual" merchant.
+    std::uint32_t known = 0;
+    for (int b = 0; b < 64; ++b) known += (p.merchants_seen >> b) & 1ull;
+    const bool narrow = p.total_txns >= lim_.merchant_min_txns &&
+                        known <= lim_.merchant_max_known;
+    if (narrow && merchant_id >= 1 && merchant_id <= 64 &&
         ((p.merchants_seen >> (merchant_id - 1)) & 1ull) == 0) bits |= R_NEW_MERCHANT;
 
     // burst: how many completions fall inside the short window
@@ -85,7 +106,16 @@ public:
       }
       if (!near) bits |= R_ODD_HOUR;
     }
-    return bits;
+
+    if (raw_out) *raw_out = bits;
+
+    // Corroboration: one weak signal is an observation, not an accusation.
+    std::uint32_t score = 0;
+    if (bits & R_VELOCITY_ANOMALY) score += (in_burst + 1 > lim_.max_txn_in_burst)
+                                             ? lim_.w_burst : lim_.w_velocity;
+    if (bits & R_NEW_MERCHANT)     score += lim_.w_new_merchant;
+    if (bits & R_ODD_HOUR)         score += lim_.w_odd_hour;
+    return score >= lim_.flag_threshold ? bits : 0u;
   }
 
   // Commit only for transactions that actually completed.

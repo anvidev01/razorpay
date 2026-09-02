@@ -232,6 +232,7 @@ IntentDraft translate_local(const std::string& utterance, const std::string& cat
   struct Pick { std::string sku, cat, name; double price; int qty;
                 std::size_t pos; bool specific; };
   std::vector<Pick> picks;
+  std::vector<Pick> all_items;   // every catalogue entry, for expanding "variety"
   try {
     padded_string p(catalog_json);
     ondemand::parser parser;
@@ -250,6 +251,8 @@ IntentDraft translate_local(const std::string& utterance, const std::string& cat
         const auto at = low.find(std::string(k));
         if (at != std::string::npos && at < hit) hit = at;
       }
+      all_items.push_back({std::string(sku), std::string(cat), std::string(name),
+                           price, 1, 0, false});
       if (hit == std::string::npos) continue;
       // How specific was the match? A hit on "biryani" should beat a hit on the
       // generic "meal", so a distinctive word wins its category.
@@ -421,6 +424,29 @@ IntentDraft translate_local(const std::string& utterance, const std::string& cat
   }
   std::sort(uniq.begin(), uniq.end(),
             [](const Pick& a, const Pick& b) { return a.pos < b.pos; });
+
+  // "3 meals of DIFFERENT category each" asks for three DISTINCT items, not three of
+  // one. Without this the generic collapse above answers with 3 x the same dish, which
+  // is what a user actually hit. Expand a generic pick of quantity N into N distinct
+  // catalogue items sharing its category, cheapest first.
+  if (wants_variety) {
+    std::vector<Pick> expanded;
+    for (const auto& p : uniq) {
+      if (p.specific || p.qty < 2) { expanded.push_back(p); continue; }
+      std::vector<Pick> pool;
+      for (const auto& c : all_items) if (c.cat == p.cat) pool.push_back(c);
+      std::sort(pool.begin(), pool.end(),
+                [](const Pick& a, const Pick& b) { return a.price < b.price; });
+      if (static_cast<int>(pool.size()) < p.qty) { expanded.push_back(p); continue; }
+      for (int i = 0; i < p.qty; ++i) {
+        Pick one = pool[static_cast<std::size_t>(i)];
+        one.qty = 1;
+        one.pos = p.pos;
+        expanded.push_back(one);
+      }
+    }
+    uniq.swap(expanded);
+  }
 
   double ceilsum = 0;
   std::ostringstream items, interp;

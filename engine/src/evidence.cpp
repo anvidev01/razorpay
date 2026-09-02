@@ -40,6 +40,7 @@ EvidenceReport evidence_json(const std::string& wal, std::uint64_t want) {
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-security"
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
 #endif
   const auto emit = [&O](const char* fmt, auto... a) {
     // Size the buffer from the formatted length. A fixed 4096 silently truncated the
@@ -145,7 +146,7 @@ EvidenceReport evidence_json(const std::string& wal, std::uint64_t want) {
               dp.recorded_bits, dp.recorded_bits);
   emit("    \"reasons\": [");
   bool first = true;
-  for (int b = 0; b < R_BIT_COUNT; ++b) {
+  for (int b = 0; b < static_cast<int>(R_BIT_COUNT); ++b) {
     const std::uint32_t bit = 1u << b;
     if (!(dp.recorded_bits & bit)) continue;
     if (!first) emit(", ");

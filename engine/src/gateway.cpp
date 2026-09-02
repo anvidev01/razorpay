@@ -465,7 +465,7 @@ std::string Gateway::decision_json(const Decision& d) const {
 
   o << ",\"reasons\":[";
   bool first = true;
-  for (int b = 0; b < R_BIT_COUNT; ++b) {
+  for (int b = 0; b < static_cast<int>(R_BIT_COUNT); ++b) {
     const std::uint32_t bit = 1u << b;
     if (!(d.verdict.bits & bit)) continue;
     if (!first) o << ",";

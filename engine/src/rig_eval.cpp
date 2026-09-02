@@ -78,7 +78,7 @@ static int run(int argc, char** argv) {
       (unsigned long long)d.agent_session_id, C_DIM, C_RST, gw.rail_name());
   if (!ok) {
     std::printf("\n  %sreasons (all of them -- the kernel never short-circuits)%s\n", C_DIM, C_RST);
-    for (int b = 0; b < R_BIT_COUNT; ++b) {
+    for (int b = 0; b < static_cast<int>(R_BIT_COUNT); ++b) {
       const std::uint32_t bit = 1u << b;
       if (!(d.verdict.bits & bit)) continue;
       std::printf("    %s|-%s %-24s %s%s%s\n", C_RED, C_RST, reject_name(bit),
@@ -93,7 +93,7 @@ static int run(int argc, char** argv) {
       std::printf("    %s%s%s  %-26.*s", lok ? C_GRN : C_RED, lok ? "ok  " : "DENY", C_RST,
         (int)gw.intern().name(L.sku_id).size(), gw.intern().name(L.sku_id).data());
       if (!lok) {
-        for (int b = 0; b < R_BIT_COUNT; ++b)
+        for (int b = 0; b < static_cast<int>(R_BIT_COUNT); ++b)
           if (L.bits & (1u << b)) std::printf(" %s", reject_name(1u << b));
       }
       if (L.substituted_for) {

@@ -90,7 +90,7 @@ static std::string audit_json(const std::string& path) {
       else if (oc == Outcome::REVIEW) { ++review; kind = "warn"; }
       else { ++deny; kind = "bad"; }
       std::string reasons;
-      for (int b = 0; b < R_BIT_COUNT; ++b) {
+      for (int b = 0; b < static_cast<int>(R_BIT_COUNT); ++b) {
         const std::uint32_t bit = 1u << b;
         if (!(dp.recorded_bits & bit)) continue;
         if (!reasons.empty()) reasons += ", ";
@@ -301,6 +301,43 @@ static int run(int argc, char** argv) {
       const std::uint64_t seq = query_u64(path, "seq");
       const auto r = evidence_json(wal_path, seq);
       respond(c, r.found ? 200 : 404, "application/json", r.json);
+
+    } else if (method == "GET" && path == "/.well-known/agent-commerce") {
+      // Agent-readable discovery. An AI buyer arriving cold needs to learn, without a
+      // human, what this merchant sells and what rules a mandate must satisfy. Serving
+      // it at a well-known path is what makes the merchant transactable end to end
+      // rather than only after someone hand-writes a mandate.
+      std::ostringstream o;
+      o << "{\n  \"protocol\": \"razorpay-intent-gateway/1\",\n"
+        << "  \"description\": \"Merchant transactable by an AI buyer under a "
+           "human-signed intent mandate.\",\n"
+        << "  \"mandate\": {\n"
+        << "    \"signature\": \"ed25519 over the exact mandate bytes, by the user's "
+           "enrolled device\",\n"
+        << "    \"amounts\": \"integer paise\",\n"
+        << "    \"max_constraints\": " << MAXC << ",\n"
+        << "    \"max_cart_lines\": " << MAX_CART << ",\n"
+        << "    \"substitution_policies\": [\"deny\",\"same_category\",\"any_in_budget\"]\n"
+        << "  },\n"
+        << "  \"endpoints\": {\n"
+        << "    \"admit\":    { \"method\": \"POST\", \"path\": \"/api/admit\" },\n"
+        << "    \"decide\":   { \"method\": \"POST\", \"path\": \"/api/decide?execute=1\" },\n"
+        << "    \"confirm\":  { \"method\": \"POST\", \"path\": \"/api/confirm\" },\n"
+        << "    \"catalog\":  { \"method\": \"GET\",  \"path\": \"/api/catalog\" },\n"
+        << "    \"audit\":    { \"method\": \"GET\",  \"path\": \"/api/audit\" },\n"
+        << "    \"evidence\": { \"method\": \"GET\",  \"path\": \"/api/evidence?seq=N\" }\n"
+        << "  },\n"
+        << "  \"outcomes\": [\"ALLOW\",\"REVIEW\",\"DENY\"],\n"
+        << "  \"reject_codes\": [";
+      for (int b = 0; b < static_cast<int>(R_BIT_COUNT); ++b) {
+        if (b) o << ",";
+        o << "\"" << reject_name(1u << b) << "\"";
+      }
+      o << "],\n  \"rail\": \"" << gw->rail_name() << "\"\n}\n";
+      respond(c, 200, "application/json", o.str());
+
+    } else if (method == "GET" && path == "/api/catalog") {
+      respond(c, 200, "application/json", slurp("fixtures/catalog.json"));
 
     } else if (method == "POST" && path == "/api/intent") {
       // Natural language -> a DRAFT mandate. Deliberately NOT signed here: the draft

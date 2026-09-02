@@ -8,6 +8,10 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
+# A printf format/argument mismatch in rig_riskeval compiled silently and segfaulted at
+# runtime. Warnings are not optional in something that moves money.
+add_compile_options(-Wall -Wextra -Wformat=2 -Wno-unused-parameter)
+
 # --- dependency discovery -------------------------------------------------------
 # Previously this hardcoded Homebrew prefixes, so the project simply did not build on
 # Linux despite run.sh advertising Debian packages. Find them properly, then fall back
@@ -32,7 +36,7 @@ if(APPLE AND NOT simdjson_FOUND AND NOT SIMDJSON_FOUND)
 endif()
 
 add_library(rigcore STATIC
-  src/kernel.cpp src/crypto.cpp src/wal.cpp src/parse.cpp src/pct.cpp src/gateway.cpp src/rail.cpp src/evidence.cpp src/intent.cpp)
+  src/kernel.cpp src/crypto.cpp src/wal.cpp src/parse.cpp src/pct.cpp src/gateway.cpp src/rail.cpp src/evidence.cpp src/intent.cpp src/dataset.cpp)
 target_include_directories(rigcore PUBLIC include)
 target_link_libraries(rigcore PUBLIC OpenSSL::Crypto CURL::libcurl)
 

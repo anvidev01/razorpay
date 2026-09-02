@@ -58,6 +58,19 @@ Auto-blocking on a probabilistic score is how a risk system destroys good revenu
 is why behavioural signals escalate instead of blocking — and why the false-positive cost
 is measurable: **[docs/07 — Honest Risk Metrics](docs/07-RISK-METRICS.md)**.
 
+## Agent-readable discovery  [Track 01]
+
+An AI buyer arriving cold learns what this merchant sells and what a mandate must
+satisfy, without a human in the loop:
+
+```bash
+curl http://127.0.0.1:8787/.well-known/agent-commerce   # protocol, limits, endpoints, reject codes
+curl http://127.0.0.1:8787/api/catalog                  # SKUs, categories, prices
+```
+
+That is what "transactable by an AI buyer end to end" requires: discovery, then a
+signed mandate, then bounded purchases, then a receipt anyone can verify.
+
 ## Meeting Razorpay's bar
 
 > *"Every money action explainable, bounded and gated. Show the audit trail and one
