@@ -108,6 +108,16 @@ c++ -std=c++20 -O2 -Iengine/include /tmp/rig_port.cpp -o /tmp/rig_port 2>/dev/nu
 c++ -std=c++20 -O2 -DRIG_FORCE_PORTABLE_CLOCK -Iengine/include /tmp/rig_port.cpp -o /tmp/rig_portp 2>/dev/null && /tmp/rig_portp \
   && ok "portable clock + durable flush" "the branch Linux compiles, run here too" || no "portable clock"
 
+hdr "5c · Track 01 — revenue impact"
+rev=$(./build/rig-revenue 2>&1 | sed 's/\x1b\[[0-9;]*m//g')
+echo "$rev" | grep -q "gateway ahead by" \
+  && ok "net revenue position vs an aggressive blocker" \
+       "$(echo "$rev" | grep -o 'gateway ahead by Rs [0-9]*')" \
+  || no "revenue model"
+echo "$rev" | grep -q "Assumptions, stated" \
+  && ok "model assumptions published, not buried" "synthetic data labelled as such" \
+  || no "revenue assumptions"
+
 hdr "6 · Memory safety"
 # Build the whole core under sanitizers, not just the kernel: the tests now exercise
 # mandate parsing too, and a partial link makes this check silently untestable.

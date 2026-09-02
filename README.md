@@ -71,6 +71,20 @@ curl http://127.0.0.1:8787/api/catalog                  # SKUs, categories, pric
 That is what "transactable by an AI buyer end to end" requires: discovery, then a
 signed mandate, then bounded purchases, then a receipt anyone can verify.
 
+## What it earns, not just what it blocks  [Track 01]
+
+```
+./build/rig-revenue
+```
+
+Four policies on identical held-out traffic. Against a blocker tuned to catch 80% of
+anomalies, this gateway preserves **₹79,542 more revenue (+6.4%)** and kills **zero**
+in-mandate sales, at a cost of 61 confirmations across 3,693 purchases.
+
+The aggressive blocker prevents ₹29,097 more fraud and spends ₹79,542 of real sales
+doing it — **net ₹50,445 behind**. That is the commercial case for escalating instead
+of blocking. Method and assumptions: **[docs/07 appendix](docs/07-RISK-METRICS.md)**.
+
 ## Meeting Razorpay's bar
 
 > *"Every money action explainable, bounded and gated. Show the audit trail and one

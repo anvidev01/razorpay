@@ -132,3 +132,68 @@ explainable, but honestly labelled as not reproducible from one record alone.
 Per-merchant-category baselines; sequence models over agent action traces (thresholds
 only today); feeding confirmed step-up outcomes back as labels; and evaluation against
 real traffic once agentic volume exists to learn from.
+
+---
+
+# Appendix — Revenue impact  [Track 01]
+
+> Track 01's headline is *"Grow the merchant's revenue."* Every other metric in this
+> project is defensive. This one answers what the gateway **earns**.
+
+Reproduce: `./build/rig-revenue [seed] [sessions]`
+
+## Method
+
+The same seeded, held-out data the detector is evaluated on, run through four policies so
+the comparison is like-for-like:
+
+| | policy |
+|---|---|
+| **A** | limit-only — what the rail does today: approve anything under the block |
+| **B** | naive blocker — deterministic caps, and any risk signal **denies** |
+| **B+** | the same design tuned for catch rate (0.80 recall) — what a risk owner actually ships |
+| **C** | this gateway — caps deny, risk signals **escalate** |
+
+Two quantities are separated deliberately, because lumping them hides the only number the
+policies differ on:
+
+- **outside the mandate** — legitimate, but the human never authorised it. Refusing this
+  is the product working; it is not lost revenue.
+- **sales killed** — legitimate, *inside* the mandate, refused anyway. This is a real loss.
+
+## Result (seed 42, 400 sessions, held-out split)
+
+```
+policy                      fraud thru   sales killed   revenue kept   prompts
+A · limit-only                 143,059              0      1,360,230         0
+B · naive blocker               47,201          1,054      1,319,206         0
+B+ · naive, tuned to catch      18,104         79,542      1,240,718         0
+C · intent gateway              47,201              0      1,320,260        61
+```
+
+| | |
+|---|---:|
+| fraud prevented vs the rail today | **+₹95,858** |
+| revenue preserved vs a blocker at 0.80 recall | **+₹79,542** (+6.4%) |
+| sales this gateway killed | **₹0** |
+| friction | 61 confirmations across 3,693 purchases (1.7%) |
+
+## The argument, netted out honestly
+
+The aggressive blocker **does** prevent ₹29,097 more fraud than this gateway. It spends
+**₹79,542 of real sales** to do it.
+
+**Net position: the gateway is ₹50,445 ahead for the merchant** — not because it detects
+better, but because an uncertain signal becomes a question instead of a decline.
+
+That is the entire commercial case for `REVIEW` as a third outcome, and it is why the
+detector's honest 0.30 recall is not the weakness it looks like.
+
+## Assumptions, stated rather than buried
+
+- **The traffic is synthetic.** No public corpus of agentic-payment fraud exists — the
+  rails are months old. These are the consequences of a documented behaviour model
+  (`engine/src/dataset.cpp`), not a measurement of real revenue. Argue with the model.
+- **A step-up prompt is answered correctly**: people approve their own purchases and
+  decline ones they did not make. The whole comparison rests on this, so it is stated.
+- **Mandate modelled** as ₹1,200 per purchase, merchants 1–6.
