@@ -24,7 +24,7 @@ target_include_directories(rigcore PUBLIC include ${SIMDJSON_PREFIX}/include ${O
 target_link_directories(rigcore PUBLIC ${SIMDJSON_PREFIX}/lib ${OPENSSL_PREFIX}/lib)
 target_link_libraries(rigcore PUBLIC simdjson crypto)
 
-foreach(tool rig_eval rig_replay rig_gateway rig_attack rig_load wal_dump)
+foreach(tool rig_eval rig_replay rig_gateway rig_attack rig_load rig_evidence wal_dump)
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/${tool}.cpp)
     string(REPLACE "_" "-" bin ${tool})
     add_executable(${bin} src/${tool}.cpp)

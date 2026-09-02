@@ -10,6 +10,7 @@
 #include <fstream>
 #include <sstream>
 #include <time.h>
+#include <unistd.h>
 
 using namespace rig;
 
@@ -35,7 +36,12 @@ static int run(int argc, char** argv) {
   const char* intent = argc > 1 ? argv[1] : "fixtures/lunch_intent.json";
   const char* cart   = argc > 2 ? argv[2] : "fixtures/lunch_cart.json";
 
-  Gateway gw("wal/rig.wal");
+  // Own log, cleared each run: the attack suite needs a FRESH authorised decision to
+  // attack, and the idempotency layer would (correctly) collapse a repeated baseline
+  // cart onto its original decision, leaving nothing to mint a token from.
+  const char* awal = "wal/attack.wal";
+  ::unlink(awal);
+  Gateway gw(awal);
   std::string err;
   if (!gw.admit_mandate(slurp(intent), err)) {
     std::fprintf(stderr, "admission failed: %s\n", err.c_str());
