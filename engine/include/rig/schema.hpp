@@ -28,8 +28,46 @@ enum Reject : std::uint32_t {
   R_SUBSTITUTION_DELTA   = 1u << 11,  // swap allowed in kind, but too expensive
   R_INJECTION_SUSPECTED  = 1u << 12,  // instruction-like text in a cart field
   R_DUPLICATE_CHARGE     = 1u << 13,  // same semantic cart already authorised
-  R_BIT_COUNT            = 14
+  // --- Track 02 behavioural signals. These ESCALATE, they never auto-block. ---
+  R_VELOCITY_ANOMALY     = 1u << 14,  // spending far above this agent's baseline
+  R_NEW_MERCHANT         = 1u << 15,  // merchant never seen for this agent
+  R_ODD_HOUR             = 1u << 16,  // outside the agent's normal active hours
+  R_BIT_COUNT            = 17
 };
+
+// Three outcomes, not two. A hard intent violation is a DENY. A behavioural signal
+// is a REVIEW -- it asks the human rather than killing a legitimate purchase.
+// Auto-blocking on a probabilistic signal is how a fraud system destroys good revenue,
+// so the false-positive cost here is one confirmation tap, not a lost sale.
+enum class Outcome : std::uint8_t { ALLOW = 0, REVIEW = 1, DENY = 2 };
+const char* outcome_name(Outcome o) noexcept;
+
+// Deterministic, bounded rule violations -> DENY.
+inline constexpr std::uint32_t HARD_DENY_MASK =
+    R_SKU_NOT_IN_INTENT | R_QTY_EXCEEDED | R_UNIT_PRICE_EXCEEDED | R_CART_TOTAL_EXCEEDED |
+    R_MERCHANT_NOT_ALLOWED | R_MANDATE_EXPIRED | R_ARITH_OVERFLOW | R_REPLAY_NONCE |
+    R_SCHEMA_VERSION | R_ENGINE_RESOURCE | R_SUBSTITUTION_DENIED | R_SUBSTITUTION_DELTA;
+
+// Probabilistic / heuristic signals -> step up to the human.
+// R_INJECTION_SUSPECTED is here deliberately: the scanner is a heuristic, so using it
+// to auto-block would manufacture false positives. The STRUCTURAL defence (the item is
+// not in the signed mandate) is already in HARD_DENY_MASK and does the real work.
+inline constexpr std::uint32_t REVIEW_MASK =
+    R_INJECTION_SUSPECTED | R_VELOCITY_ANOMALY | R_NEW_MERCHANT | R_ODD_HOUR;
+
+// Bits derived from CROSS-TRANSACTION STATE rather than from this record's own inputs.
+// The kernel is a pure function of one record, so it cannot re-derive these, and the
+// replay auditor must exclude them or it would report false divergences.
+// R_INJECTION_SUSPECTED is deliberately NOT here: it is computed from this cart's own
+// text at parse time and travels in the payload, so it replays exactly.
+inline constexpr std::uint32_t STATEFUL_RISK_MASK =
+    R_VELOCITY_ANOMALY | R_NEW_MERCHANT | R_ODD_HOUR;
+
+inline Outcome classify(std::uint32_t bits) noexcept {
+  if (bits & HARD_DENY_MASK) return Outcome::DENY;
+  if (bits & REVIEW_MASK)    return Outcome::REVIEW;
+  return Outcome::ALLOW;
+}
 
 // What the mandate permits when the agent cannot get the exact SKU.
 // Grocery inventory turns hourly, so "deny every substitution" is unusable in

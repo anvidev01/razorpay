@@ -2,6 +2,15 @@
 
 namespace rig {
 
+const char* outcome_name(Outcome o) noexcept {
+  switch (o) {
+    case Outcome::ALLOW:  return "ALLOW";
+    case Outcome::REVIEW: return "REVIEW";
+    case Outcome::DENY:   return "DENY";
+    default:              return "UNKNOWN";
+  }
+}
+
 const char* reject_name(std::uint32_t bit) noexcept {
   switch (bit) {
     case R_SKU_NOT_IN_INTENT:    return "R_SKU_NOT_IN_INTENT";
@@ -18,6 +27,9 @@ const char* reject_name(std::uint32_t bit) noexcept {
     case R_SUBSTITUTION_DELTA:   return "R_SUBSTITUTION_DELTA";
     case R_INJECTION_SUSPECTED:  return "R_INJECTION_SUSPECTED";
     case R_DUPLICATE_CHARGE:     return "R_DUPLICATE_CHARGE";
+    case R_VELOCITY_ANOMALY:     return "R_VELOCITY_ANOMALY";
+    case R_NEW_MERCHANT:         return "R_NEW_MERCHANT";
+    case R_ODD_HOUR:             return "R_ODD_HOUR";
     default:                     return "R_UNKNOWN";
   }
 }
@@ -38,6 +50,9 @@ const char* reject_help(std::uint32_t bit) noexcept {
     case R_SUBSTITUTION_DELTA:   return "substitute costs more than the mandate allows";
     case R_INJECTION_SUSPECTED:  return "instruction-like text found in a cart field";
     case R_DUPLICATE_CHARGE:     return "this exact cart was already authorised";
+    case R_VELOCITY_ANOMALY:     return "spending or frequency above this agent's baseline";
+    case R_NEW_MERCHANT:         return "merchant never used by this agent before";
+    case R_ODD_HOUR:             return "outside this agent's normal active hours";
     default:                     return "unknown rejection";
   }
 }
