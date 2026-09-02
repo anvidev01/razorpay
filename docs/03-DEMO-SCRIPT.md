@@ -169,6 +169,20 @@ java -cp control-plane/out com.razorpay.rig.ReplayAuditor wal/rig.wal
 
 ---
 
+## If a judge asks "is the Razorpay integration actually real?"
+
+```bash
+./scripts/prove-razorpay.sh
+```
+
+It creates an order, then reads it back **out of Razorpay's API** with your audit
+metadata attached, and shows that a denied cart creates no order at all. Reading the
+record back from their servers is the part nothing local can fake.
+
+Worth saying out loud during the demo: **only three of the seven steps contact
+Razorpay.** The denials, the duplicate and the step-up never do — that is the whole
+point, and the UI now says so explicitly rather than leaving it invisible.
+
 ## Recording notes
 
 - **Rehearse the verdict numbers.** `0x000D` blender, `0x0800` substitution,

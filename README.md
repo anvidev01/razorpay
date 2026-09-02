@@ -165,6 +165,28 @@ Then open **View evidence pack** in the audit card for the dispute-grade JSON.
 Prefer the terminal? `./run.sh --demo` runs the whole walkthrough non-interactively.
 Field reference and gotchas: **[docs/08](docs/08-TESTING-YOUR-DATA.md)**.
 
+### Proving the Razorpay integration is real
+
+```bash
+./scripts/prove-razorpay.sh
+```
+
+Creates an order through the gateway, then reads it **back out of
+`api.razorpay.com`** — nothing local can fake that — shows the audit metadata
+Razorpay now stores against it, confirms a denied cart creates no order at all, and
+lists your recent test orders straight from their API.
+
+Most scenarios deliberately never contact Razorpay, because a refused cart must not:
+
+| scenario | outcome | Razorpay called |
+|---|---|---|
+| order lunch / auto-repair / first retry | ALLOW | **yes** — a real `order_...` |
+| hallucinated blender, wrong substitution | DENY | no |
+| regenerated retry | DUPLICATE | no |
+| hidden instructions | REVIEW | not until a human approves |
+
+That table *is* the product: three of seven reach the rail.
+
 ### Real Razorpay test mode
 
 ```bash

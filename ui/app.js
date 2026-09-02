@@ -129,6 +129,10 @@ function render(j) {
     chips.push(`<span class="rchip payno">POST ${host}/v1/orders → ${d.payment_http_status} · ${d.payment_error || 'failed'}</span>`);
   } else if (oc === 'ALLOW') {
     chips.push('<span class="rchip payno">token issued, not executed</span>');
+  } else {
+    // A refusal means Razorpay was never contacted at all. That non-event is the
+    // product working, and it is invisible unless we say so.
+    chips.push(`<span class="rchip payno">${host} never contacted — no order created</span>`);
   }
 
   const gate = oc === 'ALLOW'
