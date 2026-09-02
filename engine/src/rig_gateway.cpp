@@ -2,6 +2,7 @@
 // Single-threaded and deliberately small -- the interesting code is the engine.
 #include "rig/gateway.hpp"
 #include "rig/evidence.hpp"
+#include "rig/intent.hpp"
 #include <map>
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -274,6 +275,25 @@ static int run(int argc, char** argv) {
       const std::uint64_t seq = query_u64(path, "seq");
       const auto r = evidence_json(wal_path, seq);
       respond(c, r.found ? 200 : 404, "application/json", r.json);
+
+    } else if (method == "POST" && path == "/api/intent") {
+      // Natural language -> a DRAFT mandate. Deliberately NOT signed here: the draft
+      // goes back to the human, who confirms it, and only then does /api/admit sign it.
+      // The model has no key and no path to admission.
+      const std::string utterance = json_str(body, "utterance");
+      const std::string catalog   = slurp("fixtures/catalog.json");
+      const IntentDraft d = translate_intent(utterance, catalog);
+      std::ostringstream o;
+      o << "{\"ok\":" << (d.ok ? "true" : "false")
+        << ",\"source\":\"" << d.source << "\""
+        << ",\"model\":\"" << d.model << "\""
+        << ",\"latency_ms\":" << d.latency_ms
+        << ",\"input_tokens\":" << d.input_tokens
+        << ",\"output_tokens\":" << d.output_tokens
+        << ",\"interpretation\":\"" << d.interpretation << "\""
+        << ",\"note\":\"" << d.error << "\""
+        << ",\"draft\":" << (d.mandate_json.empty() ? "null" : d.mandate_json) << "}";
+      respond(c, 200, "application/json", o.str());
 
     } else if (method == "POST" && path == "/api/reset") {
       // Drop the gateway (releases the WAL lock), truncate, rebuild. Demo repeatability.

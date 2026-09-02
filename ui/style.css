@@ -266,3 +266,12 @@ button.danger:hover:not(:disabled){background:var(--red-soft);border-color:var(-
 .chk input{width:auto}
 .hint{margin-top:9px;font-family:var(--mono);font-size:11px;color:var(--muted)}
 .hint.bad{color:var(--red)} .hint.good{color:var(--green)}
+
+/* ---------- natural-language intent ---------- */
+.nlrow{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.nlrow input{flex:1;font-size:14px;padding:9px 11px}
+.interp{padding:11px 13px;border-radius:8px;background:var(--blue-soft);
+  border:1px solid var(--blue);font-size:13px;color:var(--ink);line-height:1.5}
+.interp .src{font-family:var(--mono);font-size:10.5px;color:var(--muted);
+  display:block;margin-top:6px}
+.interp.warn{background:var(--amber-soft);border-color:var(--amber)}

@@ -1,0 +1,15 @@
+{
+  "_comment": "Merchant catalogue the translator maps natural language onto. In production this is the merchant's live product feed.",
+  "items": [
+    { "sku": "SKU_MEAL_THALI_001",  "name": "Veg thali",            "category": "FOOD_MAIN",  "price_rupees": 240, "keywords": ["meal","thali","lunch","food","veg"] },
+    { "sku": "SKU_MEAL_BIRYANI_02", "name": "Chicken biryani",      "category": "FOOD_MAIN",  "price_rupees": 320, "keywords": ["meal","biryani","lunch","chicken","rice"] },
+    { "sku": "SKU_DRINK_LIME_007",  "name": "Fresh lime soda",      "category": "FOOD_DRINK", "price_rupees": 60,  "keywords": ["drink","lime","soda","beverage","juice"] },
+    { "sku": "SKU_DRINK_COFFEE_09", "name": "Filter coffee",        "category": "FOOD_DRINK", "price_rupees": 80,  "keywords": ["drink","coffee","beverage","tea"] },
+    { "sku": "SKU_SIDE_RAITA_014",  "name": "Boondi raita",         "category": "FOOD_SIDE",  "price_rupees": 45,  "keywords": ["side","raita","curd"] },
+    { "sku": "SKU_DESSERT_GULAB",   "name": "Gulab jamun (2 pc)",   "category": "FOOD_SWEET", "price_rupees": 70,  "keywords": ["dessert","sweet","gulab","jamun"] },
+    { "sku": "SKU_MILK_TONED_1L",   "name": "Toned milk 1L",        "category": "DAIRY_MILK", "price_rupees": 60,  "keywords": ["milk","dairy","toned"] },
+    { "sku": "SKU_BREAD_WHOLE",     "name": "Whole wheat bread",    "category": "BAKERY_BREAD","price_rupees": 45, "keywords": ["bread","bakery","wheat"] },
+    { "sku": "SKU_EGGS_TRAY_12",    "name": "Eggs (tray of 12)",    "category": "EGGS",       "price_rupees": 85,  "keywords": ["eggs","egg","tray"] }
+  ],
+  "merchants": ["swiggy", "zomato", "bigbasket", "zepto"]
+}

@@ -84,7 +84,16 @@
 
       <div class="composer" id="composer" hidden>
         <div class="csect">
-          <div class="secttl">1 · The mandate <span>what the human authorises</span></div>
+          <div class="secttl">1 · Say it in plain English <span>the assistant drafts, you approve</span></div>
+          <div class="nlrow">
+            <input id="c-utter" placeholder="buy me two meals and a drink under ₹1000">
+            <button class="btn-quiet" id="c-interpret">Interpret →</button>
+          </div>
+          <div class="interp" id="c-interp" hidden></div>
+        </div>
+
+        <div class="csect">
+          <div class="secttl">2 · Review what it understood <span>nothing is signed until you press the button</span></div>
           <div class="frow">
             <label>Mandate id<input id="c-mid" value="mnd_live_01"></label>
             <label>Budget ₹<input id="c-budget" type="number" min="1" value="500"></label>
@@ -109,7 +118,7 @@
         </div>
 
         <div class="csect">
-          <div class="secttl">2 · The cart <span>what the agent wants to buy</span></div>
+          <div class="secttl">3 · The cart <span>what the agent wants to buy</span></div>
           <div class="frow">
             <label>Merchant<input id="c-cmerch" value="swiggy"></label>
             <label>Agent session<input id="c-sess" value="sess_live_01"></label>

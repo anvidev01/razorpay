@@ -473,3 +473,61 @@ $('m-com').onclick = () => {
   $('scenarios').hidden = true; $('composer').hidden = false;
   hint('edit the mandate, press Sign & admit, then send a cart against it');
 };
+
+
+// ---------- natural language -> draft mandate ----------
+// The model PROPOSES. The human confirms by pressing Sign & admit. The model has no
+// key and no path to /api/admit, so a bad translation is caught here -- exactly the
+// way a bad cart is caught by the policy kernel.
+$('c-interpret').onclick = async () => {
+  const utterance = $('c-utter').value.trim();
+  if (!utterance) return;
+  const box = $('c-interp');
+  box.hidden = false;
+  box.className = 'interp';
+  box.textContent = 'interpreting…';
+
+  const j = await (await fetch('/api/intent', {
+    method: 'POST', body: JSON.stringify({ utterance }),
+  })).json();
+
+  if (!j.ok) {
+    box.className = 'interp warn';
+    box.textContent = 'could not interpret that: ' + (j.note || 'no match');
+    return;
+  }
+  const d = j.draft;
+
+  // Fill the form. The human now sees exactly what will be signed.
+  $('c-budget').value = Math.round(d.budget_rupees);
+  $('c-ttl').value = d.valid_minutes;
+  $('c-merch').value = d.merchants.join(', ');
+  $('c-sub').value = d.substitution_policy;
+  $('c-delta').value = d.substitution_uplift_pct;
+  rulesBox.innerHTML = '';
+  d.items.forEach((it) => rulesBox.appendChild(
+    ruleRow(it.sku, it.category, Math.round(it.max_unit_rupees), it.max_qty)));
+
+  // Prefill the cart with the same items at catalogue-ish prices, so "send" is one click.
+  linesBox.innerHTML = '';
+  d.items.forEach((it) => linesBox.appendChild(
+    lineRow(it.sku, it.category, Math.round(it.max_unit_rupees * 0.9), it.max_qty, '')));
+  if (d.merchants.length) $('c-cmerch').value = d.merchants[0];
+
+  const cost = j.input_tokens
+    ? ` · ${j.input_tokens}+${j.output_tokens} tokens · ${j.latency_ms} ms` : '';
+  const src = j.source === 'claude'
+    ? `drafted by ${j.model}${cost}`
+    : `drafted by the offline keyword matcher — no API key set, so this is NOT an LLM`;
+  box.className = 'interp' + (j.source === 'claude' ? '' : ' warn');
+  box.innerHTML = `<b>Understood:</b> ${d.interpretation}
+    <span class="src">${src} · this is a DRAFT — review the fields below, nothing is
+    signed until you press Sign &amp; admit</span>`;
+  if (j.note) box.innerHTML += `<span class="src">note: ${j.note}</span>`;
+  msg('user', 'you', utterance);
+  msg('agent', 'assistant', `I read that as: ${d.interpretation}. Confirm and I'll get it signed.`);
+};
+
+$('c-utter').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') $('c-interpret').click();
+});
