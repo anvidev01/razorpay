@@ -1,0 +1,43 @@
+{
+  "_comment": "YOUR MANDATE. This is what the human authorised. Edit freely, then run:",
+  "_run": "./scripts/mandate.sh fixtures/custom/my_intent.json 30    # 30-minute validity window",
+  "mandate_id": "mnd_my_test_01",
+  "utterance": "order my team lunch, under 900 rupees, from swiggy or zomato",
+  "not_before_ns": 1788341996222824960,
+  "not_after_ns": 1788343856222824960,
+  "_window": "Leave both 0 -- scripts/mandate.sh fills them with a real window.",
+  "total_budget_paise": 90000,
+  "_budget": "PAISE, not rupees. 90000 = Rs 900. Integers only, never floats.",
+  "merchant_allow": [
+    "swiggy",
+    "zomato"
+  ],
+  "_merchants": "Max 64 distinct merchants across all mandates (they live in a bitmask).",
+  "substitution": {
+    "policy": "same_category",
+    "max_delta_bp": 1500
+  },
+  "_substitution": "policy: deny | same_category | any_in_budget. 1500 bp = a substitute may cost up to +15% over the cap. Omit this block entirely for exact-SKU-only.",
+  "constraints": [
+    {
+      "sku": "SKU_MY_MEAL_A",
+      "category": "FOOD_MAIN",
+      "max_unit_paise": 30000,
+      "max_qty": 3
+    },
+    {
+      "sku": "SKU_MY_MEAL_B",
+      "category": "FOOD_MAIN",
+      "max_unit_paise": 28000,
+      "max_qty": 3
+    },
+    {
+      "sku": "SKU_MY_DRINK",
+      "category": "FOOD_DRINK",
+      "max_unit_paise": 9000,
+      "max_qty": 6
+    }
+  ],
+  "_constraints": "Max 16. 'category' is optional and only used for substitution matching. SKU strings max 48 chars.",
+  "schema_version": 1
+}

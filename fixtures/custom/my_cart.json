@@ -1,0 +1,15 @@
+{
+  "_comment": "WHAT THE AGENT WANTS TO BUY. Must reference the same mandate_id.",
+
+  "mandate_id": "mnd_my_test_01",
+  "merchant": "swiggy",
+  "agent_session_id": "sess_my_agent_01",
+  "_session": "Optional but recommended -- behavioural baselines are per session.",
+
+  "lines": [
+    { "sku": "SKU_MY_MEAL_A", "category": "FOOD_MAIN",  "unit_paise": 28000, "qty": 2 },
+    { "sku": "SKU_MY_DRINK",  "category": "FOOD_DRINK", "unit_paise": 8000,  "qty": 2 }
+  ],
+  "_lines": "Max 64. 'name' and 'note' are optional free text and ARE scanned for injection.",
+  "_total": "28000*2 + 8000*2 = 72000 paise = Rs 720, inside the Rs 900 budget."
+}
