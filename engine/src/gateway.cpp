@@ -147,8 +147,10 @@ Decision Gateway::decide(const std::string& cart_json, std::uint64_t now_ns) {
 
   auto it = by_id_.find(mandate_id);
   if (it == by_id_.end()) {
-    d.verdict.bits = R_MANDATE_EXPIRED;      // no such mandate -> nothing authorises this
-    d.parse_error  = "unknown mandate";
+    // Distinct from R_MANDATE_EXPIRED: nothing was ever signed under this id.
+    d.verdict.bits = R_MANDATE_UNKNOWN;
+    d.parse_error  = "no mandate '" + std::to_string(mandate_id)
+                   + "' has been admitted -- sign it first";
     wal_->append(RecType::CAPABILITY_DENIED, &d.verdict.bits, sizeof d.verdict.bits);
     wal_->commit();
     return d;

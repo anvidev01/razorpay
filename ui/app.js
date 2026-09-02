@@ -578,6 +578,20 @@ $('c-auto').onclick = async () => {
   const merchant = $('c-cmerch').value.trim();
   const session = ($('c-sess').value.trim() || 'sess_auto') + '_auto';
 
+  // Starting an unattended run against a mandate that was never signed produces five
+  // identical refusals and no explanation of the real cause. Say it once, up front.
+  const probe = await (await fetch('/api/decide', {
+    method: 'POST',
+    body: JSON.stringify({ mandate_id: mandate, merchant, agent_session_id: session + '_probe',
+                           lines: [{ sku: '__probe__', unit_paise: 1, qty: 1 }] }),
+  })).json();
+  if ((probe.decision.reasons || []).some((r) => r.code === 'R_MANDATE_UNKNOWN')) {
+    msg('sys', null, `✗ mandate "${mandate}" has not been signed yet — press `
+      + `<b>Sign &amp; admit mandate</b> above first, then run this.`);
+    hint(`mandate "${mandate}" is not admitted — sign it first`, 'bad');
+    btn.disabled = false;
+    return;
+  }
   msg('sys', null, 'you signed once — the agent now transacts on its own, no further clicks');
 
   for (const b of AUTO_BASKETS) {

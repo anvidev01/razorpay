@@ -30,6 +30,7 @@ const char* reject_name(std::uint32_t bit) noexcept {
     case R_VELOCITY_ANOMALY:     return "R_VELOCITY_ANOMALY";
     case R_NEW_MERCHANT:         return "R_NEW_MERCHANT";
     case R_ODD_HOUR:             return "R_ODD_HOUR";
+    case R_MANDATE_UNKNOWN:      return "R_MANDATE_UNKNOWN";
     default:                     return "R_UNKNOWN";
   }
 }
@@ -53,6 +54,7 @@ const char* reject_help(std::uint32_t bit) noexcept {
     case R_VELOCITY_ANOMALY:     return "spending or frequency above this agent's baseline";
     case R_NEW_MERCHANT:         return "merchant never used by this agent before";
     case R_ODD_HOUR:             return "outside this agent's normal active hours";
+    case R_MANDATE_UNKNOWN:      return "no mandate with this id has been signed and admitted";
     default:                     return "unknown rejection";
   }
 }

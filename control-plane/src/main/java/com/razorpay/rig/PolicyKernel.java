@@ -30,6 +30,7 @@ public final class PolicyKernel {
     public static final int R_VELOCITY_ANOMALY     = 1 << 14;
     public static final int R_NEW_MERCHANT         = 1 << 15;
     public static final int R_ODD_HOUR             = 1 << 16;
+    public static final int R_MANDATE_UNKNOWN      = 1 << 17;
     public static final int SUBST_DENY = 0, SUBST_SAME_CATEGORY = 1, SUBST_ANY_IN_BUDGET = 2;
 
     /**
@@ -50,7 +51,7 @@ public final class PolicyKernel {
                         "R_ARITH_OVERFLOW","R_REPLAY_NONCE","R_SCHEMA_VERSION","R_ENGINE_RESOURCE",
                         "R_SUBSTITUTION_DENIED","R_SUBSTITUTION_DELTA","R_INJECTION_SUSPECTED",
                         "R_DUPLICATE_CHARGE","R_VELOCITY_ANOMALY","R_NEW_MERCHANT",
-                        "R_ODD_HOUR"};
+                        "R_ODD_HOUR","R_MANDATE_UNKNOWN"};
         int n = Integer.bitCount(bits);
         String[] out = new String[n];
         int k = 0;

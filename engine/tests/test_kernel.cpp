@@ -136,6 +136,18 @@ int main() {
     CHECK(t2.lookup("NEVER_SEEN") == InternTable::INVALID, "unknown sku -> INVALID");
   }
 
+  // ---------------- an unsigned mandate is not an expired one ----------------
+  // These were the same code, so a user who forgot to press Sign & admit was told
+  // their validity window was wrong and went looking at budgets and clocks.
+  {
+    CHECK(std::string(reject_name(R_MANDATE_UNKNOWN)) == "R_MANDATE_UNKNOWN",
+          "unknown mandate has its own code");
+    CHECK(std::string(reject_name(R_MANDATE_EXPIRED)) != std::string(reject_name(R_MANDATE_UNKNOWN)),
+          "  -> distinct from expired");
+    CHECK((HARD_DENY_MASK & R_MANDATE_UNKNOWN) != 0,
+          "  -> and denies rather than escalating");
+  }
+
   // ---------------- ambiguous mandates ----------------
   // Two rules for one SKU let list order decide the binding: a loose rule written
   // second silently overrode a tight one written first, approving 4 x Rs450 against

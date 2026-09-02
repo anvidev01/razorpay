@@ -32,7 +32,11 @@ enum Reject : std::uint32_t {
   R_VELOCITY_ANOMALY     = 1u << 14,  // spending far above this agent's baseline
   R_NEW_MERCHANT         = 1u << 15,  // merchant never seen for this agent
   R_ODD_HOUR             = 1u << 16,  // outside the agent's normal active hours
-  R_BIT_COUNT            = 17
+  // "no such mandate" is NOT "the mandate expired". Conflating them told a user their
+  // validity window was wrong when they had simply never signed the mandate, which
+  // sent them checking budgets and clocks instead of pressing the sign button.
+  R_MANDATE_UNKNOWN      = 1u << 17,  // nothing has been signed under this id
+  R_BIT_COUNT            = 18
 };
 
 // Three outcomes, not two. A hard intent violation is a DENY. A behavioural signal
@@ -45,7 +49,8 @@ const char* outcome_name(Outcome o) noexcept;
 // Deterministic, bounded rule violations -> DENY.
 inline constexpr std::uint32_t HARD_DENY_MASK =
     R_SKU_NOT_IN_INTENT | R_QTY_EXCEEDED | R_UNIT_PRICE_EXCEEDED | R_CART_TOTAL_EXCEEDED |
-    R_MERCHANT_NOT_ALLOWED | R_MANDATE_EXPIRED | R_ARITH_OVERFLOW | R_REPLAY_NONCE |
+    R_MERCHANT_NOT_ALLOWED | R_MANDATE_EXPIRED | R_MANDATE_UNKNOWN |
+    R_ARITH_OVERFLOW | R_REPLAY_NONCE |
     R_SCHEMA_VERSION | R_ENGINE_RESOURCE | R_SUBSTITUTION_DENIED | R_SUBSTITUTION_DELTA |
     // A duplicate is deterministic, not probabilistic: the same basket was already
     // decided. It must never be reviewable into a second charge.
