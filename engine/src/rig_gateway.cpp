@@ -6,6 +6,7 @@
 #include <map>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <sys/time.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <signal.h>
@@ -39,7 +40,11 @@ static void respond(int fd, int code, const char* ctype, const std::string& body
     << "Content-Type: " << ctype << "\r\n"
     << "Content-Length: " << body.size() << "\r\n"
     << "Cache-Control: no-store\r\n"
-    << "Access-Control-Allow-Origin: *\r\n\r\n" << body;
+    // No Access-Control-Allow-Origin. The UI is served by this same origin, so CORS
+    // buys nothing -- and a wildcard on an endpoint that moves money lets any page the
+    // user happens to be visiting POST to 127.0.0.1 and spend from a live mandate.
+    << "X-Content-Type-Options: nosniff\r\n"
+    << "Cache-Control: no-store\r\n\r\n" << body;
   send_all(fd, o.str());
 }
 
@@ -190,13 +195,17 @@ static int run(int argc, char** argv) {
 
   std::map<std::uint64_t, Decision> live;   // decisions awaiting confirm / execute
 
+  // One user device for the whole session: it signs, the gateway verifies.
+  UserDevice device("user_phone_9f21");
+
   auto admit_default = [&](Gateway& g) {
+    g.enroll_device(device.public_key(), device.label());
     std::string err;
     const std::string intent = slurp("fixtures/lunch_intent.json");
-    if (!intent.empty() && !g.admit_mandate(intent, err))
+    if (!intent.empty() && !g.admit_mandate(intent, device.sign(intent), device.public_key(), err))
       std::fprintf(stderr, "warning: lunch mandate not admitted: %s\n", err.c_str());
     const std::string groc = slurp("fixtures/grocery_intent.json");
-    if (!groc.empty() && !g.admit_mandate(groc, err))
+    if (!groc.empty() && !g.admit_mandate(groc, device.sign(groc), device.public_key(), err))
       std::fprintf(stderr, "warning: grocery mandate not admitted: %s\n", err.c_str());
   };
 
@@ -217,18 +226,32 @@ static int run(int argc, char** argv) {
   for (;;) {
     const int c = ::accept(srv, nullptr, nullptr);
     if (c < 0) continue;
+    // Bounded reads. Without these a single client can grow `req` without limit, or
+    // declare a huge Content-Length and hold the (single-threaded) accept loop open
+    // forever -- one slow connection would take the whole gateway down.
+    static constexpr std::size_t MAX_HEADERS = 16 * 1024;
+    static constexpr std::size_t MAX_BODY    = 256 * 1024;
+    timeval tv{}; tv.tv_sec = 5;
+    ::setsockopt(c, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof tv);
+
     std::string req; req.reserve(8192);
     char buf[4096];
     ssize_t n;
+    bool too_big = false;
     while ((n = ::read(c, buf, sizeof buf)) > 0) {
       req.append(buf, (std::size_t)n);
       const auto hp = req.find("\r\n\r\n");
-      if (hp == std::string::npos) continue;
+      if (hp == std::string::npos) {
+        if (req.size() > MAX_HEADERS) { too_big = true; break; }
+        continue;
+      }
       std::size_t clen = 0;
       const auto cl = req.find("Content-Length:");
       if (cl != std::string::npos) clen = std::strtoul(req.c_str() + cl + 15, nullptr, 10);
+      if (clen > MAX_BODY || req.size() > MAX_HEADERS + MAX_BODY) { too_big = true; break; }
       if (req.size() >= hp + 4 + clen) break;
     }
+    if (too_big) { respond(c, 413, "text/plain", "request too large"); ::close(c); continue; }
     if (req.empty()) { ::close(c); continue; }
 
     const auto sp1 = req.find(' ');
@@ -307,7 +330,7 @@ static int run(int argc, char** argv) {
 
     } else if (method == "POST" && path == "/api/admit") {
       std::string err;
-      const bool ok = gw->admit_mandate(body, err);
+      const bool ok = gw->admit_mandate(body, device.sign(body), device.public_key(), err);
       respond(c, ok ? 200 : 400, "application/json",
               std::string("{\"ok\":") + (ok ? "true" : "false") + ",\"error\":\"" + err + "\"}");
     } else if (method == "GET" && path.rfind("/api/wal", 0) == 0) {

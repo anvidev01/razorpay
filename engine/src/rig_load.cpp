@@ -19,7 +19,10 @@ static int run(int argc, char** argv) {
   ::unlink(wal);
   Gateway gw(wal);
   std::string err;
-  if (!gw.admit_mandate(slurp("fixtures/lunch_intent.json"), err))
+  UserDevice device("user_phone_9f21");
+  gw.enroll_device(device.public_key(), device.label());
+  const std::string intent = slurp("fixtures/lunch_intent.json");
+  if (!gw.admit_mandate(intent, device.sign(intent), device.public_key(), err))
     throw std::runtime_error("admission: " + err);
 
   const std::string cart = slurp("fixtures/lunch_cart.json");

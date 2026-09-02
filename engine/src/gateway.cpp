@@ -70,17 +70,34 @@ Tag128 Gateway::tag_of(const IntentSchema& s) const noexcept {
   return siphash(&copy, sizeof copy, tag_key_);
 }
 
-bool Gateway::admit_mandate(const std::string& intent_json, std::string& err) {
+void Gateway::enroll_device(const std::array<std::uint8_t, 32>& pub, std::string label) {
+  enrolled_pub_    = pub;
+  enrolled_label_  = std::move(label);
+  device_enrolled_ = true;
+}
+
+bool Gateway::admit_mandate(const std::string& intent_json, const Sig512& sig,
+                            const std::array<std::uint8_t, 32>& pub, std::string& err) {
+  if (!device_enrolled_) { err = "no user device enrolled"; return false; }
+
+  // 1. The signature must come from the device the user actually enrolled. Accepting
+  //    any key that presents itself would make the signature decorative.
+  if (pub != enrolled_pub_) {
+    err = "mandate signed by an unenrolled device (" + hex(pub.data(), 8)
+        + "), expected " + hex(enrolled_pub_.data(), 8);
+    return false;
+  }
+  // 2. The signature must cover these EXACT bytes, so nothing can be edited between
+  //    what the human approved on their phone and what the engine enforces.
+  //    Ed25519 costs ~36.5us and is paid ONCE here, never per cart.
+  if (!verify_detached(pub.data(), intent_json.data(), intent_json.size(), sig)) {
+    err = "signature does not cover this mandate (altered after signing?)";
+    return false;
+  }
+
   IntentSchema s{};
   const ParseResult pr = parse_intent(intent_json, intern_, s);
   if (!pr.ok) { err = pr.error; return false; }
-
-  // Ed25519 costs 36.5us -- 1302x the kernel. It is paid ONCE, here, never per cart.
-  const Sig512 sig = key_.sign(&s, sizeof(IntentSchema) - sizeof(s.integrity_tag));
-  if (!key_.verify(&s, sizeof(IntentSchema) - sizeof(s.integrity_tag), sig)) {
-    err = "mandate signature verification failed";
-    return false;
-  }
   const Tag128 tag = tag_of(s);
   std::memcpy(s.integrity_tag, tag.data(), 16);
 
@@ -94,9 +111,10 @@ bool Gateway::admit_mandate(const std::string& intent_json, std::string& err) {
   }
   pool_.at(idx) = s;
 
-  struct { std::uint64_t id; std::uint8_t sig[64]; } rec{};
+  struct { std::uint64_t id; std::uint8_t sig[64]; std::uint8_t dev[32]; } rec{};
   rec.id = s.mandate_id;
   std::memcpy(rec.sig, sig.data(), 64);
+  std::memcpy(rec.dev, pub.data(), 32);
   wal_->append(RecType::MANDATE_ISSUED, &rec, sizeof rec);
   wal_->commit();
   return true;
@@ -244,12 +262,19 @@ Decision Gateway::decide(const std::string& cart_json, std::uint64_t now_ns) {
     sr.id = d.decision_id; sr.seq = d.wal_seq;
     sr.sess = d.agent_session_id; sr.risk = d.risk_bits;
     wal_->append(RecType::STEP_UP_REQUIRED, &sr, sizeof sr);
-    for (auto& p : pending_) {
-      if (p.live) continue;
-      p = Pending{d.decision_id, mandate_id, d.wal_seq, d.amount_paise,
-                  cart.merchant_id, d.agent_session_id, d.cart_hash, rec_head, true};
-      break;
+    // Park it. If every slot is live, evict the OLDEST rather than silently dropping
+    // this one -- a dropped step-up is a decision the human can never answer, which
+    // strands the agent instead of failing cleanly.
+    Pending* slot = nullptr;
+    for (auto& p : pending_) if (!p.live) { slot = &p; break; }
+    if (!slot) {
+      slot = &pending_[0];
+      for (auto& p : pending_) if (p.decision_id < slot->decision_id) slot = &p;
+      std::fprintf(stderr, "gateway: step-up table full, evicting decision %llu\n",
+                   (unsigned long long)slot->decision_id);
     }
+    *slot = Pending{d.decision_id, mandate_id, d.wal_seq, d.amount_paise,
+                    cart.merchant_id, d.agent_session_id, d.cart_hash, rec_head, true};
     if (!group_commit_) wal_->commit();
     idem_.insert(d.idem_key, d.decision_id, d.wal_seq, false, now_ns);
     return d;

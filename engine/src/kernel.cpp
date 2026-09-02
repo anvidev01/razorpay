@@ -92,11 +92,20 @@ Verdict evaluate(const IntentSchema& s, const CartView& c, std::uint64_t now_ns)
                     ((s.merchant_allow_mask >> (c.merchant_id - 1)) & 1ull) == 0,
                   R_MERCHANT_NOT_ALLOWED);
   bits |= mask_if(c.n > MAX_CART, R_ENGINE_RESOURCE);
+  // An empty cart is not a purchase. It previously returned ALLOW and minted a
+  // capability token bound to nothing, burning a nonce for a zero-value order.
+  bits |= mask_if(c.n == 0, R_SCHEMA_VERSION);
   // Injection flags are raised at the parse boundary, where the text still exists.
   // NOTE: this is telemetry and defence in depth, NOT the security boundary --
   // see docs/06-AGENTIC-BLIND-SPOTS.md. The real control is that an injected item
   // is not in the signed mandate, so it fails on intent regardless of the text.
   bits |= (c.text_flags & R_INJECTION_SUSPECTED);
+
+  // Quantity caps must be AGGREGATE across the cart, not per line. The agent decides
+  // how many lines to send, so a per-line check lets it buy N of a max-1 item by
+  // sending N lines of quantity 1. Found by testing; see docs/09-SECURITY-REVIEW.md.
+  std::uint64_t agg_qty[MAXC] = {};
+  int           line_eff[MAX_CART];
 
   std::int64_t total = 0;
   for (std::uint32_t i = 0; i < v.n_lines; ++i) {
@@ -129,7 +138,10 @@ Verdict evaluate(const IntentSchema& s, const CartView& c, std::uint64_t now_ns)
     const std::int64_t ceiling = cap + (cap * static_cast<std::int64_t>(s.subst_max_delta_bp)) / 10000;
     lb |= mask_if(ci < 0 && sub >= 0 && up > ceiling, R_SUBSTITUTION_DELTA);
 
+    // per-line cap (a single line over the limit is still a violation)
     lb |= mask_if(eff >= 0 && q  > s.max_qty[safe],        R_QTY_EXCEEDED);
+    line_eff[i] = eff;
+    if (eff >= 0) agg_qty[eff] += q;
     // Two independent unit-price bounds. The second applies even to an unknown SKU:
     // a single line costing more than the ENTIRE mandate budget is always a violation,
     // and without it a hallucinated item would report only "not in intent" and hide
@@ -147,6 +159,20 @@ Verdict evaluate(const IntentSchema& s, const CartView& c, std::uint64_t now_ns)
     v.lines[i].bits            = lb;
     v.lines[i].substituted_for = (ci < 0 && sub >= 0) ? s.sku_id[sub] : 0u;
     bits |= lb;
+  }
+
+  // Aggregate cap: sum every line that resolves to the same constraint.
+  std::uint32_t over = 0;                      // bitmask of constraints exceeded
+  for (int ci = 0; ci < MAXC; ++ci) {
+    const bool bad = (ci < static_cast<int>(s.n_constraints)) &&
+                     (agg_qty[ci] > s.max_qty[ci]);
+    over |= static_cast<std::uint32_t>(bad) << ci;
+    bits |= mask_if(bad, R_QTY_EXCEEDED);
+  }
+  // Attribute the overrun to every line that contributed to it.
+  for (std::uint32_t i = 0; i < v.n_lines; ++i) {
+    const int e = line_eff[i];
+    if (e >= 0 && ((over >> e) & 1u)) v.lines[i].bits |= R_QTY_EXCEEDED;
   }
 
   bits |= mask_if(total > s.total_budget_paise, R_CART_TOTAL_EXCEEDED);

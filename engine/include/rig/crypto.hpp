@@ -42,6 +42,27 @@ private:
   void* pkey_ = nullptr;          // EVP_PKEY*
 };
 
+// Verify against a public key we do NOT hold the private half of. This is what makes
+// "the human authorised it" a checkable claim rather than the gateway vouching for
+// itself: the signing key lives on the user's device, the gateway only ever verifies.
+bool verify_detached(const std::uint8_t pub[32], const void* msg, std::size_t len,
+                     const Sig512& sig) noexcept;
+
+// The user's device / UPI app. In production this key never leaves the phone's secure
+// element; here it is a separate object with its own keypair so the trust boundary is
+// modelled honestly and the verification path is real.
+class UserDevice {
+public:
+  explicit UserDevice(std::string label) : label_(std::move(label)) {}
+  Sig512                       sign(const std::string& mandate_json) const;
+  std::array<std::uint8_t, 32> public_key() const { return key_.public_key(); }
+  const std::string&           label() const noexcept { return label_; }
+  std::string                  fingerprint() const;   // first 8 bytes of the pubkey
+private:
+  Signer      key_;
+  std::string label_;
+};
+
 std::string hex(const void* data, std::size_t len);
 template <class T> std::string hex(const T& a) { return hex(a.data(), a.size()); }
 

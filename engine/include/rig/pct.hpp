@@ -8,7 +8,7 @@
 #include "crypto.hpp"
 #include "schema.hpp"
 #include <cstdint>
-#include <unordered_set>
+#include <unordered_map>
 #include <string>
 
 namespace rig {
@@ -61,7 +61,11 @@ public:
 
 private:
   const Signer&                  key_;
-  std::unordered_set<std::uint64_t> burned_;
+  // nonce -> the token's expiry. A nonce cannot be replayed once its token has
+  // expired, so expired entries are pruned; an unordered_set kept every nonce the
+  // process ever saw, which is a slow memory leak in a long-running gateway.
+  std::unordered_map<std::uint64_t, std::uint64_t> burned_;
+  std::uint64_t                  last_prune_ns_ = 0;
   std::uint64_t                  authorized_ = 0;
   std::uint64_t                  refused_    = 0;
 };

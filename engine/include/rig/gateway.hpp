@@ -59,8 +59,18 @@ class Gateway {
 public:
   explicit Gateway(std::string wal_path);
 
-  // ADMISSION PATH (cold): Ed25519-verify once, then freeze the schema and tag it.
-  bool admit_mandate(const std::string& intent_json, std::string& err);
+  // Enrol the user's device public key. In production this happens once, out of band,
+  // when the user links their UPI app -- the gateway receives a PUBLIC key and never
+  // holds the private half.
+  void enroll_device(const std::array<std::uint8_t, 32>& pub, std::string label);
+  bool device_enrolled() const noexcept { return device_enrolled_; }
+  std::string device_fingerprint() const { return hex(enrolled_pub_.data(), 8); }
+
+  // ADMISSION PATH (cold). The mandate must carry a signature from the ENROLLED device
+  // over its exact bytes. A mandate signed by any other key, or altered after signing,
+  // is refused here and never reaches the policy engine.
+  bool admit_mandate(const std::string& intent_json, const Sig512& sig,
+                     const std::array<std::uint8_t, 32>& pub, std::string& err);
 
   // HOT PATH: ~270ns of compute, then the durable-commit fence.
   Decision decide(const std::string& cart_json, std::uint64_t now_ns);
@@ -126,6 +136,9 @@ private:
   Pending pending_[64]{};
   std::unordered_map<std::uint64_t, std::uint32_t> by_id_;
   std::uint8_t                 tag_key_[16]{};
+  std::array<std::uint8_t, 32> enrolled_pub_{};
+  std::string                  enrolled_label_;
+  bool                         device_enrolled_ = false;
   std::uint64_t                next_decision_ = 1;
   std::uint64_t                next_nonce_    = 1;
   bool                         group_commit_  = false;

@@ -22,6 +22,14 @@ static const char* DIM = "\033[2m";  static const char* BLD = "\033[1m";
 static const char* RST = "\033[0m";
 
 static int fails = 0;
+static void report_admit(const char* attack, bool admitted, const std::string& why) {
+  if (admitted) ++fails;
+  std::printf("  %s%-34s%s %s%-8s%s %s%s%s\n",
+    BLD, attack, RST,
+    admitted ? GRN : RED, admitted ? "ADMITTED" : "REFUSED", RST,
+    DIM, admitted ? "mandate accepted" : why.c_str(), RST);
+}
+
 static void report(const char* attack, PctStatus got, bool expect_refused) {
   const bool refused = (got != PctStatus::VALID);
   const bool pass    = refused == expect_refused;
@@ -43,10 +51,54 @@ static int run(int argc, char** argv) {
   ::unlink(awal);
   Gateway gw(awal);
   std::string err;
-  if (!gw.admit_mandate(slurp(intent), err)) {
+  UserDevice device("user_phone_9f21");
+  gw.enroll_device(device.public_key(), device.label());
+  const std::string mandate_json = slurp(intent);
+  if (!gw.admit_mandate(mandate_json, device.sign(mandate_json), device.public_key(), err)) {
     std::fprintf(stderr, "admission failed: %s\n", err.c_str());
     return 2;
   }
+  // ---- attacks on ADMISSION: forging the human's authorisation itself ----
+  std::printf("\n  %sthree ways to forge the human's authorisation%s\n\n", DIM, RST);
+  {
+    UserDevice attacker("attacker_device");
+    std::string e;
+    const bool ok = gw.admit_mandate(mandate_json, attacker.sign(mandate_json),
+                                     attacker.public_key(), e);
+    report_admit("--sign-with-attacker-device", ok, e);
+  }
+  {
+    // Raise the budget AFTER the human signed. The signature covers the exact bytes,
+    // so any edit invalidates it.
+    std::string tampered = mandate_json;
+    const auto at = tampered.find("\"total_budget_paise\"");
+    if (at != std::string::npos) {
+      const auto colon = tampered.find(':', at);
+      const auto comma = tampered.find(',', colon);
+      tampered = tampered.substr(0, colon + 1) + " 99999999" + tampered.substr(comma);
+    }
+    std::string e;
+    const bool ok = gw.admit_mandate(tampered, device.sign(mandate_json),
+                                     device.public_key(), e);
+    report_admit("--raise-budget-after-signing", ok, e);
+  }
+  {
+    std::string e;
+    Sig512 junk{};
+    for (std::size_t i = 0; i < junk.size(); ++i) junk[i] = static_cast<std::uint8_t>(i);
+    const bool ok = gw.admit_mandate(mandate_json, junk, device.public_key(), e);
+    report_admit("--fabricate-a-signature", ok, e);
+  }
+  {   // control: the genuine device is still accepted
+    std::string e;
+    const bool ok = gw.admit_mandate(mandate_json, device.sign(mandate_json),
+                                     device.public_key(), e);
+    std::printf("  %s%-34s%s %s%-8s%s %sthe enrolled device%s\n",
+      BLD, "enrolled device (control)", RST, ok ? GRN : RED,
+      ok ? "ADMITTED" : "REFUSED", RST, DIM, RST);
+    if (!ok) ++fails;
+  }
+
   struct timespec ts; clock_gettime(CLOCK_REALTIME, &ts);
   const std::uint64_t now = std::uint64_t(ts.tv_sec) * 1000000000ull + ts.tv_nsec;
 
@@ -54,7 +106,7 @@ static int run(int argc, char** argv) {
   if (!d.has_pct) { std::fprintf(stderr, "baseline cart was denied; attacks need a valid PCT\n"); return 2; }
   Executor& ex = gw.executor();
 
-  std::printf("\n  %sfour ways to route around the policy engine%s\n\n", DIM, RST);
+  std::printf("\n  %sfive ways to route around the policy engine%s\n\n", DIM, RST);
 
   // 1. no token at all -- the agent simply calls the payment API itself
   report("--force-payment --skip-gateway",
@@ -82,7 +134,7 @@ static int run(int argc, char** argv) {
   report("--replay-last-valid-pct",
          ex.authorize(&d.pct, d.cart_hash, d.amount_paise, now), true);
 
-  std::printf("\n  %sauthorized=%llu refused=%llu%s\n",
+  std::printf("\n  %sadmission forgeries refused=3 | execution bypasses: authorized=%llu refused=%llu%s\n",
     DIM, (unsigned long long)ex.authorized(), (unsigned long long)ex.refused(), RST);
   if (fails) { std::printf("\n  %s%d ATTACK(S) BEHAVED UNEXPECTEDLY%s\n\n", RED, fails, RST); return 1; }
   std::printf("\n  %sall bypasses refused; exactly one legitimate payment authorized%s\n\n", GRN, RST);

@@ -134,6 +134,38 @@ int main() {
     CHECK(t2.lookup("NEVER_SEEN") == InternTable::INVALID, "unknown sku -> INVALID");
   }
 
+  // ---------------- security regressions (docs/09-SECURITY-REVIEW.md) ----------------
+  std::printf("\n== security regressions ==\n");
+  {
+    // V-B: the agent chooses how many LINES to send, so a per-line quantity cap is
+    // no cap at all -- 10 lines of qty 1 bought 10 of a max-1 item.
+    Cart c;
+    for (int i = 0; i < 10; ++i) c.add(t.lookup("SKU_DRINK_LIME_007"), 6000, 1);
+    auto v = evaluate(s, c.view(swiggy), NOW);
+    CHECK(!v.allowed(),                "10 lines x qty1 cannot beat a qty cap of 4");
+    CHECK(v.bits & R_QTY_EXCEEDED,     "  -> reported as a quantity violation");
+    CHECK(v.lines[0].bits & R_QTY_EXCEEDED, "  -> attributed to the contributing lines");
+    std::printf("   split-across-lines verdict = 0x%04X\n", v.bits);
+  }
+  {   // the same cart within the aggregate cap must still pass
+    Cart c;
+    for (int i = 0; i < 4; ++i) c.add(t.lookup("SKU_DRINK_LIME_007"), 6000, 1);
+    CHECK(evaluate(s, c.view(swiggy), NOW).allowed(),
+          "4 lines x qty1 is exactly the cap and is allowed");
+  }
+  {   // substitutes must aggregate against the constraint they stand in for
+    Cart c;
+    c.add(t.lookup("SKU_DRINK_LIME_007"), 6000, 3);
+    c.add(t.lookup("SKU_DRINK_LIME_007"), 6000, 3);
+    auto v = evaluate(s, c.view(swiggy), NOW);
+    CHECK(v.bits & R_QTY_EXCEEDED,     "3+3 against a cap of 4 is refused");
+  }
+  {   // V-I: an empty cart is not a purchase and must not mint a token
+    Cart c;
+    auto v = evaluate(s, c.view(swiggy), NOW);
+    CHECK(!v.allowed(),                "an empty cart is refused, not allowed");
+  }
+
   // ---------------- substitution: the out-of-stock milk problem ----------------
   std::printf("\n== substitution policy ==\n");
   {

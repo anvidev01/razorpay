@@ -38,8 +38,13 @@ static int run(int argc, char** argv) {
   }
 
   Gateway gw(wal_path);
+  // The user's phone. It holds the signing key; the gateway only ever verifies.
+  UserDevice device("user_phone_9f21");
+  gw.enroll_device(device.public_key(), device.label());
+
+  const std::string intent = slurp(argv[1]);
   std::string err;
-  if (!gw.admit_mandate(slurp(argv[1]), err)) {
+  if (!gw.admit_mandate(intent, device.sign(intent), device.public_key(), err)) {
     std::fprintf(stderr, "mandate rejected at admission: %s\n", err.c_str());
     return 3;
   }

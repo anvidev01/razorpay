@@ -40,7 +40,15 @@ EvidenceReport evidence_json(const std::string& wal, std::uint64_t want) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-security"
   const auto emit = [&O](const char* fmt, auto... a) {
-    char b[4096]; std::snprintf(b, sizeof b, fmt, a...); O += b;
+    // Size the buffer from the formatted length. A fixed 4096 silently truncated the
+    // raw cart on large baskets and produced MALFORMED JSON -- an evidence pack that
+    // fails to parse is worse than none, because it fails precisely when the disputed
+    // order was big. See docs/09-SECURITY-REVIEW.md.
+    const int need = std::snprintf(nullptr, 0, fmt, a...);
+    if (need <= 0) return;
+    std::string tmp(static_cast<std::size_t>(need) + 1, '\0');
+    std::snprintf(tmp.data(), tmp.size(), fmt, a...);
+    O.append(tmp.c_str(), static_cast<std::size_t>(need));
   };
 #pragma clang diagnostic pop
 
@@ -93,11 +101,18 @@ EvidenceReport evidence_json(const std::string& wal, std::uint64_t want) {
   emit("    \"substitution_policy\": %u, \"substitution_max_delta_bp\": %u,\n",
               dp.schema.subst_policy, dp.schema.subst_max_delta_bp);
   emit("    \"ed25519_signed_at_admission\": %s,\n", have_mandate ? "true" : "false");
-  if (have_mandate)
+  if (have_mandate) {
+    // Who signed it. This is the field a dispute actually turns on: the mandate was
+    // signed by a key held on the user's device, which the gateway only verifies.
+    std::string dev = "unknown";
+    if (mandate.payload.size() >= 8 + 64 + 32)
+      dev = hex(mandate.payload.data() + 8 + 64, 8);
+    emit("    \"signed_by_device\": \"%s\",\n", dev.c_str());
     emit("    \"mandate_record_seq\": %llu, \"mandate_record_hash\": \"%s\"\n",
                 (unsigned long long)mandate.hdr.seq, hex(mandate.this_hash).c_str());
+  }
   else
-    emit("    \"mandate_record_seq\": null\n");
+    emit("    \"signed_by_device\": null, \"mandate_record_seq\": null\n");
   emit("  },\n");
 
   emit("  \"2_agent_proposal\": {\n");

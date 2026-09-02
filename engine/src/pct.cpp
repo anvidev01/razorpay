@@ -1,4 +1,5 @@
 #include "rig/pct.hpp"
+#include <iterator>
 #include <cstring>
 
 namespace rig {
@@ -34,6 +35,13 @@ PctStatus Executor::authorize(const Pct* pct, const Hash256& actual_cart_hash,
     return refuse(PctStatus::EXPIRED);
   if (burned_.count(pct->body.nonce))
     return refuse(PctStatus::NONCE_BURNED);
+
+  // Prune nonces whose tokens have expired -- they can never be replayed again.
+  if (now_ns - last_prune_ns_ > 60ull * 1000000000ull) {
+    for (auto it = burned_.begin(); it != burned_.end();)
+      it = (it->second < now_ns) ? burned_.erase(it) : std::next(it);
+    last_prune_ns_ = now_ns;
+  }
   // Re-hash what we are ABOUT to submit. This is what stops a cart swap between
   // approval and execution: an approved lunch cannot be exchanged for a blender.
   if (std::memcmp(pct->body.cart_hash, actual_cart_hash.data(), 32) != 0)
@@ -41,7 +49,7 @@ PctStatus Executor::authorize(const Pct* pct, const Hash256& actual_cart_hash,
   if (pct->body.amount_paise != actual_amount)
     return refuse(PctStatus::AMOUNT_MISMATCH);
 
-  burned_.insert(pct->body.nonce);
+  burned_.emplace(pct->body.nonce, pct->body.exp_ns);
   ++authorized_;
   return PctStatus::VALID;
 }

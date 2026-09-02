@@ -143,6 +143,32 @@ std::array<std::uint8_t, 32> Signer::public_key() const {
   return pk;
 }
 
+bool verify_detached(const std::uint8_t pub[32], const void* msg, std::size_t len,
+                     const Sig512& sig) noexcept {
+  EVP_PKEY* pk = EVP_PKEY_new_raw_public_key(EVP_PKEY_ED25519, nullptr, pub, 32);
+  if (!pk) return false;
+  EVP_MD_CTX* m = EVP_MD_CTX_new();
+  bool ok = false;
+  if (m && EVP_DigestVerifyInit(m, nullptr, nullptr, nullptr, pk) > 0) {
+    ok = EVP_DigestVerify(m, sig.data(), sig.size(),
+                          static_cast<const unsigned char*>(msg), len) == 1;
+  }
+  if (m) EVP_MD_CTX_free(m);
+  EVP_PKEY_free(pk);
+  return ok;
+}
+
+Sig512 UserDevice::sign(const std::string& mandate_json) const {
+  // Sign the EXACT bytes the human approved, not a re-serialisation of them. If the
+  // gateway parsed it differently, the signature would not cover what was shown.
+  return key_.sign(mandate_json.data(), mandate_json.size());
+}
+
+std::string UserDevice::fingerprint() const {
+  const auto pk = key_.public_key();
+  return hex(pk.data(), 8);
+}
+
 std::string hex(const void* data, std::size_t len) {
   static const char* d = "0123456789abcdef";
   const auto* p = static_cast<const std::uint8_t*>(data);

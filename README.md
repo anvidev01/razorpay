@@ -205,6 +205,7 @@ Interactive UI: `./build/rig-gateway` → http://127.0.0.1:8787
 | [06 — The Four Blind Spots](docs/06-AGENTIC-BLIND-SPOTS.md) | the research, with sources |
 | [07 — Honest Risk Metrics](docs/07-RISK-METRICS.md) | confusion matrix, false-positive cost |
 | [08 — Testing Your Own Data](docs/08-TESTING-YOUR-DATA.md) | field reference, every failure path, gotchas |
+| [09 — Security Review](docs/09-SECURITY-REVIEW.md) | findings, fixes, and accepted limitations |
 | [Benchmarks](docs/BENCHMARKS.md) | every number, and how it was measured |
 
 ## Future work
