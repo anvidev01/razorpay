@@ -14,6 +14,10 @@ const char* reject_name(std::uint32_t bit) noexcept {
     case R_REPLAY_NONCE:         return "R_REPLAY_NONCE";
     case R_SCHEMA_VERSION:       return "R_SCHEMA_VERSION";
     case R_ENGINE_RESOURCE:      return "R_ENGINE_RESOURCE";
+    case R_SUBSTITUTION_DENIED:  return "R_SUBSTITUTION_DENIED";
+    case R_SUBSTITUTION_DELTA:   return "R_SUBSTITUTION_DELTA";
+    case R_INJECTION_SUSPECTED:  return "R_INJECTION_SUSPECTED";
+    case R_DUPLICATE_CHARGE:     return "R_DUPLICATE_CHARGE";
     default:                     return "R_UNKNOWN";
   }
 }
@@ -30,6 +34,10 @@ const char* reject_help(std::uint32_t bit) noexcept {
     case R_REPLAY_NONCE:         return "capability nonce already used";
     case R_SCHEMA_VERSION:       return "cart or mandate schema version unsupported";
     case R_ENGINE_RESOURCE:      return "engine resource exhausted (fails closed)";
+    case R_SUBSTITUTION_DENIED:  return "substitute is not in an approved category";
+    case R_SUBSTITUTION_DELTA:   return "substitute costs more than the mandate allows";
+    case R_INJECTION_SUSPECTED:  return "instruction-like text found in a cart field";
+    case R_DUPLICATE_CHARGE:     return "this exact cart was already authorised";
     default:                     return "unknown rejection";
   }
 }
@@ -39,6 +47,17 @@ const char* reject_help(std::uint32_t bit) noexcept {
 // attack-shaped tail.
 static inline std::uint32_t mask_if(bool cond, std::uint32_t bit) noexcept {
   return static_cast<std::uint32_t>(-static_cast<std::int32_t>(cond)) & bit;
+}
+
+// Finds a constraint in the same category -- the candidate this line substitutes for.
+static inline int find_by_category(const IntentSchema& s, std::uint32_t cat) noexcept {
+  int found = -1;
+  if (cat == 0) return -1;                          // merchant sent no category: no swap
+  for (int i = 0; i < MAXC; ++i) {
+    const bool hit = (i < static_cast<int>(s.n_constraints)) & (s.category_id[i] == cat);
+    found = hit ? i : found;
+  }
+  return found;
 }
 
 Verdict evaluate(const IntentSchema& s, const CartView& c, std::uint64_t now_ns) noexcept {
@@ -58,6 +77,11 @@ Verdict evaluate(const IntentSchema& s, const CartView& c, std::uint64_t now_ns)
                     ((s.merchant_allow_mask >> (c.merchant_id - 1)) & 1ull) == 0,
                   R_MERCHANT_NOT_ALLOWED);
   bits |= mask_if(c.n > MAX_CART, R_ENGINE_RESOURCE);
+  // Injection flags are raised at the parse boundary, where the text still exists.
+  // NOTE: this is telemetry and defence in depth, NOT the security boundary --
+  // see docs/06-AGENTIC-BLIND-SPOTS.md. The real control is that an injected item
+  // is not in the signed mandate, so it fails on intent regardless of the text.
+  bits |= (c.text_flags & R_INJECTION_SUSPECTED);
 
   std::int64_t total = 0;
   for (std::uint32_t i = 0; i < v.n_lines; ++i) {
@@ -65,12 +89,32 @@ Verdict evaluate(const IntentSchema& s, const CartView& c, std::uint64_t now_ns)
     const std::int64_t  up  = c.unit_paise[i];
     const std::uint32_t q   = c.qty[i];
 
-    const int ci   = find_constraint(s, sku);
-    const int safe = ci < 0 ? 0 : ci;              // clamp; index 0 always in range
+    const std::uint32_t cat = c.category_id ? c.category_id[i] : 0u;
+
+    const int ci = find_constraint(s, sku);        // exact SKU
+    // Substitution: only consulted when the exact SKU is absent.
+    const int sub = (ci < 0 && s.subst_policy == SUBST_SAME_CATEGORY)
+                        ? find_by_category(s, cat) : -1;
+    const bool any_ok = (ci < 0 && s.subst_policy == SUBST_ANY_IN_BUDGET);
+
+    // The constraint this line is judged against: exact, else its substitute.
+    const int eff  = ci >= 0 ? ci : sub;
+    const int safe = eff < 0 ? 0 : eff;            // clamp; index 0 always in range
 
     std::uint32_t lb = 0;
-    lb |= mask_if(ci < 0, R_SKU_NOT_IN_INTENT);
-    lb |= mask_if(ci >= 0 && q  > s.max_qty[safe],        R_QTY_EXCEEDED);
+    // Unknown SKU is a violation unless a substitution rule adopts it.
+    lb |= mask_if(ci < 0 && sub < 0 && !any_ok, R_SKU_NOT_IN_INTENT);
+    // Policy permits swaps, but nothing in the mandate shares this category.
+    lb |= mask_if(ci < 0 && sub < 0 && s.subst_policy == SUBST_SAME_CATEGORY,
+                  R_SUBSTITUTION_DENIED);
+    // A legitimate swap that costs too much. ceiling = cap * (1 + delta_bp/10000).
+    // 60-rupee milk with a +20% allowance tops out at 72; a 180-rupee organic
+    // substitute is in the right category and still refused.
+    const std::int64_t cap     = s.max_unit_paise[safe];
+    const std::int64_t ceiling = cap + (cap * static_cast<std::int64_t>(s.subst_max_delta_bp)) / 10000;
+    lb |= mask_if(ci < 0 && sub >= 0 && up > ceiling, R_SUBSTITUTION_DELTA);
+
+    lb |= mask_if(eff >= 0 && q  > s.max_qty[safe],        R_QTY_EXCEEDED);
     // Two independent unit-price bounds. The second applies even to an unknown SKU:
     // a single line costing more than the ENTIRE mandate budget is always a violation,
     // and without it a hallucinated item would report only "not in intent" and hide
@@ -84,8 +128,9 @@ Verdict evaluate(const IntentSchema& s, const CartView& c, std::uint64_t now_ns)
     const bool of2 = __builtin_add_overflow(total, line, &total);
     lb |= mask_if(of1 || of2, R_ARITH_OVERFLOW);
 
-    v.lines[i].sku_id = sku;
-    v.lines[i].bits   = lb;
+    v.lines[i].sku_id          = sku;
+    v.lines[i].bits            = lb;
+    v.lines[i].substituted_for = (ci < 0 && sub >= 0) ? s.sku_id[sub] : 0u;
     bits |= lb;
   }
 

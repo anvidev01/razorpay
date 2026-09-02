@@ -23,7 +23,21 @@ enum Reject : std::uint32_t {
   R_REPLAY_NONCE         = 1u << 7,
   R_SCHEMA_VERSION       = 1u << 8,
   R_ENGINE_RESOURCE      = 1u << 9,
-  R_BIT_COUNT            = 10
+  // --- agentic-specific failure modes (see docs/06-AGENTIC-BLIND-SPOTS.md) ---
+  R_SUBSTITUTION_DENIED  = 1u << 10,  // swap not permitted by the mandate
+  R_SUBSTITUTION_DELTA   = 1u << 11,  // swap allowed in kind, but too expensive
+  R_INJECTION_SUSPECTED  = 1u << 12,  // instruction-like text in a cart field
+  R_DUPLICATE_CHARGE     = 1u << 13,  // same semantic cart already authorised
+  R_BIT_COUNT            = 14
+};
+
+// What the mandate permits when the agent cannot get the exact SKU.
+// Grocery inventory turns hourly, so "deny every substitution" is unusable in
+// practice and "allow anything" is how a 60-rupee milk becomes a 180-rupee one.
+enum SubstPolicy : std::uint8_t {
+  SUBST_DENY          = 0,   // exact SKUs only
+  SUBST_SAME_CATEGORY = 1,   // same category, within max_delta_bp of the capped price
+  SUBST_ANY_IN_BUDGET = 2,   // any item, still bounded by every price cap
 };
 
 const char* reject_name(std::uint32_t bit) noexcept;
@@ -46,6 +60,10 @@ struct alignas(128) IntentSchema {
   std::uint32_t sku_id[MAXC];            // interned, contiguous: one cache line
   std::int64_t  max_unit_paise[MAXC];
   std::uint32_t max_qty[MAXC];
+  std::uint32_t category_id[MAXC];       // interned category, for substitution matching
+  std::uint16_t subst_max_delta_bp;      // basis points a substitute may exceed the cap
+  std::uint8_t  subst_policy;            // SubstPolicy
+  std::uint8_t  _pad1;
   std::uint8_t  integrity_tag[16];       // SipHash-2-4 over the record, checked per cart
 };
 
@@ -54,14 +72,19 @@ struct CartView {
   const std::uint32_t* sku_id;
   const std::int64_t*  unit_paise;
   const std::uint32_t* qty;
+  const std::uint32_t* category_id;      // interned; 0 when the merchant sent none
   std::uint32_t        n;
   std::uint32_t        merchant_id;      // interned
+  std::uint32_t        text_flags;       // injection scan result from the parse boundary
+  std::uint32_t        _pad;
 };
 
 // Per-line attribution, so the audit record can name WHICH line failed and why.
 struct LineVerdict {
   std::uint32_t sku_id;
   std::uint32_t bits;
+  std::uint32_t substituted_for;   // the intended SKU this line stands in for, else 0
+  std::uint32_t _pad;
 };
 
 struct Verdict {
