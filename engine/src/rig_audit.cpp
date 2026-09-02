@@ -135,9 +135,13 @@ static int run(int argc, char** argv) {
         if (r.payload.size() >= sizeof(Res)) {
           Res s2; std::memcpy(&s2, r.payload.data(), sizeof s2);
           col = s2.ok ? G : R;
+          const bool no_payment = std::strstr(s2.err, "not a valid id") != nullptr;
           std::snprintf(buf, sizeof buf, "%s  http %ld  %s",
-            s2.ok ? "REFUNDED" : "refund failed", s2.status,
-            s2.ok ? s2.ref : (s2.err[0] ? s2.err : "no reason recorded"));
+            s2.ok ? "REFUNDED" : (no_payment ? "rail declined" : "refund failed"),
+            s2.status,
+            s2.ok ? s2.ref
+                  : (no_payment ? "no payment exists against this order to reverse"
+                                : (s2.err[0] ? s2.err : "no reason recorded")));
           detail = buf;
         }
         break;

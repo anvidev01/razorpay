@@ -42,6 +42,7 @@ struct Reversal {
   std::string   payment_ref;            // what the rail was asked to reverse
   PaymentResult payment{};
   std::string   error;
+  std::string   note;      // why the rail could not act, when policy said yes
 };
 
 struct Decision {

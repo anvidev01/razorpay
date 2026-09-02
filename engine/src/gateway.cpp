@@ -653,6 +653,16 @@ Reversal Gateway::reverse(std::uint64_t decision_id, std::int64_t amount_paise,
   wal_->append(RecType::REVERSAL_RESULT, &res, sizeof res);
   wal_->commit();
 
+  // Policy said yes and the rail said no. That is a PRECONDITION, not a defect, and it
+  // reads as a broken product unless it is spelled out: Razorpay reverses a PAYMENT, and
+  // an order nobody has paid has nothing to give back. Say so rather than surfacing a
+  // bare 400 that a reader has to interpret.
+  if (!rv.payment.ok && rv.payment_ref.rfind("order_", 0) == 0) {
+    rv.note = "policy authorised this refund. The rail could not act because Razorpay "
+              "reverses a payment, not an order, and no customer has paid this order. "
+              "Pass payment_id to reverse a real payment.";
+  }
+
   if (rv.payment.ok) it->second.reversed_paise += amount_paise;
   return rv;
 }
@@ -670,6 +680,7 @@ std::string Gateway::reversal_json(const Reversal& r) const {
     << ",\"http_status\":" << r.payment.http_status
     << ",\"rail_error\":\"" << esc_str(r.payment.error) << "\""
     << ",\"error\":\"" << esc_str(r.error) << "\""
+    << ",\"note\":\"" << esc_str(r.note) << "\""
     << ",\"reasons\":[";
   bool first = true;
   for (int b = 0; b < static_cast<int>(R_BIT_COUNT); ++b) {
