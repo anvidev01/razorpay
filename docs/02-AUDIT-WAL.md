@@ -147,15 +147,21 @@ decisions ──> per-thread SPSC ring ──> commit thread ──> one F_FULLF
                                         (batch = 256 records OR 2 ms, whichever first)
 ```
 
-| Batch | Amortised durable cost / decision | Ceiling |
-|---:|---:|---:|
-| 1 | 3 960 µs | 252 /s |
-| 64 | 62 µs | 16 100 /s |
-| **256** | **15.5 µs** | **64 600 /s** |
+Measured with `rig-load` against the real gateway (not calculated):
 
-The decision is returned to the agent at **270 ns**; the PCT is released when the batch
+| Mode | Durable cost / decision | Throughput | decisions/fsync |
+|---|---:|---:|---:|
+| commit every record | 7 485 µs | 134 /s | 0.5 |
+| **group commit (256 rec / 2 ms)** | **37 µs** | **27 006 /s** | **125** |
+
+> An earlier draft of this document claimed 15.5 µs by dividing 3 960 µs by 256. That
+> was wrong: each decision writes **three** records, so a 256-record batch holds ~85
+> decisions, and the 2 ms timer usually closes the batch before it fills. The measured
+> figure is 37 µs. The estimate was replaced by the measurement.
+
+The decision is returned to the agent at **~225 ns**; the PCT is released when the batch
 commits. Latency is honestly reported as two numbers, never conflated:
-**decision 270 ns / durable-and-payable ~15 µs amortised (2 ms worst case).**
+**decision ~225 ns / durable-and-payable ~37 µs amortised (2 ms worst case).**
 
 ---
 

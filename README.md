@@ -35,15 +35,15 @@ forging an Ed25519 signature.
 
 | | p50 |
 |---|---:|
-| Policy kernel (8-line cart) | **28 ns** |
+| Policy kernel (8-line cart) | **30.8 ns** |
 | simdjson parse + extract | 160 ns |
-| **Full decision** | **≈ 270 ns** |
-| Durable audit record (group-committed) | ~15 µs amortised |
+| **Full decision** | **≈ 225 ns** |
+| Durable audit record (group-committed) | **37 µs** amortised, 27 000/s |
 
 Reproduce: `./engine/bench/run_all.sh` · Method and caveats: [docs/BENCHMARKS.md](docs/BENCHMARKS.md)
 
 > The claim is **not** "microsecond checkout." The checkout is ~200 ms. The claim is
-> that the safety layer is *free*: 270 ns on a 200 ms transaction.
+> that the safety layer is *free*: ~225 ns on a 200 ms transaction.
 
 ## Hitting the bar
 
@@ -71,9 +71,47 @@ Reproduce: `./engine/bench/run_all.sh` · Method and caveats: [docs/BENCHMARKS.m
 | [05 — Sprint Plan](docs/05-SPRINT-PLAN.md) | day-by-day to submission, with cut lines |
 | [Benchmarks](docs/BENCHMARKS.md) | every number, and how it was measured |
 
-## Build
+## Build and run
 
 ```bash
 brew install simdjson openssl@3
-./engine/bench/run_all.sh        # reproduce the latency budget
+cmake -S engine -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j
+./control-plane/build.sh          # plain javac, no Maven/Gradle
 ```
+
+Then, in one command:
+
+```bash
+./scripts/demo.sh                 # the entire submission, end to end
+```
+
+Or piece by piece:
+
+```bash
+./scripts/seed.sh                                                  # reset to a known state
+./build/rig-eval fixtures/lunch_intent.json fixtures/lunch_cart.json    # ALLOW
+./build/rig-eval fixtures/lunch_intent.json fixtures/blender_cart.json  # DENY 0x000D
+./build/rig-attack                                                 # 5 bypasses, all refused
+./build/rig-replay wal/rig.wal                                     # C++ replays its own log
+java -cp control-plane/out com.razorpay.rig.ReplayAuditor wal/rig.wal   # independent Java audit
+./scripts/tamper.sh                                                # flip a bit, chain breaks
+./build/rig-load 4000                                              # group-commit durability
+./build/rig-tests                                                  # 24 golden vectors
+./engine/bench/run_all.sh                                          # reproduce the latency budget
+```
+
+Interactive demo UI (split-screen agent chat, live verdict panel, live WAL tail):
+
+```bash
+./build/rig-gateway               # http://127.0.0.1:8787
+```
+
+## Layout
+
+| | |
+|---|---|
+| [engine/include/rig/](engine/include/rig/) | arena, pool, intern table, schema, kernel, WAL, crypto, capability tokens |
+| [engine/src/](engine/src/) | implementations + the `rig-*` tools |
+| [control-plane/](control-plane/) | Java auditor — an **independent** implementation of the same policy |
+| [ui/](ui/) | vanilla JS demo (no framework, no build step) |
+| [scripts/](scripts/) | `demo.sh`, `seed.sh`, `tamper.sh`, `log.sh` |

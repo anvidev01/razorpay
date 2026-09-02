@@ -11,16 +11,34 @@
 |---|---:|---:|---|
 | simdjson On-Demand parse + field extract (509 B cart, 8 lines) | **160 ns** | 248 ns | 3.19 GB/s |
 | SKU intern (FNV-1a → `uint32_t`, open-addressed) | ~30 ns | — | 8 SKUs |
-| **Deterministic policy kernel (8-line cart)** | **28 ns** | **36 ns** | branch-free |
-| **Total in-process decision** | **≈ 220 ns** | **≈ 320 ns** | |
+| Policy kernel — prototype, verdict bits only (8-line cart) | 28.4 ns | 36 ns | branch-free |
+| **Policy kernel — PRODUCTION, with per-line attribution** | **30.8 ns** | **37 ns** | the shipped kernel |
+| **Total in-process decision** | **≈ 225 ns** | **≈ 325 ns** | |
 | WAL record append (buffered `write`, 256 B) | 2.2 µs | 9.4 µs | not yet durable |
 | WAL `fsync` | 33.5 µs | 87.7 µs | **does not flush drive cache on macOS** |
 | WAL `fcntl(F_FULLFSYNC)` — true durability | **3 960 µs** | 5 016 µs | max observed 27.9 ms |
+| **Durable decision, group-committed (measured end-to-end)** | **37 µs** | — | 27 000 decisions/s |
 
-**The engineering thesis in one line:** the policy decision costs *220 nanoseconds*;
+**The engineering thesis in one line:** the policy decision costs *225 nanoseconds*;
 honest durability costs *4 milliseconds*. The gateway is therefore not a
 "fast matching engine" problem — it is an **amortised-durability** problem.
 Group commit is the entire design.
+
+### The cost of explainability (measured)
+
+Interleaved A/B, best-of-5 to control for machine drift:
+
+```
+prototype  (verdict bits only)          p50 = 28.4 ns
+production (+ per-line attribution)     p50 = 30.8 ns
+                                        ---------------
+per-line explainability costs           +2.4 ns  (+8%)
+```
+
+Recording *which line* failed and *why*, for every line, costs 8% of the kernel.
+That is the price of the audit trail, and it is worth stating precisely rather than
+hiding: 2.4 nanoseconds buys the difference between "this cart was denied" and
+"line 3 was denied for these two reasons".
 
 ## 1. Policy kernel scaling (measured)
 
@@ -85,12 +103,34 @@ prevents the optimiser from hoisting the loop.
 > If a judge asks "how do you measure 28 nanoseconds?" — this section is the answer.
 > It is the single most likely technical challenge to the submission.
 
+## 4b. Group commit — measured, not calculated
+
+`rig-load` drives real decisions through the real gateway:
+
+```
+commit every record        60 decisions ->  7 485 us/decision (   134/s)   0.5 decisions/fsync
+group commit (256 / 2ms) 4000 decisions ->     37 us/decision ( 27 006/s) 125.0 decisions/fsync
+```
+
+**A 202x improvement**, and a correction to an earlier estimate in this repo. The
+first draft of `docs/02-AUDIT-WAL.md` calculated 15.5 µs/decision by dividing 3 960 µs
+by a 256-record batch. That was wrong for two reasons the measurement exposed:
+
+1. **Each decision writes three records** (`CART_PROPOSED`, `POLICY_DECISION`,
+   `CAPABILITY_ISSUED`/`_DENIED`), so a 256-record batch holds ~85 decisions, not 256.
+2. **The 2 ms timer usually closes the batch first**, so the observed figure is
+   125 decisions per fsync rather than the full batch.
+
+The honest number is **37 µs per durable decision at ~27 000 decisions/s**. Note also
+that un-grouped mode shows *0.5 decisions per fsync* — `decide()` fences twice per
+decision (once before minting, once after) — which is why it costs 7.5 ms, not 4 ms.
+
 ## 5. Honest end-to-end
 
 The 220 ns decision is the *gateway's own* cost. A real checkout adds:
 loopback HTTP ≈ 40–80 µs, Razorpay API round trip ≈ 80–300 ms.
 
 **The claim made in the pitch is precisely:** "the Intent Gateway adds a
-sub-microsecond policy decision and ~15 µs of amortised durable audit to a checkout
+sub-microsecond policy decision and ~37 µs of amortised durable audit to a checkout
 that already costs ~200 ms." Not "microsecond checkout." The distinction is what
 makes the number defensible.

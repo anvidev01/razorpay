@@ -11,7 +11,7 @@ static inline uint64_t ticks(){ return mach_absolute_time(); }
 
 // ---- verdict bits ----
 enum : uint32_t {
-  R_OK=0, R_SKU_NOT_IN_INTENT=1u<<0, R_QTY=1u<<1, R_UNIT_PRICE=1u<<2,
+  R_NONE=0, R_SKU_NOT_IN_INTENT=1u<<0, R_QTY=1u<<1, R_UNIT_PRICE=1u<<2,
   R_CART_TOTAL=1u<<3, R_MERCHANT=1u<<4, R_EXPIRED=1u<<5, R_OVERFLOW=1u<<6
 };
 

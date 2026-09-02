@@ -47,11 +47,11 @@ Show, in order:
 1. The extracted intent schema — categories `MEAL, DRINK, SIDE`, cap ₹500, TTL 15 min.
 2. **The human confirmation tap.** Say: *"The mandate is signed here, by the user, once.
    Ed25519. Everything after this is checked against this signature."*
-3. Agent builds a ₹420 cart → verdict panel flashes green: `verdict=0x0000  eval=28ns`
+3. Agent builds a ₹420 cart → verdict panel flashes green: `verdict=0x0000  kernel=30.8ns`
 4. WAL pane shows `MANDATE_ISSUED`, `CART_PROPOSED`, `POLICY_DECISION`,
    `CAPABILITY_ISSUED`, `PAYMENT_RESULT`.
 
-> "Twenty-eight nanoseconds. I'll come back to how that's measured — it's less than
+> "Thirty nanoseconds. I'll come back to how that's measured — it's less than
 > two ticks of this machine's hardware timer, which is its own engineering problem."
 
 ---
@@ -68,7 +68,7 @@ remaining. Say: *"Under the limit. UPI Reserve Pay says yes."*
 **Beat 2 — the engine says no.** Verdict panel goes red:
 
 ```
-verdict = 0x000D                       eval = 31 ns
+verdict = 0x000D                    kernel = 30.8 ns
   ├─ R_SKU_NOT_IN_INTENT      SKU_APPLIANCE_BLENDER_5  not in {MEAL,DRINK,SIDE}
   ├─ R_UNIT_PRICE_EXCEEDED    ₹6,000 > ₹500 cap
   └─ R_CART_TOTAL_EXCEEDED    ₹6,420 > ₹500 budget
@@ -130,11 +130,19 @@ $ ./scripts/attack.sh --swap-cart-after-approval
 ### 3:40 – 4:20 — The audit trail
 
 ```bash
-$ java -cp out com.razorpay.rig.ReplayAuditor wal/
-  chain    : 128,441 records, BLAKE3 chain INTACT, 128 anchors verified
-  replay   : 128,441 decisions re-executed against recorded inputs
-  divergent: 0
+$ ./build/rig-replay wal/rig.wal          # C++ replays its own log
+$ java -cp control-plane/out com.razorpay.rig.ReplayAuditor wal/rig.wal
+  chain     : 7 records, SHA-256 chain INTACT
+  replay    : 2 decisions re-executed by a SEPARATE implementation
+  divergent : 0
+  OK C++ engine and Java auditor agree on every money action
 ```
+
+> Say this out loud, it is the strongest claim in the submission: *"The Java auditor is
+> not a wrapper around the C++ engine. It is an independent implementation of the same
+> policy, reading the same log. Re-running my own code proves it is self-consistent.
+> Two implementations agreeing proves the policy is well-specified — that the audit
+> trail means something regardless of which binary produced it."*
 
 > "Because the kernel is a pure function — no allocation, no clock reads, no floating
 > point — I can re-execute every decision this gateway ever made and prove it matches
@@ -149,8 +157,8 @@ $ java -cp out com.razorpay.rig.ReplayAuditor wal/
   ❌ chain BROKEN at seq 4711  (expected 9f3a…, got 21c8…)
 ```
 
-Then the histogram: p50 28 ns / p99 36 ns / p99.9 41 ns, and the honest split —
-**decision 270 ns, durable audit ~15 µs amortised, Razorpay round trip ~200 ms.**
+Then the histogram: p50 30.8 ns / p99 37 ns, and the honest split —
+**decision ~225 ns, durable audit 37 µs amortised, Razorpay round trip ~200 ms.**
 
 > "I'm not claiming a microsecond checkout. The checkout is 200 milliseconds. I'm
 > claiming the safety layer is free — 270 nanoseconds on a 200 millisecond
@@ -174,7 +182,7 @@ Then the histogram: p50 28 ns / p99 36 ns / p99.9 41 ns, and the honest split �
 > faster, because the hot loop stopped comparing strings.
 >
 > That's the whole project: every money action explainable, bounded, and gated —
-> and the safety layer costs 270 nanoseconds. Thank you."
+> and the safety layer costs 225 nanoseconds. Thank you."
 
 ---
 
@@ -186,6 +194,6 @@ Then the histogram: p50 28 ns / p99 36 ns / p99.9 41 ns, and the honest split �
 - Have the histogram and the ReplayAuditor output **pre-generated** — do not run a
   128k-record replay on camera.
 - Subtitles: judges may watch muted.
-- **Do not say "single-digit microsecond gateway."** Say "270 nanosecond decision,
-  15 microsecond durable audit." Precision reads as competence; round numbers read as
+- **Do not say "single-digit microsecond gateway."** Say "225 nanosecond decision,
+  37 microsecond durable audit." Precision reads as competence; round numbers read as
   marketing.
