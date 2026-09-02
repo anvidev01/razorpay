@@ -614,3 +614,27 @@ $('c-auto').onclick = async () => {
   hint('five purchases, one signature, zero human clicks after it', 'good');
   btn.disabled = false;
 };
+
+
+// ---------- forge the human's authorisation ----------
+// The CLI bypass suite proves this, but a judge in the browser could not see it.
+// Every attempt below goes through the SAME admit path a real mandate does.
+$('forge-run').onclick = async () => {
+  const box = $('forge-out');
+  box.innerHTML = '<div class="empty">attempting…</div>';
+  const j = await (await fetch('/api/forge', { method: 'POST' })).json();
+  box.innerHTML = j.attempts.map((a) => `
+    <div class="frow2">
+      <span class="fverdict ${a.admitted ? 'yes' : 'no'}">${a.admitted ? 'ADMITTED' : 'REFUSED'}</span>
+      <div><div class="fname">${a.attack}</div>
+           <div class="fwhy">${a.what}</div>
+           <div class="fwhy">→ ${a.reason}</div></div>
+    </div>`).join('')
+    + `<div class="frow2"><span class="fverdict yes">KEY</span>
+         <div><div class="fname">enrolled device ${j.enrolled_device}</div>
+         <div class="fwhy">the gateway holds only the public half — it cannot sign a mandate at all</div>
+         </div></div>`;
+  msg('sys', null,
+    `forgery attempts: ${j.attempts.filter((a) => !a.admitted).length} refused, `
+    + `${j.attempts.filter((a) => a.admitted).length} admitted (the genuine device)`);
+};

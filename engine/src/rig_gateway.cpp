@@ -336,6 +336,54 @@ static int run(int argc, char** argv) {
       o << "],\n  \"rail\": \"" << gw->rail_name() << "\"\n}\n";
       respond(c, 200, "application/json", o.str());
 
+    } else if (method == "POST" && path == "/api/forge") {
+      // Attempts to forge the human's authorisation, run live so the UI can show what
+      // the CLI bypass suite shows. Each attempt goes through the SAME admit path a
+      // real mandate does -- nothing here is simulated.
+      const std::string intent = slurp("fixtures/lunch_intent.json");
+      UserDevice attacker("attacker_device");
+      std::ostringstream o;
+      o << "{\"attempts\":[";
+
+      auto attempt = [&](const char* name, const char* what,
+                         const std::string& body_json, const Sig512& sig,
+                         const std::array<std::uint8_t,32>& pub, bool first) {
+        std::string e;
+        const bool admitted = gw->admit_mandate(body_json, sig, pub, e);
+        if (!first) o << ",";
+        o << "{\"attack\":\"" << name << "\",\"what\":\"" << what
+          << "\",\"admitted\":" << (admitted ? "true" : "false")
+          << ",\"reason\":\"" << (admitted ? "accepted" : e) << "\"}";
+      };
+
+      attempt("sign with an attacker's device",
+              "a different Ed25519 key signs the same mandate",
+              intent, attacker.sign(intent), attacker.public_key(), true);
+
+      std::string tampered = intent;
+      const auto at = tampered.find("\"total_budget_paise\"");
+      if (at != std::string::npos) {
+        const auto colon = tampered.find(':', at);
+        const auto comma = tampered.find(',', colon);
+        tampered = tampered.substr(0, colon + 1) + " 99999999" + tampered.substr(comma);
+      }
+      attempt("raise the budget after signing",
+              "budget edited from Rs 500 to Rs 999,999 after the human signed",
+              tampered, device.sign(intent), device.public_key(), false);
+
+      Sig512 junk{};
+      for (std::size_t i = 0; i < junk.size(); ++i) junk[i] = static_cast<std::uint8_t>(i * 7);
+      attempt("fabricate a signature",
+              "64 bytes of invented signature",
+              intent, junk, device.public_key(), false);
+
+      attempt("the enrolled device (control)",
+              "the genuine key the human enrolled",
+              intent, device.sign(intent), device.public_key(), false);
+
+      o << "],\"enrolled_device\":\"" << gw->device_fingerprint() << "\"}";
+      respond(c, 200, "application/json", o.str());
+
     } else if (method == "GET" && path == "/api/catalog") {
       respond(c, 200, "application/json", slurp("fixtures/catalog.json"));
 
