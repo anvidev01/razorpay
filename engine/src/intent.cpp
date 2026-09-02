@@ -1,4 +1,5 @@
 #include "rig/intent.hpp"
+#include "rig/clock.hpp"
 #include <simdjson.h>
 #include <curl/curl.h>
 #include <time.h>
@@ -13,7 +14,11 @@
 namespace rig {
 using namespace simdjson;
 
-static std::uint64_t mono_ms() { return clock_gettime_nsec_np(CLOCK_UPTIME_RAW) / 1000000; }
+// simdjson marks .get() warn_unused_result. Where a field is genuinely optional the
+// error is the answer ("absent"), so those call sites cast to void deliberately --
+// an unmarked ignore would look like an oversight.
+
+static std::uint64_t mono_ms() { return rig::mono_ns() / 1000000; }
 
 static std::size_t sink(void* p, std::size_t sz, std::size_t n, void* ud) {
   static_cast<std::string*>(ud)->append(static_cast<char*>(p), sz * n);
@@ -159,7 +164,7 @@ static IntentDraft translate_claude(const std::string& utterance,
     ondemand::parser ip2;
     auto idoc = ip2.iterate(ip);
     std::string_view interp;
-    idoc["interpretation"].get_string().get(interp);
+    (void)idoc["interpretation"].get_string().get(interp);
     d.interpretation.assign(interp);
     d.mandate_json = inner;
     d.ok = true;
@@ -233,9 +238,9 @@ IntentDraft translate_local(const std::string& utterance, const std::string& cat
     auto doc = parser.iterate(p);
     for (auto it : doc["items"].get_array()) {
       std::string_view sku, name, cat;
-      it["sku"].get_string().get(sku);
-      it["name"].get_string().get(name);
-      it["category"].get_string().get(cat);
+      (void)it["sku"].get_string().get(sku);
+      (void)it["name"].get_string().get(name);
+      (void)it["category"].get_string().get(cat);
       double price = 0; it["price_rupees"].get(price);
 
       std::size_t hit = std::string::npos;
@@ -284,7 +289,7 @@ IntentDraft translate_local(const std::string& utterance, const std::string& cat
       auto vdoc = vp.iterate(p2);
       for (auto it : vdoc["items"].get_array()) {
         std::string_view nm;
-        it["name"].get_string().get(nm);
+        (void)it["name"].get_string().get(nm);
         std::string nl(nm);
         std::transform(nl.begin(), nl.end(), nl.begin(), ::tolower);
         std::istringstream ws(nl);

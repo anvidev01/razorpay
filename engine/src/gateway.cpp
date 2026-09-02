@@ -1,4 +1,5 @@
 #include "rig/gateway.hpp"
+#include "rig/clock.hpp"
 #include <ctime>
 #include <time.h>
 #include <cstring>
@@ -9,7 +10,6 @@
 
 namespace rig {
 
-static std::uint64_t mono_ns() { return clock_gettime_nsec_np(CLOCK_UPTIME_RAW); }
 
 Gateway::Gateway(std::string wal_path)
     : wal_path_(wal_path), wal_(std::make_unique<Wal>(wal_path)) {

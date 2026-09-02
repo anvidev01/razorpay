@@ -1,5 +1,7 @@
 # Razorpay Intent Gateway
 
+[![verify](https://github.com/anvidev01/razorpay/actions/workflows/verify.yml/badge.svg)](https://github.com/anvidev01/razorpay/actions/workflows/verify.yml)
+
 **An AI payment security layer that sits between an AI buyer and the payment rail, so
 every money action an agent takes is explainable, bounded and gated — and provable
 afterwards.**
@@ -118,14 +120,17 @@ Method, caveats and how each was measured: **[docs/BENCHMARKS.md](docs/BENCHMARK
 
 ```bash
 git clone https://github.com/anvidev01/razorpay.git && cd razorpay
-./verify.sh            # 23 checks, ~90s   (--quick skips benchmarks/sanitizers, ~15s)
+./verify.sh            # 25 checks, ~90s   (--quick skips benchmarks/sanitizers, ~15s)
 ```
 
 Builds from clean, then proves each claim in this README and prints PASS/FAIL:
 the 43 kernel vectors and 25 intent regressions, all three graceful failures,
 eight refused bypasses including three forged mandates, both auditors agreeing,
-tamper detection, the risk confusion matrix, ASan/UBSan, and a real payment
-through the rail. Exit code is the number of failures.
+tamper detection, the risk confusion matrix, both clock/durability code paths
+(macOS and Linux), ASan/UBSan, and a real payment through the rail. Exit code is
+the number of failures.
+
+CI runs the same script on **Ubuntu and macOS** on every push.
 
 ## Or drive it yourself
 
@@ -226,3 +231,7 @@ Explicitly **not** claimed as built: deep integration with Razorpay's internal r
 systems, ML fraud models over agent action traces, multi-merchant mandate federation,
 WAL segment rotation and archival, and AP2 wire-format interop (the artefacts map
 one-to-one today, the encoding does not).
+
+## License
+
+MIT — see [LICENSE](LICENSE).

@@ -127,8 +127,11 @@ static std::string audit_json(const std::string& path) {
         PR pr; std::memcpy(&pr, r.payload.data(), sizeof pr);
         kind = pr.ok ? "good" : "bad";
         if (pr.ok) ++paid;
+        // A failed payment must carry the rail's own reason into the UI, not just a
+        // status code -- a dispute over a failed charge needs to say why it failed.
         std::snprintf(buf, sizeof buf, "%s  http %ld  %s",
-          pr.ok ? "PAID" : "FAILED", pr.status, pr.order);
+          pr.ok ? "PAID" : "FAILED", pr.status,
+          pr.ok ? pr.order : (pr.err[0] ? pr.err : "no reason recorded"));
         detail = buf;
       }
     } else if (t == RecType::DUPLICATE_SUPPRESSED) {

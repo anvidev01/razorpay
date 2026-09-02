@@ -1,5 +1,6 @@
 // rig-load: substantiates the group-commit claim with a measurement, not an assertion.
 #include "rig/gateway.hpp"
+#include "rig/clock.hpp"
 #include <cstdio>
 #include <stdexcept>
 #include <fstream>
@@ -11,7 +12,7 @@
 
 using namespace rig;
 static std::string slurp(const char* p){ std::ifstream f(p); std::ostringstream o; o<<f.rdbuf(); return o.str(); }
-static std::uint64_t mono(){ return clock_gettime_nsec_np(CLOCK_UPTIME_RAW); }
+static inline uint64_t mono(){ return rig::mono_ns(); }
 
 static int run(int argc, char** argv) {
   const int n = argc > 1 ? std::atoi(argv[1]) : 2000;

@@ -1,199 +1,182 @@
-# 03 — The 5-Minute Pitch & Demo Script
+# 03 — The 5-Minute Pitch
 
-**Format:** screen recording, 1080p60, pre-recorded and edited. **No live demos.**
-**Screen layout:** left = agent chat (vanilla JS). Right top = live verdict panel
-(verdict bits + `eval_ns`). Right bottom = `tail -f` of the decoded WAL.
-Terminal font ≥ 18 pt — judges watch on laptops.
+Two windows, side by side. **Left**: the UI at `http://127.0.0.1:8787`.
+**Right**: a terminal, font large enough to read on a phone.
 
-Total: **4:55**. Rehearse to the second.
-
----
-
-### 0:00 – 0:25 — Cold open (no logo, no agenda slide)
-
-> "UPI Reserve Pay lets an AI agent spend your money. The rail checks one thing: is
-> the agent under its limit. It does **not** check what's in the cart.
->
-> So an agent told to order a ₹400 lunch can buy a ₹6,000 blender, and the payment
-> succeeds — because ₹6,000 was under the limit.
->
-> I built the Intent Gateway. It sits between the agent and the rail and asks the
-> question the rail doesn't: *does this cart match what the human actually agreed to?*"
-
-**On screen:** the two carts side by side. ₹420 lunch. ₹6,000 blender. Both "valid"
-to the rail.
-
----
-
-### 0:25 – 0:55 — Architecture, one diagram, 30 seconds
-
-Show the §02.1 diagram. Say exactly three sentences:
-
-> "The agent proposes. A C++ engine decides. Only the engine can mint a payment token,
-> and it only does that after the decision is durable in a hash-chained audit log.
->
-> The agent holds no Razorpay credentials. Not restricted — it doesn't have them.
->
-> So bypassing the policy isn't a matter of a clever prompt. It requires forging an
-> Ed25519 signature."
-
----
-
-### 0:55 – 1:40 — Happy path (establish the baseline)
-
-**Type:** `"order me lunch, keep it under ₹500"`
-
-Show, in order:
-1. The extracted intent schema — categories `MEAL, DRINK, SIDE`, cap ₹500, TTL 15 min.
-2. **The human confirmation tap.** Say: *"The mandate is signed here, by the user, once.
-   Ed25519. Everything after this is checked against this signature."*
-3. Agent builds a ₹420 cart → verdict panel flashes green: `verdict=0x0000  kernel=30.8ns`
-4. WAL pane shows `MANDATE_ISSUED`, `CART_PROPOSED`, `POLICY_DECISION`,
-   `CAPABILITY_ISSUED`, `PAYMENT_RESULT`.
-
-> "Thirty nanoseconds. I'll come back to how that's measured — it's less than
-> two ticks of this machine's hardware timer, which is its own engineering problem."
-
----
-
-### 1:40 – 2:55 — **The blender.** The centrepiece.
-
-**Type:** `"actually, also add something to make smoothies"`
-
-Agent proposes a ₹6,000 blender. Then, deliberately, in three beats:
-
-**Beat 1 — the rail would allow this.** Show the mandate's spend limit: ₹10,000
-remaining. Say: *"Under the limit. UPI Reserve Pay says yes."*
-
-**Beat 2 — the engine says no.** Verdict panel goes red:
-
-```
-verdict = 0x000D                    kernel = 30.8 ns
-  ├─ R_SKU_NOT_IN_INTENT      SKU_APPLIANCE_BLENDER_5  not in {MEAL,DRINK,SIDE}
-  ├─ R_UNIT_PRICE_EXCEEDED    ₹6,000 > ₹500 cap
-  └─ R_CART_TOTAL_EXCEEDED    ₹6,420 > ₹500 budget
-```
-
-> "Three reasons, not one. The kernel evaluates every rule for every cart and
-> accumulates — it never short-circuits. That's what makes the log explainable
-> instead of just first-failure."
-
-**Beat 3 — prove the bypass is impossible.** This is the money shot.
-
-Run, on camera:
+**Before you record**
 
 ```bash
-$ ./scripts/attack.sh --force-payment --skip-gateway
-  executor: PCT missing            -> REFUSED
-$ ./scripts/attack.sh --forge-pct
-  executor: PCT signature invalid  -> REFUSED
-$ ./scripts/attack.sh --replay-last-valid-pct
-  executor: nonce already burned   -> REFUSED
-$ ./scripts/attack.sh --swap-cart-after-approval
-  executor: cart_hash mismatch     -> REFUSED
+cp .env.example .env        # put the real Razorpay test key in it
+./verify.sh                 # 25 checks; if anything fails, do not record yet
+./run.sh                    # header must read `rail razorpay-test`, not `mock`
 ```
 
-> "Four ways to route around the engine. The agent has no credentials, can't forge a
-> token, can't replay one, and can't swap the cart after approval — the token commits
-> to the cart hash. This isn't a policy the model can be talked out of."
+If the header says `mock`, the key is not loading — a judge will notice, and it
+undercuts the one claim Track 01 asks for by name.
 
 ---
 
-### 2:55 – 3:40 — Graceful failure (the bar Razorpay explicitly set)
+## 0:00 – 0:35 · The problem
 
-**The critical framing:** a blocked payment must not be a dead end.
+> "NPCI is rolling out agentic payments on UPI. Razorpay and NPCI announced it on
+> Claude in February — Zomato, Swiggy, Zepto. The rail blocks up to ten thousand
+> rupees and checks two things: is this a registered agent, and is it under the
+> limit.
+>
+> Both necessary. Neither looks at the cart.
+>
+> So if your agent orders a six-thousand-rupee blender instead of a four-hundred-rupee
+> lunch, six thousand is less than ten thousand — and every system in the chain
+> approves it."
 
-1. Gateway returns structured `INTENT_VIOLATION` **with repair hints** — not a 500:
-
-```json
-{ "decision":"DENY", "reasons":[...],
-  "repair":{ "remove":["SKU_APPLIANCE_BLENDER_5"], "resubmit_ok":true },
-  "escalate":{ "path":"new_mandate", "requires":"user_mfa" } }
-```
-
-2. Agent auto-repairs: drops the blender, resubmits → `verdict=0x0000` → **the lunch
-   is ordered.** The user's actual goal still completes.
-
-3. User's phone: *"I blocked a ₹6,000 blender your assistant tried to add. Your ₹420
-   lunch is on the way. Did you want the blender? [Approve separately]"*
-
-4. Tap **Approve** → new mandate → MFA → signed → the blender is now *in* intent →
-   the same engine **allows** it. `verdict=0x0000`.
-
-> "This is the part people skip. Blocking is easy — blocking without breaking the user
-> is the product. The gateway degrades to *ask the human*, never to *fail the task*
-> and never to *allow it anyway*. And notice: when the user genuinely wants the
-> blender, they get the blender. This is a consent mechanism, not a spending limit."
+*On screen: the hero line, "bounded by what the human agreed to".*
 
 ---
 
-### 3:40 – 4:20 — The audit trail
+## 0:35 – 1:05 · What the human actually authorises
+
+*Compose your own order → type it live.*
+
+```
+order me lunch, a thali and a drink, under 500 rupees
+```
+
+> "The assistant drafts. It does **not** authorise. I read one plain-English sentence
+> back — two items, these ceilings, this budget — and **I** press sign. The signing key
+> is on the user's device. The gateway holds only the public half and cannot sign a
+> mandate at all."
+
+*Press **Sign & admit**. Point at the `HUMAN · once` badge.*
+
+> "Once. Not per purchase."
+
+---
+
+## 1:05 – 1:45 · The happy path, and the receipt
+
+*Send to gateway.*
+
+> "Thirty-one nanoseconds to decide. Four milliseconds to make that decision durable —
+> deciding is instant, remembering is the slow part, and remembering is the point."
+
+*Point at the audit panel filling in.*
+
+> "Mandate signed. Cart proposed. Decision. Token minted. Payment attempted. Paid —
+> that's a real order id from Razorpay test mode. Every money action, in order, with
+> the reason."
+
+---
+
+## 1:45 – 2:40 · Three failures, handled
+
+*Scripted scenarios tab.*
+
+**Blender** — `2 · Hallucinated item`
+
+> "`DENY`, `0x000D`. Three reasons at once — the kernel never stops at the first, so
+> you get the whole story. And no token exists, so this cart *cannot* reach the rail."
+
+**Auto-repair** — `3`
+
+> "The agent drops it and resubmits. **The lunch still arrives.** Blocking isn't the
+> product; blocking without breaking the user's actual goal is."
+
+**Retry storm** — `4`
+
+> "Checkout times out. A human clicks retry — same bytes. An agent **regenerates** the
+> request: reordered lines, new client ref. Every rail sees a new order and charges
+> twice. We key on the canonical cart, so it collapses. One charge."
+
+---
+
+## 2:40 – 3:20 · When it isn't sure, it asks
+
+*Scenario `5 · Hidden instructions`.*
+
+> "Hidden text on the merchant page. Every item here is inside the mandate — only the
+> text is hostile. So this is `REVIEW`, not `DENY`."
+
+*Point at the step-up card.*
+
+> "A behavioural signal is probabilistic. Auto-blocking on a guess turns every false
+> positive into a lost sale. Here it costs one tap."
+
+*Press **Approve · MFA**.*
+
+> "Human answer recorded, bound to this decision **and** this cart hash. Token minted.
+> Paid. That binding is what a chargeback turns on."
+
+---
+
+## 3:20 – 4:00 · Try to get around it
+
+*Terminal: `./build/rig-attack`*
+
+> "Eight ways to move money without permission."
+
+*Let the list land, then read three:*
+
+> "Forge the mandate with another device — refused, wrong key. Raise the budget after
+> signing — refused, the signature covers the exact bytes. Skip the gateway entirely —
+> there is no token, and the executor accepts nothing else.
+>
+> The agent holds no Razorpay credentials. Getting around this isn't a prompt
+> engineering problem. It's forging Ed25519."
+
+---
+
+## 4:00 – 4:35 · Prove it afterwards
+
+*Terminal:*
 
 ```bash
-$ ./build/rig-replay wal/rig.wal          # C++ replays its own log
-$ java -cp control-plane/out com.razorpay.rig.ReplayAuditor wal/rig.wal
-  chain     : 7 records, SHA-256 chain INTACT
-  replay    : 2 decisions re-executed by a SEPARATE implementation
-  divergent : 0
-  OK C++ engine and Java auditor agree on every money action
+./build/rig-replay wal/rig.wal
+java -cp control-plane/out com.razorpay.rig.ReplayAuditor wal/rig.wal
 ```
 
-> Say this out loud, it is the strongest claim in the submission: *"The Java auditor is
-> not a wrapper around the C++ engine. It is an independent implementation of the same
-> policy, reading the same log. Re-running my own code proves it is self-consistent.
-> Two implementations agreeing proves the policy is well-specified — that the audit
-> trail means something regardless of which binary produced it."*
+> "The C++ engine replays its own log. Then a **Java re-implementation that shares no
+> code with it** replays the same log and agrees bit for bit. Zero divergences."
 
-> "Because the kernel is a pure function — no allocation, no clock reads, no floating
-> point — I can re-execute every decision this gateway ever made and prove it matches
-> what was logged. Not 'here are some logs.' A reproducible proof, offline, that the
-> engine did what the policy says. For every transaction."
+*`./scripts/tamper.sh` — one bit.*
 
-Then tamper, live:
+> "Flip one bit anywhere and the chain refuses to verify."
 
-```bash
-$ ./scripts/tamper.sh --edit-amount wal/000001.seg 4711
-$ java -cp out com.razorpay.rig.ReplayAuditor wal/
-  ❌ chain BROKEN at seq 4711  (expected 9f3a…, got 21c8…)
-```
+*UI: **View evidence pack**.*
 
-Then the histogram: p50 30.8 ns / p99 37 ns, and the honest split —
-**decision ~225 ns, durable audit 37 µs amortised, Razorpay round trip ~200 ms.**
-
-> "I'm not claiming a microsecond checkout. The checkout is 200 milliseconds. I'm
-> claiming the safety layer is free — 270 nanoseconds on a 200 millisecond
-> transaction. Safety that costs nothing is safety that actually ships."
+> "For a dispute: what the human approved, which device signed it, what the agent
+> proposed, what was decided and why — and section six **re-runs the decision** and
+> confirms it matches. Today the merchant absorbs these losses because none of that
+> exists."
 
 ---
 
-### 4:20 – 4:55 — The 2 AM bug, and close
+## 4:35 – 5:00 · Close
 
-> "At 2 AM on day two this segfaulted at 41,000 requests a second, and only above
-> 41,000. simdjson hands you `string_view`s into its own buffer. I was holding them
-> in the audit ring after resetting the arena underneath. ASan didn't catch it —
-> arena memory is still 'live' to the allocator, so a use-after-free inside a pool is
-> invisible unless you teach the sanitiser about the pool.
+> "Thirty-one nanoseconds on a two-hundred-millisecond checkout. The safety layer is
+> free.
 >
-> So I instrumented the arena to poison itself on reset. ASan then caught it in nine
-> seconds.
+> I audited my own engine and found a real one: quantity caps were enforced per line,
+> and the *agent* chooses how many lines it sends — so ten lines of one bought ten of a
+> max-one item. Fixed, and pinned in the tests. That bug is the argument for the whole
+> project: the layer above the kernel drifts, so the kernel has to check the cart.
 >
-> The fix was to stop holding borrowed strings at all — intern every SKU to a 32-bit
-> id at the parse boundary. That deleted the bug class *and* made the kernel 2.6×
-> faster, because the hot loop stopped comparing strings.
->
-> That's the whole project: every money action explainable, bounded, and gated —
-> and the safety layer costs 225 nanoseconds. Thank you."
+> Clone it and run `./verify.sh`. Twenty-five checks, and it exits non-zero if any of
+> this was a lie."
 
 ---
 
-## Production notes
+## Recording notes
 
-- **Pre-record. Seed the scenario deterministically** (`--seed 42`). Never demo live.
-- Rehearse the 1:40–2:55 blender segment until it's muscle memory; it carries the pitch.
-- Cut all dead air around command execution.
-- Have the histogram and the ReplayAuditor output **pre-generated** — do not run a
-  128k-record replay on camera.
-- Subtitles: judges may watch muted.
-- **Do not say "single-digit microsecond gateway."** Say "225 nanosecond decision,
-  37 microsecond durable audit." Precision reads as competence; round numbers read as
-  marketing.
+- **Rehearse the verdict numbers.** `0x000D` blender, `0x0800` substitution,
+  `0x2000` duplicate, `0x1000` injection. Saying them from memory reads as fluency.
+- **Do not narrate the UI.** Say what it *means*, not what it shows.
+- **Let `rig-attack` sit on screen** for two seconds before speaking. The wall of
+  REFUSED is the strongest single frame in the video.
+- `./scripts/seed.sh` before each take, so the log starts empty.
+- If a take goes wrong mid-scenario, press **Reset demo** rather than restarting.
+- 1080p60, terminal at ~18pt.
+
+## If you only get 90 seconds
+
+Blender denied with three reasons → step-up approved and paid → `rig-attack` →
+both auditors agreeing. That is the whole thesis: **bounded, gated, explainable.**

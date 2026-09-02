@@ -1,4 +1,5 @@
 #include <cstdio>
+#include "rig/clock.hpp"
 #include <cstdint>
 #include <fcntl.h>
 #include <unistd.h>
@@ -6,7 +7,7 @@
 #include <cstring>
 #include <algorithm>
 #include <vector>
-static uint64_t now(){ return clock_gettime_nsec_np(CLOCK_UPTIME_RAW); }
+static inline uint64_t now(){ return rig::mono_ns(); }
 int main(){
   const char* path = "wal_probe.bin";
   int fd = ::open(path, O_CREAT|O_WRONLY|O_TRUNC, 0644);

@@ -82,6 +82,22 @@ echo "$out" | grep -q "false positive(s) => 0 extra" \
   && ok "zero false positives; signals REVIEW, never DENY" || no "risk fp"
 
 if [ "$QUICK" = "0" ]; then
+hdr "5b · Portability"
+cat > /tmp/rig_port.cpp <<'CPP'
+#include "rig/clock.hpp"
+#include <fcntl.h>
+#include <unistd.h>
+int main(){ const auto a=rig::mono_ns(); volatile int s=0;
+  for(int i=0;i<1000000;i++) s=s+1; if(rig::mono_ns()<=a) return 1;
+  if(rig::wall_ns()==0) return 1;
+  int fd=::open("/tmp/rig_p.tmp",O_CREAT|O_WRONLY|O_TRUNC,0644); ::write(fd,"x",1);
+  int rc=rig::durable_flush(fd); ::close(fd); ::unlink("/tmp/rig_p.tmp"); return rc; }
+CPP
+c++ -std=c++20 -O2 -Iengine/include /tmp/rig_port.cpp -o /tmp/rig_port 2>/dev/null && /tmp/rig_port \
+  && ok "native clock + durable flush" "F_FULLFSYNC path on macOS" || no "native clock"
+c++ -std=c++20 -O2 -DRIG_FORCE_PORTABLE_CLOCK -Iengine/include /tmp/rig_port.cpp -o /tmp/rig_portp 2>/dev/null && /tmp/rig_portp \
+  && ok "portable clock + durable flush" "the branch Linux compiles, run here too" || no "portable clock"
+
 hdr "6 · Memory safety"
 SSL=$(brew --prefix openssl@3 2>/dev/null || echo /usr)
 c++ -std=c++20 -O1 -g -fsanitize=address,undefined -Iengine/include -I"$SSL/include" \

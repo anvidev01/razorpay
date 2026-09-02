@@ -1,3 +1,7 @@
+> **Historical.** This was the plan written on day one. It is kept as a record of what
+> was intended versus what was built; the shipped system is described in the README and
+> docs 01, 02, 06-09.
+
 # 05 — Execution Plan: 1 Sep (night) → 4 Sep, submit early
 
 **Hard deadline 5 Sep. Target submission 4 Sep 21:00 IST** — a full day of slack,

@@ -1,4 +1,5 @@
 #include "rig/rail.hpp"
+#include "rig/clock.hpp"
 #include <curl/curl.h>
 #include <time.h>
 #include <cstdlib>
@@ -6,7 +7,7 @@
 
 namespace rig {
 
-static std::uint64_t mono_us() { return clock_gettime_nsec_np(CLOCK_UPTIME_RAW) / 1000; }
+static std::uint64_t mono_us() { return rig::mono_ns() / 1000; }
 
 PaymentResult MockRail::create_order(std::int64_t amount_paise, const std::string& receipt,
                                      const std::string&) {

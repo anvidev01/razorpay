@@ -1,10 +1,11 @@
 #include <cstdio>
+#include "rig/clock.hpp"
 #include <cstdint>
 #include <atomic>
 #include <thread>
 #include <vector>
 #include <time.h>
-static uint64_t now(){ return clock_gettime_nsec_np(CLOCK_UPTIME_RAW); }
+static inline uint64_t now(){ return rig::mono_ns(); }
 template<int STRIDE> void run(const char* label){
   static_assert(STRIDE>=8);
   alignas(256) static unsigned char buf[STRIDE*2 + 256];

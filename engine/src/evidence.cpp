@@ -37,8 +37,10 @@ EvidenceReport evidence_json(const std::string& wal, std::uint64_t want) {
   // Every call site below passes a string literal, but the compiler cannot see that
   // through the lambda, so -Wformat-security fires. Suppressed narrowly rather than
   // left to print a warning on every first build.
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-security"
+#endif
   const auto emit = [&O](const char* fmt, auto... a) {
     // Size the buffer from the formatted length. A fixed 4096 silently truncated the
     // raw cart on large baskets and produced MALFORMED JSON -- an evidence pack that
@@ -50,7 +52,9 @@ EvidenceReport evidence_json(const std::string& wal, std::uint64_t want) {
     std::snprintf(tmp.data(), tmp.size(), fmt, a...);
     O.append(tmp.c_str(), static_cast<std::size_t>(need));
   };
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#endif
 
   WalRecord mandate{}, cart{}, decision{}, capability{};
   bool have_mandate = false, have_cart = false, have_decision = false, have_cap = false;

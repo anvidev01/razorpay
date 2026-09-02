@@ -8,21 +8,45 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
-# Homebrew prefixes (Apple Silicon default)
-execute_process(COMMAND brew --prefix simdjson  OUTPUT_VARIABLE SIMDJSON_PREFIX OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-execute_process(COMMAND brew --prefix openssl@3 OUTPUT_VARIABLE OPENSSL_PREFIX  OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-if(NOT SIMDJSON_PREFIX)
-  set(SIMDJSON_PREFIX /opt/homebrew/opt/simdjson)
+# --- dependency discovery -------------------------------------------------------
+# Previously this hardcoded Homebrew prefixes, so the project simply did not build on
+# Linux despite run.sh advertising Debian packages. Find them properly, then fall back
+# to Homebrew only on macOS.
+find_package(OpenSSL REQUIRED)
+find_package(CURL REQUIRED)
+
+find_package(simdjson QUIET CONFIG)
+if(NOT simdjson_FOUND)
+  find_package(PkgConfig QUIET)
+  if(PkgConfig_FOUND)
+    pkg_check_modules(SIMDJSON QUIET simdjson)
+  endif()
 endif()
-if(NOT OPENSSL_PREFIX)
-  set(OPENSSL_PREFIX /opt/homebrew/opt/openssl@3)
+
+if(APPLE AND NOT simdjson_FOUND AND NOT SIMDJSON_FOUND)
+  execute_process(COMMAND brew --prefix simdjson
+                  OUTPUT_VARIABLE SIMDJSON_PREFIX OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+  if(NOT SIMDJSON_PREFIX)
+    set(SIMDJSON_PREFIX /opt/homebrew/opt/simdjson)
+  endif()
 endif()
 
 add_library(rigcore STATIC
   src/kernel.cpp src/crypto.cpp src/wal.cpp src/parse.cpp src/pct.cpp src/gateway.cpp src/rail.cpp src/evidence.cpp src/intent.cpp)
-target_include_directories(rigcore PUBLIC include ${SIMDJSON_PREFIX}/include ${OPENSSL_PREFIX}/include)
-target_link_directories(rigcore PUBLIC ${SIMDJSON_PREFIX}/lib ${OPENSSL_PREFIX}/lib)
-target_link_libraries(rigcore PUBLIC simdjson crypto curl)
+target_include_directories(rigcore PUBLIC include)
+target_link_libraries(rigcore PUBLIC OpenSSL::Crypto CURL::libcurl)
+
+if(simdjson_FOUND)                       # CMake config package (vcpkg, recent distros)
+  target_link_libraries(rigcore PUBLIC simdjson::simdjson)
+elseif(SIMDJSON_FOUND)                   # pkg-config (Debian/Ubuntu libsimdjson-dev)
+  target_include_directories(rigcore PUBLIC ${SIMDJSON_INCLUDE_DIRS})
+  target_link_directories(rigcore PUBLIC ${SIMDJSON_LIBRARY_DIRS})
+  target_link_libraries(rigcore PUBLIC ${SIMDJSON_LIBRARIES})
+else()                                   # Homebrew layout
+  target_include_directories(rigcore PUBLIC ${SIMDJSON_PREFIX}/include)
+  target_link_directories(rigcore PUBLIC ${SIMDJSON_PREFIX}/lib)
+  target_link_libraries(rigcore PUBLIC simdjson)
+endif()
 
 foreach(tool rig_eval rig_replay rig_gateway rig_attack rig_load rig_evidence rig_audit rig_riskeval wal_dump)
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/${tool}.cpp)

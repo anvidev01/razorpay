@@ -1,4 +1,5 @@
 #include "rig/wal.hpp"
+#include "rig/clock.hpp"
 #include <fcntl.h>
 #include <sys/file.h>
 #include <unistd.h>
@@ -27,11 +28,6 @@ const char* rectype_name(RecType t) noexcept {
   }
 }
 
-static std::uint64_t mono_ns() { return clock_gettime_nsec_np(CLOCK_UPTIME_RAW); }
-static std::uint64_t wall_ns() {
-  struct timespec ts; clock_gettime(CLOCK_REALTIME, &ts);
-  return std::uint64_t(ts.tv_sec) * 1000000000ull + ts.tv_nsec;
-}
 
 Wal::Wal(std::string path, std::uint32_t group_size, std::uint64_t group_us)
     : path_(std::move(path)), group_size_(group_size), group_us_(group_us) {
@@ -129,8 +125,9 @@ std::uint64_t Wal::commit() {
     if (w <= 0) throw std::runtime_error("wal: short write");
     p += w; left -= static_cast<std::size_t>(w);
   }
-  // THE fence. fsync() alone does not flush the drive cache on macOS.
-  if (::fcntl(fd_, F_FULLFSYNC) == -1) ::fsync(fd_);   // fall back on filesystems without it
+  // THE fence. On macOS fsync() alone does not flush the drive cache; durable_flush
+  // uses F_FULLFSYNC there and fdatasync on Linux.
+  if (durable_flush(fd_) != 0) { /* no stronger primitive available */ }
   const std::uint64_t us = (mono_ns() - t0) / 1000;
 
   committed_seq_   = seq_ - 1;

@@ -1,0 +1,68 @@
+name: verify
+
+on:
+  push: { branches: [main] }
+  pull_request: { branches: [main] }
+  workflow_dispatch:
+
+jobs:
+  linux:
+    name: Ubuntu — build, test, verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake pkg-config \
+            libsimdjson-dev libssl-dev libcurl4-openssl-dev default-jdk
+      - name: Build engine
+        run: |
+          cmake -S engine -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j
+      - name: Build independent Java auditor
+        run: ./control-plane/build.sh
+      - name: Verify every claim
+        run: ./verify.sh          # non-zero exit == number of failed checks
+
+  macos:
+    name: macOS — build, test, verify
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: brew install simdjson openssl@3
+      - name: Build engine
+        run: |
+          cmake -S engine -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j
+      - name: Build independent Java auditor
+        run: ./control-plane/build.sh
+      - name: Verify every claim
+        run: ./verify.sh
+
+  sanitizers:
+    name: ASan + UBSan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake pkg-config libsimdjson-dev libssl-dev libcurl4-openssl-dev
+      - name: Kernel and intent suites under sanitizers
+        run: |
+          set -e
+          for t in tests/test_kernel.cpp tests/test_intent.cpp; do
+            g++ -std=c++20 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer \
+                -Iengine/include engine/src/*.cpp "engine/$t" \
+                $(pkg-config --cflags --libs simdjson) -lcrypto -lcurl \
+                -o /tmp/san_$(basename "$t" .cpp) 2>/dev/null || \
+            g++ -std=c++20 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer \
+                -Iengine/include engine/src/kernel.cpp "engine/$t" \
+                -o /tmp/san_$(basename "$t" .cpp)
+          done
+          /tmp/san_test_kernel
+          /tmp/san_test_intent fixtures/catalog.json
