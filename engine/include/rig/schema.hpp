@@ -46,7 +46,10 @@ const char* outcome_name(Outcome o) noexcept;
 inline constexpr std::uint32_t HARD_DENY_MASK =
     R_SKU_NOT_IN_INTENT | R_QTY_EXCEEDED | R_UNIT_PRICE_EXCEEDED | R_CART_TOTAL_EXCEEDED |
     R_MERCHANT_NOT_ALLOWED | R_MANDATE_EXPIRED | R_ARITH_OVERFLOW | R_REPLAY_NONCE |
-    R_SCHEMA_VERSION | R_ENGINE_RESOURCE | R_SUBSTITUTION_DENIED | R_SUBSTITUTION_DELTA;
+    R_SCHEMA_VERSION | R_ENGINE_RESOURCE | R_SUBSTITUTION_DENIED | R_SUBSTITUTION_DELTA |
+    // A duplicate is deterministic, not probabilistic: the same basket was already
+    // decided. It must never be reviewable into a second charge.
+    R_DUPLICATE_CHARGE;
 
 // Probabilistic / heuristic signals -> step up to the human.
 // R_INJECTION_SUSPECTED is here deliberately: the scanner is a heuristic, so using it

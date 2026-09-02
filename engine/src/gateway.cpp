@@ -168,6 +168,7 @@ Decision Gateway::decide(const std::string& cart_json, std::uint64_t now_ns) {
                                now_ns, tmv.tm_hour);
     d.verdict.bits |= d.risk_bits;
   }
+  d.merchant_id = cart.merchant_id;
   d.outcome = classify(d.verdict.bits);
 
   last_flags_ = cart.text_flags;
@@ -189,6 +190,9 @@ Decision Gateway::decide(const std::string& cart_json, std::uint64_t now_ns) {
     d.duplicate_hits       = prior->hits;
     d.wal_seq              = prior->wal_seq;
     d.verdict.bits        |= R_DUPLICATE_CHARGE;
+    // Re-classify: the outcome computed above predates the duplicate bit. A duplicate
+    // is refused deterministically -- it can never be reviewed into a second charge.
+    d.outcome              = classify(d.verdict.bits);
     // Idempotent semantics: replay the ORIGINAL outcome, mint nothing new.
     struct { std::uint64_t orig; std::uint64_t seq; std::uint32_t hits; std::uint8_t key[32]; } rec{};
     rec.orig = prior->decision_id; rec.seq = prior->wal_seq; rec.hits = prior->hits;
@@ -288,6 +292,7 @@ bool Gateway::confirm(std::uint64_t decision_id, bool approved, const std::strin
   out.amount_paise     = p->amount_paise;
   out.cart_hash        = p->cart_hash;
   out.agent_session_id = p->agent_session_id;
+  out.merchant_id      = p->merchant_id;
   out.parsed           = true;
 
   // The human's answer, bound to THIS decision and THIS cart hash.
@@ -365,7 +370,8 @@ bool Gateway::execute(Decision& d, std::uint64_t now_ns) {
   if (d.paid) {   // only completed payments shape the behavioural baseline
     const std::time_t secs = static_cast<std::time_t>(now_ns / 1000000000ull);
     std::tm tmv{}; localtime_r(&secs, &tmv);
-    risk_.observe(risk_.profile(d.agent_session_id), 0, d.amount_paise, now_ns, tmv.tm_hour);
+    risk_.observe(risk_.profile(d.agent_session_id), d.merchant_id, d.amount_paise,
+                  now_ns, tmv.tm_hour);
   }
   return d.paid;
 }

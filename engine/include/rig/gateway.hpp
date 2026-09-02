@@ -33,6 +33,7 @@ struct Decision {
   Outcome       outcome       = Outcome::DENY;
   std::uint32_t risk_bits     = 0;
   std::uint64_t agent_session_id = 0;
+  std::uint32_t merchant_id     = 0;
   Confirmation  confirmation{};
   PaymentResult payment{};
   bool          paid          = false;
