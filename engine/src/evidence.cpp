@@ -90,7 +90,14 @@ EvidenceReport evidence_json(const std::string& wal, std::uint64_t want) {
   const CartView cv{dp.sku_id, dp.unit_paise, dp.qty, dp.category_id,
                     dp.n_lines, dp.merchant_id, dp.text_flags, 0};
   const Verdict v = evaluate(dp.schema, cv, dp.now_ns);
-  const bool reproduces = (v.bits == dp.recorded_bits && v.cart_total_paise == dp.recorded_total);
+  // Behavioural bits derive from CROSS-TRANSACTION state, so a single-record replay
+  // cannot re-derive them -- rig-replay and the Java auditor already exclude them.
+  // The evidence pack did not, so it reported "does not reproduce" on a correct
+  // decision. In a dispute that is the worst possible failure: handing an insurer a
+  // document that says your own verdict does not check out.
+  const std::uint32_t reproducible = dp.recorded_bits & ~STATEFUL_RISK_MASK;
+  const std::uint32_t stateful     = dp.recorded_bits &  STATEFUL_RISK_MASK;
+  const bool reproduces = (v.bits == reproducible && v.cart_total_paise == dp.recorded_total);
 
   emit("{\n");
   emit("  \"evidence_pack_version\": 1,\n");
@@ -197,9 +204,31 @@ EvidenceReport evidence_json(const std::string& wal, std::uint64_t want) {
   emit("  \"6_reproducibility\": {\n");
   emit("    \"question\": \"does the recorded verdict actually follow from the inputs?\",\n");
   emit("    \"re_executed\": true,\n");
-  emit("    \"replay_verdict_hex\": \"0x%04X\", \"replay_total_paise\": %lld,\n",
-              v.bits, (long long)v.cart_total_paise);
-  emit("    \"matches_recorded\": %s\n", reproduces ? "true" : "false");
+  emit("    \"recorded_verdict_hex\": \"0x%04X\",\n", dp.recorded_bits);
+  emit("    \"deterministic_bits_hex\": \"0x%04X\", \"replay_verdict_hex\": \"0x%04X\",\n",
+              reproducible, v.bits);
+  emit("    \"replay_total_paise\": %lld,\n", (long long)v.cart_total_paise);
+  emit("    \"matches_recorded\": %s,\n", reproduces ? "true" : "false");
+  if (stateful) {
+    emit("    \"behavioural_bits_hex\": \"0x%04X\",\n", stateful);
+    emit("    \"behavioural_codes\": [");
+    bool bfirst = true;
+    for (int b = 0; b < static_cast<int>(R_BIT_COUNT); ++b) {
+      const std::uint32_t bit = 1u << b;
+      if (!(stateful & bit)) continue;
+      if (!bfirst) emit(", ");
+      bfirst = false;
+      emit("\"%s\"", reject_name(bit));
+    }
+    emit("],\n");
+    emit("    \"note\": \"the deterministic verdict re-executes exactly. The bits above "
+         "derive from this agent's transaction history rather than from this cart, so a "
+         "single-record replay cannot recompute them; they are recorded and auditable "
+         "but excluded from the reproducibility check, exactly as rig-replay and the "
+         "Java auditor do.\"\n");
+  } else {
+    emit("    \"behavioural_bits_hex\": null\n");
+  }
   emit("  }\n}\n");
 
   out.found        = true;

@@ -136,6 +136,22 @@ int main() {
     CHECK(t2.lookup("NEVER_SEEN") == InternTable::INVALID, "unknown sku -> INVALID");
   }
 
+  // ---------------- stateful bits must not fail a reproducibility check ----------
+  // The evidence pack compared the FULL recorded verdict against a single-record
+  // replay, so a decision carrying a behavioural bit reported "does not reproduce"
+  // -- handing a merchant a dispute document that disowns its own verdict.
+  {
+    const std::uint32_t recorded = R_CART_TOTAL_EXCEEDED | R_SUBSTITUTION_DELTA
+                                 | R_VELOCITY_ANOMALY;          // 0x4808
+    const std::uint32_t deterministic = recorded & ~STATEFUL_RISK_MASK;
+    CHECK(deterministic == (R_CART_TOTAL_EXCEEDED | R_SUBSTITUTION_DELTA),
+          "stateful bits strip to the deterministic verdict");
+    CHECK((recorded & STATEFUL_RISK_MASK) == R_VELOCITY_ANOMALY,
+          "  -> and the behavioural bit is still reported separately");
+    CHECK((STATEFUL_RISK_MASK & R_INJECTION_SUSPECTED) == 0,
+          "injection is NOT stateful -- it replays from the record");
+  }
+
   // ---------------- an unsigned mandate is not an expired one ----------------
   // These were the same code, so a user who forgot to press Sign & admit was told
   // their validity window was wrong and went looking at budgets and clocks.
