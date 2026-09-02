@@ -336,23 +336,35 @@ IntentDraft translate_local(const std::string& utterance, const std::string& cat
       if (!known) { unknown.push_back(t); unknown_at.push_back(static_cast<long>(w)); }
     }
 
-    // An unknown word beside a matched one makes it a DIFFERENT dish. Drop the match.
-    std::vector<std::string> refused;
+    // Group runs of unknown words into phrases: "suji halwa" is one dish, not two
+    // separate mysteries.
+    struct Phrase { std::string text; long first, last; };
+    std::vector<Phrase> phrases;
     for (std::size_t u = 0; u < unknown.size(); ++u) {
+      if (!phrases.empty() && unknown_at[u] == phrases.back().last + 1) {
+        phrases.back().text += " " + unknown[u];
+        phrases.back().last  = unknown_at[u];
+      } else {
+        phrases.push_back({unknown[u], unknown_at[u], unknown_at[u]});
+      }
+    }
+
+    // A phrase only QUALIFIES a match when it is IMMEDIATELY next to it -- "chicken
+    // tikka", "chocolate shake". Anything further apart is a separate request:
+    // in "suji halwa with mojito", halwa does not make the mojito unavailable.
+    std::vector<std::string> refused;
+    for (const auto& ph : phrases) {
       bool qualified = false;
       for (auto it = picks.begin(); it != picks.end();) {
         const long pw = word_index_of_char(it->pos);
-        if (std::labs(pw - unknown_at[u]) <= 2) {
-          // report the phrase the way it was typed, not reversed
-          const std::string& hit = words[std::min<std::size_t>(
-              static_cast<std::size_t>(pw), words.size() - 1)];
-          refused.push_back(unknown_at[u] < pw ? unknown[u] + " " + hit
-                                               : hit + " " + unknown[u]);
+        if (pw == ph.first - 1 || pw == ph.last + 1) {
+          const std::string& hit = words[static_cast<std::size_t>(pw)];
+          refused.push_back(pw < ph.first ? hit + " " + ph.text : ph.text + " " + hit);
           it = picks.erase(it);
           qualified = true;
         } else ++it;
       }
-      if (!qualified) refused.push_back(unknown[u]);
+      if (!qualified) refused.push_back(ph.text);
     }
     for (std::size_t i = 0; i < refused.size(); ++i)
       d.unmatched += (i ? ", " : "") + refused[i];

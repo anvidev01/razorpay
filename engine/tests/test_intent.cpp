@@ -42,6 +42,19 @@ int main(int argc, char** argv) {
     CHECK(has(d.unmatched, "chocolate"),           "reports chocolate shake as unavailable");
     std::printf("   unmatched: %s\n", d.unmatched.c_str());
   }
+  {  // an unknown dish must not take a VALID neighbour down with it.
+     // "suji halwa with mojito": halwa is two words from mojito, so the mojito stands.
+    auto d = translate_local(
+      "buy me a chicken tikka and a suji halwa with mojito and lassi under rupees 1000",
+      catalog);
+    CHECK(d.ok,                                    "still drafts from the servable part");
+    CHECK(has(d.interpretation, "Virgin mojito"),  "mojito survives a nearby unknown dish");
+    CHECK(has(d.interpretation, "Sweet lassi"),    "lassi survives too");
+    CHECK(!has(d.interpretation, "biryani"),       "chicken tikka is not swapped for biryani");
+    CHECK(has(d.unmatched, "chicken tikka"),       "reports 'chicken tikka' as one phrase");
+    CHECK(has(d.unmatched, "suji halwa"),          "reports 'suji halwa' as one phrase");
+    std::printf("   unmatched: %s\n", d.unmatched.c_str());
+  }
   {  // the earlier bug, kept pinned
     auto d = translate_local("get me a mojito", catalog);
     CHECK(has(d.interpretation, "Virgin mojito"),  "mojito resolves to the mojito");
