@@ -18,6 +18,8 @@
     <span>Every money action explainable, bounded and gated.</span>
     <span class="sep">·</span>
     <span class="mono" id="a-kernel">policy decision in ~31 ns</span>
+    <span class="sep">·</span>
+    <span class="mono">rail <b id="a-rail">…</b></span>
   </div>
 </div>
 
@@ -27,75 +29,60 @@
       <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
         <path d="M4 15.5 15 2l-2.2 8.2h5.4L7.2 24l2.4-8.5H4Z" fill="#3B6EF5"/>
       </svg>
-      Razorpay
-      <span class="sub">Intent Gateway</span>
+      Razorpay<span class="sub">Intent Gateway</span>
     </a>
     <nav class="links">
       <a href="#" class="on">Agentic Stack</a>
-      <a href="#">Payments</a>
-      <a href="#">Mandates</a>
-      <a href="#">Audit</a>
-      <a href="#">Docs</a>
+      <a href="#work">Live Demo</a>
+      <a href="#audit">Audit</a>
+      <a href="#" id="nav-ev">Evidence</a>
     </nav>
     <div class="navcta">
       <button class="btn-quiet sm" id="reset">Reset demo</button>
-      <button class="btn-primary sm">Sign Up →</button>
     </div>
   </div>
 </header>
 
 <div class="subnav">
   <div class="in">
-    <button class="tab on">Live Demo</button>
-    <button class="tab" id="t-audit">Audit Log</button>
-    <button class="tab" id="t-bench">Latency</button>
-    <span class="right"><button class="btn-primary sm" id="b1">Run the demo →</button></span>
+    <button class="tab on" data-jump="#work">Live Demo</button>
+    <button class="tab" data-jump="#audit">Audit Trail</button>
+    <button class="tab" data-jump=".stats">Latency</button>
+    <span class="right"><button class="btn-primary sm" id="run-all">Run all six ▸</button></span>
   </div>
 </div>
 
 <section class="hero">
   <h1>Agentic payments,<br><span class="blue">bounded by what the human agreed to</span></h1>
   <p>
-    UPI Reserve Pay checks one thing — is the agent under its limit. It never looks at the
-    cart. The Intent Gateway asks the question the rail doesn't, in a deterministic C++
-    kernel, and mints a payment token only after the decision is durable in a
-    hash-chained log.
+    The rail checks whether the agent is registered and under its limit. It never looks at
+    the cart. This layer asks the question the rail doesn't — in a deterministic C++ kernel —
+    and mints a payment token only after the decision is durable in a hash-chained log.
   </p>
   <div class="stats">
     <div class="stat"><div class="k b mono" id="s-kernel">31 ns</div><div class="l">policy kernel, this cart</div></div>
-    <div class="stat"><div class="k mono" id="s-commit">37 µs</div><div class="l">durable commit, this decision</div></div>
-    <div class="stat"><div class="k g mono" id="s-bypass">5 / 5</div><div class="l">bypass attempts refused</div></div>
-    <div class="stat"><div class="k mono" id="s-div">0</div><div class="l">divergent on replay</div></div>
+    <div class="stat"><div class="k mono" id="s-commit">—</div><div class="l">durable commit, this decision</div></div>
+    <div class="stat"><div class="k g mono" id="s-paid">0</div><div class="l">payments executed</div></div>
+    <div class="stat"><div class="k mono" id="s-dupes">0</div><div class="l">retries collapsed</div></div>
   </div>
 </section>
 
-<section class="work">
+<section class="work" id="work">
   <div class="in">
 
     <div class="card">
       <div class="chead">
-        <div>
-          <div class="eyebrow">Agent</div>
-          <h3>Swiggy ordering assistant</h3>
-        </div>
-        <span class="chip" id="mandate-state">no mandate</span>
+        <div><div class="eyebrow">Agent</div><h3>Ordering assistant</h3></div>
+        <span class="chip" id="mandate-state">2 mandates active</span>
       </div>
       <div class="chat" id="chat"></div>
-      <div class="controls">
-        <button class="btn-primary" id="b1b">1 · Order lunch</button>
-        <button class="btn-quiet" id="b2" disabled>2 · Add smoothie thing</button>
-        <button class="btn-quiet" id="b3" disabled>3 · Auto-repair</button>
-        <button class="btn-ghost" id="b4" disabled>4 · Approve with MFA</button>
-      </div>
+      <div class="controls" id="scenarios"></div>
     </div>
 
     <div class="col">
       <div class="card">
         <div class="chead">
-          <div>
-            <div class="eyebrow">Policy engine</div>
-            <h3>Deterministic C++ kernel</h3>
-          </div>
+          <div><div class="eyebrow">Policy engine</div><h3>Deterministic C++ kernel</h3></div>
           <span class="eyebrow">branch-free · pure function</span>
         </div>
         <div class="verdict" id="verdict">
@@ -103,23 +90,49 @@
         </div>
       </div>
 
+      <div class="card" id="stepup" hidden>
+        <div class="chead">
+          <div><div class="eyebrow">Gated — human in the loop</div><h3>Step-up confirmation</h3></div>
+          <span class="chip warn">awaiting human</span>
+        </div>
+        <div class="stepbody">
+          <p id="stepmsg"></p>
+          <div class="steprow">
+            <button class="btn-primary" id="approve">Approve · MFA</button>
+            <button class="btn-quiet danger" id="decline">Decline</button>
+            <span class="mono tiny" id="stepref">ref mfa_device_9f21</span>
+          </div>
+        </div>
+      </div>
+
       <div class="card" id="audit">
         <div class="chead">
-          <div>
-            <div class="eyebrow">Write-ahead audit log</div>
-            <h3>SHA-256 hash chain</h3>
-          </div>
+          <div><div class="eyebrow">Dispute-grade audit trail</div><h3>SHA-256 hash chain</h3></div>
           <span class="chip" id="chain">—</span>
         </div>
         <div class="walrows" id="wal"><div class="empty">log empty</div></div>
+        <div class="auditfoot">
+          <span class="mono tiny" id="auditsum">—</span>
+          <button class="btn-quiet sm" id="ev-btn" disabled>View evidence pack</button>
+        </div>
       </div>
     </div>
 
   </div>
 </section>
 
+<div class="modal" id="ev-modal" hidden>
+  <div class="modalbox">
+    <div class="chead">
+      <div><div class="eyebrow">Dispute evidence</div><h3 id="ev-title">Evidence pack</h3></div>
+      <button class="btn-quiet sm" id="ev-close">Close</button>
+    </div>
+    <pre id="ev-body" class="evbody"></pre>
+  </div>
+</div>
+
 <div class="foot">
-  <span>Razorpay AI Buildathon · Track 01 · anvidev01</span>
+  <span>Razorpay AI Buildathon · Track 01 + Track 02 · anvidev01</span>
   <span>every number measured on Apple M4 · ./engine/bench/run_all.sh</span>
 </div>
 
