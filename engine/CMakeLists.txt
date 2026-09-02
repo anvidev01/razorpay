@@ -19,12 +19,12 @@ if(NOT OPENSSL_PREFIX)
 endif()
 
 add_library(rigcore STATIC
-  src/kernel.cpp src/crypto.cpp src/wal.cpp src/parse.cpp src/pct.cpp src/gateway.cpp)
+  src/kernel.cpp src/crypto.cpp src/wal.cpp src/parse.cpp src/pct.cpp src/gateway.cpp src/rail.cpp)
 target_include_directories(rigcore PUBLIC include ${SIMDJSON_PREFIX}/include ${OPENSSL_PREFIX}/include)
 target_link_directories(rigcore PUBLIC ${SIMDJSON_PREFIX}/lib ${OPENSSL_PREFIX}/lib)
-target_link_libraries(rigcore PUBLIC simdjson crypto)
+target_link_libraries(rigcore PUBLIC simdjson crypto curl)
 
-foreach(tool rig_eval rig_replay rig_gateway rig_attack rig_load rig_evidence wal_dump)
+foreach(tool rig_eval rig_replay rig_gateway rig_attack rig_load rig_evidence rig_audit rig_riskeval wal_dump)
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/${tool}.cpp)
     string(REPLACE "_" "-" bin ${tool})
     add_executable(${bin} src/${tool}.cpp)
