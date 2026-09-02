@@ -122,7 +122,7 @@ static std::string audit_json(const std::string& path) {
     } else if (t == RecType::PAYMENT_ATTEMPTED) {
       detail = "submitting to the payment rail";
     } else if (t == RecType::PAYMENT_RESULT) {
-      struct PR { std::uint64_t id; std::uint8_t ok; long status; char order[40]; };
+      struct PR { std::uint64_t id; std::uint8_t ok; long status; char order[40]; char err[80]; };
       if (r.payload.size() >= sizeof(PR)) {
         PR pr; std::memcpy(&pr, r.payload.data(), sizeof pr);
         kind = pr.ok ? "good" : "bad";

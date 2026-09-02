@@ -386,9 +386,12 @@ bool Gateway::execute(Decision& d, std::uint64_t now_ns) {
   d.payment = rail_->create_order(d.amount_paise, receipt, notes);
   d.paid    = d.payment.ok;
 
-  struct { std::uint64_t id; std::uint8_t ok; long status; char order[40]; } res{};
+  // The rail's own reason is part of the audit trail: "every money action explainable"
+  // has to cover the ones that failed, or a dispute over a failed charge has no record.
+  struct { std::uint64_t id; std::uint8_t ok; long status; char order[40]; char err[80]; } res{};
   res.id = d.decision_id; res.ok = d.payment.ok ? 1 : 0; res.status = d.payment.http_status;
   std::snprintf(res.order, sizeof res.order, "%s", d.payment.order_id.c_str());
+  std::snprintf(res.err, sizeof res.err, "%s", d.payment.error.c_str());
   wal_->append(RecType::PAYMENT_RESULT, &res, sizeof res);
   wal_->commit();
 

@@ -16,6 +16,10 @@ while [ $# -gt 0 ]; do
   shift
 done
 
+# Credentials live in a gitignored .env so they are never pasted into a shell that
+# does not outlive one command, and never end up in the repo.
+if [ -f .env ]; then set -a; . ./.env; set +a; fi
+
 need() { command -v "$1" >/dev/null 2>&1; }
 miss=""
 need cmake  || miss="$miss cmake"

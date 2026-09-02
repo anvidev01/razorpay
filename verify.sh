@@ -5,6 +5,10 @@
 set -uo pipefail
 cd "$(dirname "$0")"
 G=$'\033[32m'; R=$'\033[31m'; Y=$'\033[33m'; D=$'\033[2m'; B=$'\033[1m'; Z=$'\033[0m'
+# Credentials live in a gitignored .env so they are never pasted into a shell that
+# does not outlive one command, and never end up in the repo.
+if [ -f .env ]; then set -a; . ./.env; set +a; fi
+
 QUICK=0; [ "${1:-}" = "--quick" ] && QUICK=1
 PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf "  ${G}PASS${Z}  %-46s ${D}%s${Z}\n" "$1" "${2:-}"; }

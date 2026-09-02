@@ -92,13 +92,14 @@ static int run(int argc, char** argv) {
       }
       case RecType::PAYMENT_ATTEMPTED: detail = "submitting to the payment rail"; break;
       case RecType::PAYMENT_RESULT: {
-        struct PR { std::uint64_t id; std::uint8_t ok; long status; char order[40]; };
+        struct PR { std::uint64_t id; std::uint8_t ok; long status; char order[40]; char err[80]; };
         if (r.payload.size() >= sizeof(PR)) {
           PR pr; std::memcpy(&pr, r.payload.data(), sizeof pr);
           col = pr.ok ? G : R;
           if (pr.ok) ++paid;
           std::snprintf(buf, sizeof buf, "%s  http %ld  %s",
-            pr.ok ? "PAID" : "FAILED", pr.status, pr.order);
+            pr.ok ? "PAID" : "FAILED", pr.status,
+            pr.ok ? pr.order : (pr.err[0] ? pr.err : "no reason recorded"));
           detail = buf;
         }
         break;
