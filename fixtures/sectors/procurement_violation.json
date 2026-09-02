@@ -1,0 +1,13 @@
+{
+  "mandate_id": "mnd_proc_office",
+  "merchant": "grey_market_supplies",
+  "agent_session_id": "sess_proc_agent",
+  "lines": [
+    {
+      "sku": "SKU_PAPER_A4_REAM",
+      "category": "STATIONERY",
+      "unit_paise": 24000,
+      "qty": 25
+    }
+  ]
+}

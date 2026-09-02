@@ -55,6 +55,22 @@ rm -f wal/verify_r.wal
 [ "$(v fixtures/grocery_intent.json fixtures/cart_injection.json)" = "DENY 0x140d" ] \
   && ok "prompt injection denied on INTENT" "DENY 0x140D" || no "injection"
 
+hdr "2b · One engine, four industries"
+# The kernel contains no notion of any sector. Prove it by running the same binary
+# across four, each tripping a different control -- nothing changes but the fixtures.
+sec(){ ./build/rig-eval "fixtures/sectors/$1_intent.json" "fixtures/sectors/$1_$2.json" \
+        --wal "wal/verify_sec_$1.wal" --json 2>/dev/null \
+      | python3 -c "import json,sys;d=json.load(sys.stdin);print(d['verdict_hex'])"; }
+rm -f wal/verify_sec_*.wal
+[ "$(sec retail ok)" = "0x0000" ] && [ "$(sec retail violation)" = "0x040d" ] \
+  && ok "online retail" "restock allowed · 62k tablet denied 0x040D" || no "retail sector"
+[ "$(sec saas ok)" = "0x0000" ] && [ "$(sec saas violation)" = "0x0002" ] \
+  && ok "SaaS seat licensing" "30 seats split across 3 lines denied 0x0002" || no "saas sector"
+[ "$(sec travel ok)" = "0x0000" ] && [ "$(sec travel violation)" = "0x0008" ] \
+  && ok "travel booking" "second flight breaks the budget 0x0008" || no "travel sector"
+[ "$(sec procurement ok)" = "0x0000" ] && [ "$(sec procurement violation)" = "0x0010" ] \
+  && ok "B2B procurement" "unapproved vendor denied 0x0010" || no "procurement sector"
+
 hdr "3 · Gating — bypasses and forgeries"
 out=$(./build/rig-attack 2>&1)
 echo "$out" | grep -q "all bypasses refused" \

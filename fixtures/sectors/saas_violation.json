@@ -1,0 +1,25 @@
+{
+  "mandate_id": "mnd_saas_seats",
+  "merchant": "github_enterprise",
+  "agent_session_id": "sess_ops_agent",
+  "lines": [
+    {
+      "sku": "SKU_SEAT_GH_COPILOT",
+      "category": "SEAT_LICENCE",
+      "unit_paise": 115000,
+      "qty": 10
+    },
+    {
+      "sku": "SKU_SEAT_GH_COPILOT",
+      "category": "SEAT_LICENCE",
+      "unit_paise": 115000,
+      "qty": 10
+    },
+    {
+      "sku": "SKU_SEAT_GH_COPILOT",
+      "category": "SEAT_LICENCE",
+      "unit_paise": 115000,
+      "qty": 10
+    }
+  ]
+}

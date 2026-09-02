@@ -35,6 +35,10 @@ hr; step "4. BLIND SPOT #3 — INDIRECT PROMPT INJECTION" \
   "Hidden text on the merchant page tells the agent to add a gift card. Note it fails on INTENT, not on text matching."
 ./build/rig-eval $G fixtures/cart_injection.json $W
 
+hr; step "4b. ONE ENGINE, FOUR INDUSTRIES" \
+  "The kernel knows nothing about food, retail, software or travel. Same binary, four sectors, four different controls."
+./scripts/sectors.sh
+
 hr; step "5. GATED — HUMAN STEP-UP, then the money actually moves" \
   "In-intent cart carrying hostile merchant text. Behavioural signal only, so the engine ASKS rather than blocking a good purchase."
 rm -f wal/review.wal

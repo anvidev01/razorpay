@@ -1,0 +1,19 @@
+{
+  "mandate_id": "mnd_proc_office",
+  "merchant": "office_depot_in",
+  "agent_session_id": "sess_proc_agent",
+  "lines": [
+    {
+      "sku": "SKU_PAPER_A4_REAM",
+      "category": "STATIONERY",
+      "unit_paise": 30000,
+      "qty": 25
+    },
+    {
+      "sku": "SKU_TONER_HP26A",
+      "category": "PRINTER_SUPPLY",
+      "unit_paise": 590000,
+      "qty": 1
+    }
+  ]
+}

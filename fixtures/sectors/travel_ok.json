@@ -1,0 +1,19 @@
+{
+  "mandate_id": "mnd_travel_blr",
+  "merchant": "makemytrip",
+  "agent_session_id": "sess_travel_agent",
+  "lines": [
+    {
+      "sku": "SKU_FLIGHT_BLR_RETURN",
+      "category": "AIR_TICKET",
+      "unit_paise": 1320000,
+      "qty": 1
+    },
+    {
+      "sku": "SKU_HOTEL_BLR_3N",
+      "category": "HOTEL_NIGHT",
+      "unit_paise": 420000,
+      "qty": 3
+    }
+  ]
+}

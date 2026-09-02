@@ -1,0 +1,36 @@
+{
+  "mandate_id": "mnd_retail_q3",
+  "utterance": "restock phone accessories, under 40,000 rupees, from our two usual distributors",
+  "not_before_ns": 1788376997065387008,
+  "not_after_ns": 1788380657065387008,
+  "total_budget_paise": 4000000,
+  "merchant_allow": [
+    "amazon_business",
+    "flipkart_wholesale"
+  ],
+  "substitution": {
+    "policy": "same_category",
+    "max_delta_bp": 1000
+  },
+  "constraints": [
+    {
+      "sku": "SKU_CASE_SILICONE_XL",
+      "category": "PHONE_ACCESSORY",
+      "max_unit_paise": 25000,
+      "max_qty": 60
+    },
+    {
+      "sku": "SKU_CABLE_USBC_2M",
+      "category": "PHONE_ACCESSORY",
+      "max_unit_paise": 40000,
+      "max_qty": 40
+    },
+    {
+      "sku": "SKU_SCREEN_GUARD_9H",
+      "category": "PHONE_ACCESSORY",
+      "max_unit_paise": 18000,
+      "max_qty": 80
+    }
+  ],
+  "schema_version": 1
+}

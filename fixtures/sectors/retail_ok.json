@@ -1,0 +1,19 @@
+{
+  "mandate_id": "mnd_retail_q3",
+  "merchant": "amazon_business",
+  "agent_session_id": "sess_retail_agent",
+  "lines": [
+    {
+      "sku": "SKU_CASE_SILICONE_XL",
+      "category": "PHONE_ACCESSORY",
+      "unit_paise": 23000,
+      "qty": 50
+    },
+    {
+      "sku": "SKU_CABLE_USBC_2M",
+      "category": "PHONE_ACCESSORY",
+      "unit_paise": 38000,
+      "qty": 40
+    }
+  ]
+}

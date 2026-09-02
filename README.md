@@ -25,7 +25,7 @@ That assumption breaks in three places:
 
 | gap | what goes wrong |
 |---|---|
-| **Intent** | The agent buys a ₹6,000 blender instead of a ₹400 lunch, or swaps ₹60 milk for ₹180 organic. ₹6,000 < ₹10,000, so every system approves it. |
+| **Intent** | A restocking agent buys a ₹62,000 tablet instead of ₹250 phone cases. An ops agent adds 30 seats against a 25-seat cap. Every amount is under the block, so every system approves it. |
 | **Behaviour** | Agents retry by **re-generating** the request, not re-sending it — so the rail sees a new order and charges twice. Hidden text on a merchant page redirects the agent mid-checkout. |
 | **Liability** | No human-bound proof tied to that specific transaction. No click trail, no cardholder session. The merchant absorbs the chargeback. |
 
@@ -57,6 +57,26 @@ requires forging an Ed25519 signature.
 Auto-blocking on a probabilistic score is how a risk system destroys good revenue. That
 is why behavioural signals escalate instead of blocking — and why the false-positive cost
 is measurable: **[docs/07 — Honest Risk Metrics](docs/07-RISK-METRICS.md)**.
+
+## One engine, four industries
+
+The kernel has no concept of any sector. It reasons about SKU ids, category ids,
+merchant ids, integer paise and quantities — nothing else. Same binary, four
+industries, four different controls, nothing changed but the fixtures:
+
+```bash
+./scripts/sectors.sh
+```
+
+| sector | the agent does this | refused by |
+|---|---|---|
+| **Online retail** | restocking accessories, buys a ₹62,000 tablet | `R_SKU_NOT_IN_INTENT` + 3 more |
+| **SaaS licensing** | 30 seats as 3 lines of 10, against a 25 cap | `R_QTY_EXCEEDED` |
+| **Travel** | a second return flight blows the trip budget | `R_CART_TOTAL_EXCEEDED` |
+| **B2B procurement** | switches to a cheaper unapproved vendor | `R_MERCHANT_NOT_ALLOWED` |
+
+Food ordering is one worked example in `fixtures/`, not the product. Any merchant
+Razorpay serves expresses their intent as SKUs, caps, categories and a vendor list.
 
 ## Agent-readable discovery  [Track 01]
 

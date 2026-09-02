@@ -1,0 +1,19 @@
+{
+  "mandate_id": "mnd_retail_q3",
+  "merchant": "amazon_business",
+  "agent_session_id": "sess_retail_agent",
+  "lines": [
+    {
+      "sku": "SKU_CASE_SILICONE_XL",
+      "category": "PHONE_ACCESSORY",
+      "unit_paise": 23000,
+      "qty": 20
+    },
+    {
+      "sku": "SKU_TABLET_PRO_11",
+      "category": "CONSUMER_ELECTRONICS",
+      "unit_paise": 6200000,
+      "qty": 1
+    }
+  ]
+}

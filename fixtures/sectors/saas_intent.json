@@ -1,0 +1,30 @@
+{
+  "mandate_id": "mnd_saas_seats",
+  "utterance": "add up to 25 engineering seats this month, nothing above 1,200 a seat",
+  "not_before_ns": 1788376997065387008,
+  "not_after_ns": 1788380657065387008,
+  "total_budget_paise": 3500000,
+  "merchant_allow": [
+    "atlassian",
+    "github_enterprise"
+  ],
+  "substitution": {
+    "policy": "deny",
+    "max_delta_bp": 1000
+  },
+  "constraints": [
+    {
+      "sku": "SKU_SEAT_JIRA_STD",
+      "category": "SEAT_LICENCE",
+      "max_unit_paise": 90000,
+      "max_qty": 25
+    },
+    {
+      "sku": "SKU_SEAT_GH_COPILOT",
+      "category": "SEAT_LICENCE",
+      "max_unit_paise": 120000,
+      "max_qty": 25
+    }
+  ],
+  "schema_version": 1
+}
