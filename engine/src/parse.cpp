@@ -100,6 +100,20 @@ ParseResult parse_intent(const std::string& json, InternTable& t, IntentSchema& 
                              ? t.intern(cat) : 0u;     // interned immediately
       ++n;
     }
+    // Two rules for the same SKU make the mandate ambiguous, and find_constraint
+    // resolves it by list order -- so a looser rule listed second silently overrides a
+    // tighter one written first. A human who wrote "at most 1 at Rs100" would get
+    // "4 at Rs450" approved. Refuse the mandate instead of guessing: this is an
+    // authorisation, and the only safe reading of an ambiguous authorisation is none.
+    for (std::uint32_t i = 0; i < n; ++i)
+      for (std::uint32_t j = i + 1; j < n; ++j)
+        if (out.sku_id[i] == out.sku_id[j]) {
+          r.bits  = R_SCHEMA_VERSION;
+          r.error = "duplicate rule for '" + std::string(t.name(out.sku_id[i]))
+                  + "': two rules for one SKU are ambiguous. Keep the one you meant, "
+                    "or give them different SKUs.";
+          return r;
+        }
     out.n_constraints = n;
     r.ok = true;
     return r;

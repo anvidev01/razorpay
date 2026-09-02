@@ -3,6 +3,8 @@
 #include "rig/intern.hpp"
 #include "rig/arena.hpp"
 #include "rig/safety.hpp"
+#include "rig/parse.hpp"
+#include <string>
 #include <cstdio>
 #include <cstring>
 #include <vector>
@@ -132,6 +134,32 @@ int main() {
     CHECK(t2.intern("SKU_MEAL_THALI_001") == id, "intern is stable");
     CHECK(t2.name(id) == "SKU_MEAL_THALI_001",   "reverse lookup for audit");
     CHECK(t2.lookup("NEVER_SEEN") == InternTable::INVALID, "unknown sku -> INVALID");
+  }
+
+  // ---------------- ambiguous mandates ----------------
+  // Two rules for one SKU let list order decide the binding: a loose rule written
+  // second silently overrode a tight one written first, approving 4 x Rs450 against
+  // "at most 1 at Rs100". Ambiguity in an authorisation must be refused, not guessed.
+  std::printf("\n== ambiguous mandate ==\n");
+  {
+    InternTable t3;
+    IntentSchema out{};
+    const std::string dup =
+      R"({"mandate_id":"m","not_before_ns":0,"not_after_ns":9999999999999999,)"
+      R"("total_budget_paise":500000,"merchant_allow":["swiggy"],"constraints":[)"
+      R"({"sku":"SKU_X","max_unit_paise":10000,"max_qty":1},)"
+      R"({"sku":"SKU_X","max_unit_paise":50000,"max_qty":5}]})";
+    const auto r = parse_intent(dup, t3, out);
+    CHECK(!r.ok,                                    "duplicate SKU rule is refused");
+    CHECK(r.error.find("duplicate rule") != std::string::npos,
+                                                    "  -> and says which SKU");
+    const std::string ok =
+      R"({"mandate_id":"m","not_before_ns":0,"not_after_ns":9999999999999999,)"
+      R"("total_budget_paise":500000,"merchant_allow":["swiggy"],"constraints":[)"
+      R"({"sku":"SKU_X","max_unit_paise":10000,"max_qty":1},)"
+      R"({"sku":"SKU_Y","max_unit_paise":50000,"max_qty":5}]})";
+    InternTable t4; IntentSchema out2{};
+    CHECK(parse_intent(ok, t4, out2).ok,            "distinct SKUs still admit");
   }
 
   // ---------------- security regressions (docs/09-SECURITY-REVIEW.md) ----------------
