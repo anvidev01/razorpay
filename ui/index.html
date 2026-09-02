@@ -6,47 +6,123 @@
 <title>Razorpay Intent Gateway</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<div class="app">
 
-  <section class="pane">
-    <div class="phead">
-      <div>
-        <div class="eyebrow">Agent</div>
-        <div class="ptitle">Swiggy ordering assistant</div>
-      </div>
-      <div class="eyebrow" id="mandate-state">no mandate</div>
-    </div>
-    <div class="chat" id="chat"></div>
-    <div class="controls">
-      <button class="primary" id="b1">1 · Order lunch</button>
-      <button id="b2" disabled>2 · Add smoothie thing</button>
-      <button id="b3" disabled>3 · Auto-repair</button>
-      <button id="b4" disabled>4 · Approve blender (MFA)</button>
-      <button id="reset">Reset</button>
-    </div>
-  </section>
-
-  <section class="pane right" id="right">
-    <div>
-      <div class="eyebrow" style="margin-bottom:9px">Policy engine · deterministic C++ kernel</div>
-      <div class="verdict" id="verdict">
-        <div class="empty">no decision yet — the engine has not been asked anything</div>
-      </div>
-    </div>
-    <div class="wal">
-      <div class="walhead">
-        <div class="eyebrow">Write-ahead audit log · SHA-256 chained</div>
-        <span class="chip" id="chain">—</span>
-      </div>
-      <div class="walrows" id="wal"><div class="empty">log empty</div></div>
-    </div>
-  </section>
-
+<div class="announce">
+  <div class="in">
+    <span class="dot"></span>
+    <b>Agentic Commerce</b>
+    <span>Every money action explainable, bounded and gated.</span>
+    <span class="sep">·</span>
+    <span class="mono" id="a-kernel">policy decision in ~31 ns</span>
+  </div>
 </div>
+
+<header class="nav">
+  <div class="in">
+    <a class="brand" href="/">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
+        <path d="M4 15.5 15 2l-2.2 8.2h5.4L7.2 24l2.4-8.5H4Z" fill="#3B6EF5"/>
+      </svg>
+      Razorpay
+      <span class="sub">Intent Gateway</span>
+    </a>
+    <nav class="links">
+      <a href="#" class="on">Agentic Stack</a>
+      <a href="#">Payments</a>
+      <a href="#">Mandates</a>
+      <a href="#">Audit</a>
+      <a href="#">Docs</a>
+    </nav>
+    <div class="navcta">
+      <button class="btn-quiet sm" id="reset">Reset demo</button>
+      <button class="btn-primary sm">Sign Up →</button>
+    </div>
+  </div>
+</header>
+
+<div class="subnav">
+  <div class="in">
+    <button class="tab on">Live Demo</button>
+    <button class="tab" id="t-audit">Audit Log</button>
+    <button class="tab" id="t-bench">Latency</button>
+    <span class="right"><button class="btn-primary sm" id="b1">Run the demo →</button></span>
+  </div>
+</div>
+
+<section class="hero">
+  <h1>Agentic payments,<br><span class="blue">bounded by what the human agreed to</span></h1>
+  <p>
+    UPI Reserve Pay checks one thing — is the agent under its limit. It never looks at the
+    cart. The Intent Gateway asks the question the rail doesn't, in a deterministic C++
+    kernel, and mints a payment token only after the decision is durable in a
+    hash-chained log.
+  </p>
+  <div class="stats">
+    <div class="stat"><div class="k b mono" id="s-kernel">31 ns</div><div class="l">policy kernel, this cart</div></div>
+    <div class="stat"><div class="k mono" id="s-commit">37 µs</div><div class="l">durable commit, this decision</div></div>
+    <div class="stat"><div class="k g mono" id="s-bypass">5 / 5</div><div class="l">bypass attempts refused</div></div>
+    <div class="stat"><div class="k mono" id="s-div">0</div><div class="l">divergent on replay</div></div>
+  </div>
+</section>
+
+<section class="work">
+  <div class="in">
+
+    <div class="card">
+      <div class="chead">
+        <div>
+          <div class="eyebrow">Agent</div>
+          <h3>Swiggy ordering assistant</h3>
+        </div>
+        <span class="chip" id="mandate-state">no mandate</span>
+      </div>
+      <div class="chat" id="chat"></div>
+      <div class="controls">
+        <button class="btn-primary" id="b1b">1 · Order lunch</button>
+        <button class="btn-quiet" id="b2" disabled>2 · Add smoothie thing</button>
+        <button class="btn-quiet" id="b3" disabled>3 · Auto-repair</button>
+        <button class="btn-ghost" id="b4" disabled>4 · Approve with MFA</button>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card">
+        <div class="chead">
+          <div>
+            <div class="eyebrow">Policy engine</div>
+            <h3>Deterministic C++ kernel</h3>
+          </div>
+          <span class="eyebrow">branch-free · pure function</span>
+        </div>
+        <div class="verdict" id="verdict">
+          <div class="empty">no decision yet — the engine has not been asked anything</div>
+        </div>
+      </div>
+
+      <div class="card" id="audit">
+        <div class="chead">
+          <div>
+            <div class="eyebrow">Write-ahead audit log</div>
+            <h3>SHA-256 hash chain</h3>
+          </div>
+          <span class="chip" id="chain">—</span>
+        </div>
+        <div class="walrows" id="wal"><div class="empty">log empty</div></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="foot">
+  <span>Razorpay AI Buildathon · Track 01 · anvidev01</span>
+  <span>every number measured on Apple M4 · ./engine/bench/run_all.sh</span>
+</div>
+
 <script src="/app.js"></script>
 </body>
 </html>

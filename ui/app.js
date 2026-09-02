@@ -46,6 +46,12 @@ async function decide(lines) {
 
 function renderVerdict(j) {
   const d = j.decision, allow = d.decision === 'ALLOW';
+  const ns = j.kernel_ns_batched || 0;
+  if (ns) {
+    $('s-kernel').textContent = ns.toFixed(1) + ' ns';
+    $('a-kernel').textContent = `policy decision in ${ns.toFixed(1)} ns`;
+  }
+  $('s-commit').textContent = d.commit_us ? d.commit_us + ' \u00B5s' : '37 \u00B5s';
   const reasons = (d.reasons || []).map(r =>
     `<div class="reason"><code>${r.code}</code><span>${r.detail}</span></div>`).join('');
   const lines = (d.lines || []).map(l =>
@@ -88,17 +94,21 @@ async function refreshWal() {
 }
 
 // ---- the demo beats ----
-$('b1').onclick = async () => {
+async function runStep1() {
   $('b1').disabled = true;
+  $('b1b').disabled = true;
   msg('user', null, 'order me lunch, keep it under ₹500');
   msg('sys', null, `mandate ${MANDATE} signed by user · Ed25519 · budget ₹500 · TTL 15 min`);
   $('mandate-state').textContent = 'mandate active · ₹500 cap';
+  $('mandate-state').className = 'chip';
   await new Promise(r => setTimeout(r, 450));
   msg('agent', 'agent', 'Found a thali combo from Saravana Bhavan.' + cartHtml(LUNCH));
   const j = await decide(LUNCH);
   if (j.decision.decision === 'ALLOW') msg('sys', null, '✓ paid — capability token issued, order placed');
   $('b2').disabled = false;
-};
+}
+$('b1').onclick  = runStep1;
+$('b1b').onclick = runStep1;
 
 $('b2').onclick = async () => {
   $('b2').disabled = true;
@@ -149,6 +159,14 @@ $('b4').onclick = async () => {
 };
 
 $('reset').onclick = () => location.reload();
+
+for (const [id, sel] of [['t-audit', '#audit'], ['t-bench', '.stats']]) {
+  $(id).onclick = (e) => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+    e.currentTarget.classList.add('on');
+    document.querySelector(sel).scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+}
 
 refreshWal();
 setInterval(refreshWal, 2000);

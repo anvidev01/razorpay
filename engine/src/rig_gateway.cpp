@@ -122,7 +122,7 @@ static int run(int argc, char** argv) {
       std::ostringstream o;
       o << "{\"decision\":" << gw->decision_json(d)
         << ",\"repair\":" << gw->repair_hint_json(d)
-        << ",\"kernel_ns_batched\":" << gw->measure_last_kernel_ns(200, 50) << "}";
+        << ",\"kernel_ns_batched\":" << gw->measure_last_kernel_ns(500, 101) << "}";
       respond(c, 200, "application/json", o.str());
     } else if (method == "POST" && path == "/api/admit") {
       std::string err;
