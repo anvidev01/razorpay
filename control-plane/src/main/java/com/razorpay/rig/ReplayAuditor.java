@@ -24,7 +24,7 @@ public final class ReplayAuditor {
 
         var rep = ChainVerifier.verify(Path.of(path), r -> r.type == 3);
 
-        long decisions = 0, divergent = 0, allowed = 0, denied = 0;
+        long decisions = 0, divergent = 0, allowed = 0, review = 0, denied = 0, stateful = 0;
         List<String> details = new ArrayList<>();
         for (WalRecord r : rep.decisions) {
             DecisionPayload d;
@@ -37,20 +37,24 @@ public final class ReplayAuditor {
             }
             decisions++;
             var v = PolicyKernel.evaluate(d);
-            if (v.bits != d.recordedBits || v.total != d.recordedTotal) {
+            int reproducible = d.recordedBits & ~PolicyKernel.STATEFUL_RISK_MASK;
+            if ((d.recordedBits & PolicyKernel.STATEFUL_RISK_MASK) != 0) stateful++;
+            if (v.bits != reproducible || v.total != d.recordedTotal) {
                 divergent++;
                 details.add(String.format(
-                    "seq %d: recorded 0x%04X/%d, java replay 0x%04X/%d",
-                    r.seq, d.recordedBits, d.recordedTotal, v.bits, v.total));
+                    "seq %d: recorded 0x%04X (reproducible 0x%04X)/%d, java replay 0x%04X/%d",
+                    r.seq, d.recordedBits, reproducible, d.recordedTotal, v.bits, v.total));
             }
-            if (d.recordedBits == 0) allowed++; else denied++;
+            // Count by the RECORDED outcome so this matches the audit log and the
+            // C++ auditor exactly; a REVIEW has no hard bits but is not an allow.
+            if (d.outcome == 0) allowed++; else if (d.outcome == 1) review++; else denied++;
         }
 
         if (json) {
             System.out.printf(
                 "{\"records\":%d,\"chain_intact\":%b,\"decisions\":%d,\"allowed\":%d,"
-              + "\"denied\":%d,\"divergent\":%d,\"detail\":\"%s\"}%n",
-                rep.records, rep.intact, decisions, allowed, denied, divergent, rep.detail);
+              + "\"review\":%d,\"denied\":%d,\"divergent\":%d,\"detail\":\"%s\"}%n",
+                rep.records, rep.intact, decisions, allowed, review, denied, divergent, rep.detail);
             System.exit(rep.intact && divergent == 0 ? 0 : 1);
         }
 
@@ -62,8 +66,13 @@ public final class ReplayAuditor {
         }
         System.out.printf("  replay    : %d decisions re-executed by a SEPARATE implementation%n",
             decisions);
-        System.out.printf("  outcome   : %d allowed, %d denied%n", allowed, denied);
+        System.out.printf("  outcome   : %d allowed, %d review, %d denied%n",
+            allowed, review, denied);
         System.out.printf("  divergent : %s%d%s%n", divergent == 0 ? G : R, divergent, Z);
+        if (stateful > 0) {
+            System.out.printf("  %snote      : %d decision(s) carried behavioural risk bits, "
+                + "recorded but not kernel-reproducible%s%n", D, stateful, Z);
+        }
         for (String s : details) {
             System.out.printf("    %s%s%s%n", R, s, Z);
         }

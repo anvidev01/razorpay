@@ -27,7 +27,19 @@ public final class PolicyKernel {
     public static final int R_SUBSTITUTION_DELTA   = 1 << 11;
     public static final int R_INJECTION_SUSPECTED  = 1 << 12;
     public static final int R_DUPLICATE_CHARGE     = 1 << 13;
+    public static final int R_VELOCITY_ANOMALY     = 1 << 14;
+    public static final int R_NEW_MERCHANT         = 1 << 15;
+    public static final int R_ODD_HOUR             = 1 << 16;
     public static final int SUBST_DENY = 0, SUBST_SAME_CATEGORY = 1, SUBST_ANY_IN_BUDGET = 2;
+
+    /**
+     * Bits derived from cross-transaction state rather than from one record's inputs.
+     * The kernel is a pure function of a single decision, so it cannot re-derive these;
+     * the auditor excludes them or it would report false divergences. Injection is NOT
+     * here -- it is computed from this cart's own text and travels in the payload.
+     */
+    public static final int STATEFUL_RISK_MASK =
+            R_VELOCITY_ANOMALY | R_NEW_MERCHANT | R_ODD_HOUR;
     public static final int SCHEMA_VER             = 1;
     public static final int MAXC                   = 16;
     public static final int MAX_CART               = 64;
@@ -37,7 +49,8 @@ public final class PolicyKernel {
                         "R_CART_TOTAL_EXCEEDED","R_MERCHANT_NOT_ALLOWED","R_MANDATE_EXPIRED",
                         "R_ARITH_OVERFLOW","R_REPLAY_NONCE","R_SCHEMA_VERSION","R_ENGINE_RESOURCE",
                         "R_SUBSTITUTION_DENIED","R_SUBSTITUTION_DELTA","R_INJECTION_SUSPECTED",
-                        "R_DUPLICATE_CHARGE"};
+                        "R_DUPLICATE_CHARGE","R_VELOCITY_ANOMALY","R_NEW_MERCHANT",
+                        "R_ODD_HOUR"};
         int n = Integer.bitCount(bits);
         String[] out = new String[n];
         int k = 0;

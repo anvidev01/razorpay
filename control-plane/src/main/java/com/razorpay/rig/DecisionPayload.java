@@ -23,7 +23,8 @@ public final class DecisionPayload {
     private static final int NOW_NS = 512, MERCHANT = 520, N_LINES = 524,
                              SKU = 528, UNIT = 784, QTY = 1296, CAT = 1552,
                              TEXT_FLAGS = 1808, REC_BITS = 1812, REC_TOTAL = 1816,
-                             EVAL_NS = 1824, IDEM_KEY = 1840;
+                             EVAL_NS = 1824, IDEM_KEY = 1840,
+                             AGENT_SESSION = 1872, RISK_BITS = 1880, OUTCOME = 1884;
 
     public long mandateId, notBeforeNs, notAfterNs, totalBudgetPaise, merchantAllowMask;
     public int  nConstraints, schemaVersion;
@@ -40,7 +41,8 @@ public final class DecisionPayload {
     public int[]  qty       = new int[PolicyKernel.MAX_CART];
     public int[]  category  = new int[PolicyKernel.MAX_CART];
     public int    textFlags;
-    public int  recordedBits;
+    public int  recordedBits, riskBits, outcome;
+    public long agentSessionId;
     public long recordedTotal, evalNs;
 
     public static DecisionPayload parse(byte[] p) {
@@ -77,6 +79,9 @@ public final class DecisionPayload {
         d.recordedBits  = b.getInt(REC_BITS);
         d.recordedTotal = b.getLong(REC_TOTAL);
         d.evalNs        = b.getLong(EVAL_NS);
+        d.agentSessionId = b.getLong(AGENT_SESSION);
+        d.riskBits       = b.getInt(RISK_BITS);
+        d.outcome        = b.get(OUTCOME) & 0xFF;
         return d;
     }
 }
