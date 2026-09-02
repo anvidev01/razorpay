@@ -11,6 +11,7 @@
 #include "wal.hpp"
 #include "pct.hpp"
 #include "pool.hpp"
+#include "idempotency.hpp"
 #include <string>
 #include <unordered_map>
 #include <memory>
@@ -30,6 +31,11 @@ struct Decision {
   bool          has_pct       = false;
   Pct           pct{};
   std::string   parse_error;
+  // Agent-retry handling: a duplicate is not an error, it is the SAME decision.
+  bool          duplicate_suppressed  = false;
+  std::uint64_t original_decision_id  = 0;
+  std::uint32_t duplicate_hits        = 0;
+  Hash256       idem_key{};
 };
 
 class Gateway {
@@ -67,12 +73,14 @@ public:
   std::size_t    mandates() const noexcept { return by_id_.size(); }
 
 private:
+  std::string                  wal_path_;
   InternTable                  intern_;
   ScratchArena                 arena_{1 << 20};
   std::unique_ptr<Wal>         wal_;
   Signer                       key_;
   Executor                     exec_{key_};
   FixedPool<IntentSchema, 256> pool_;
+  IdempotencyStore             idem_;
   std::unordered_map<std::uint64_t, std::uint32_t> by_id_;
   std::uint8_t                 tag_key_[16]{};
   std::uint64_t                next_decision_ = 1;
@@ -80,14 +88,17 @@ private:
   bool                         group_commit_  = false;
 
   Tag128 tag_of(const IntentSchema& s) const noexcept;
+  void   rebuild_idempotency();
 
   // snapshot of the last decision's inputs, for honest re-measurement
   IntentSchema  last_schema_{};
   std::uint32_t last_sku_[MAX_CART]{};
   std::int64_t  last_up_[MAX_CART]{};
   std::uint32_t last_qty_[MAX_CART]{};
+  std::uint32_t last_cat_[MAX_CART]{};
   std::uint32_t last_n_        = 0;
   std::uint32_t last_merchant_ = 0;
+  std::uint32_t last_flags_    = 0;
   std::uint64_t last_now_      = 0;
 };
 

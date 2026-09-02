@@ -78,13 +78,27 @@ static int run(int argc, char** argv) {
         for (int b = 0; b < R_BIT_COUNT; ++b)
           if (L.bits & (1u << b)) std::printf(" %s", reject_name(1u << b));
       }
+      if (L.substituted_for) {
+        const auto orig = gw.intern().name(L.substituted_for);
+        std::printf(" %ssubstituted for %.*s%s", C_YEL, (int)orig.size(), orig.data(), C_RST);
+      }
       std::printf("\n");
     }
   }
+  if (d.duplicate_suppressed)
+    std::printf("\n  %sDUPLICATE SUPPRESSED%s this exact basket was already decided as #%llu"
+                " (attempt %u)\n  %sno second charge -- the retry collapsed onto the original"
+                " decision%s\n",
+      C_YEL, C_RST, (unsigned long long)d.original_decision_id, d.duplicate_hits,
+      C_DIM, C_RST);
   if (!ok) std::printf("\n  %srepair%s %s\n", C_YEL, C_RST, gw.repair_hint_json(d).c_str());
   if (d.has_pct)
     std::printf("\n  %scapability issued%s nonce=%llu exp=+60s bound to cart %s...\n",
       C_GRN, C_RST, (unsigned long long)d.pct.body.nonce, hex(d.cart_hash).substr(0,16).c_str());
+  else if (d.duplicate_suppressed)
+    std::printf("\n  %sno NEW token minted -- decision #%llu already stands, so the basket"
+                " is charged exactly once%s\n",
+      C_DIM, (unsigned long long)d.original_decision_id, C_RST);
   else
     std::printf("\n  %sno capability token minted -- this cart cannot reach the payment rail%s\n",
       C_DIM, C_RST);

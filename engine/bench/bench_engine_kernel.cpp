@@ -30,10 +30,10 @@ int main(int argc, char** argv) {
     s.sku_id[i] = t.intern(b);
     s.max_unit_paise[i] = 300000; s.max_qty[i] = 8;
   }
-  std::vector<std::uint32_t> sku(n), qty(n);
+  std::vector<std::uint32_t> sku(n), qty(n), cat(n);
   std::vector<std::int64_t> up(n);
   for (int i = 0; i < n; ++i) { sku[i] = s.sku_id[i % MAXC]; up[i] = 2000 + i; qty[i] = 1; }
-  const CartView c{sku.data(), up.data(), qty.data(), (std::uint32_t)n, 1};
+  const CartView c{sku.data(), up.data(), qty.data(), cat.data(), (std::uint32_t)n, 1, 0, 0};
 
   std::uint32_t sink = 0;
   for (int i = 0; i < 200000; ++i) sink ^= evaluate(s, c, 1).bits;

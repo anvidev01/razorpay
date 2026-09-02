@@ -28,6 +28,7 @@ enum class RecType : std::uint8_t {
   PAYMENT_RESULT    = 7,
   REMEDIATION       = 8,
   ANCHOR            = 9,
+  DUPLICATE_SUPPRESSED = 10,
 };
 const char* rectype_name(RecType t) noexcept;
 
@@ -57,10 +58,13 @@ struct DecisionPayload {
   std::uint32_t sku_id[MAX_CART];
   std::int64_t  unit_paise[MAX_CART];
   std::uint32_t qty[MAX_CART];
+  std::uint32_t category_id[MAX_CART];
+  std::uint32_t text_flags;
   std::uint32_t recorded_bits;       // what the engine decided at the time
   std::int64_t  recorded_total;
   std::uint64_t eval_ns;
   std::uint64_t cart_hash_lo;        // first 8 bytes of sha256(canonical cart)
+  std::uint8_t  idem_key[32];        // semantic retry key, so dedupe survives restart
 };
 
 class Wal {

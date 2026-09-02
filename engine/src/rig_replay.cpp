@@ -30,7 +30,8 @@ int main(int argc, char** argv) {
     std::memcpy(&dp, r.payload.data(), sizeof dp);
     ++decisions;
 
-    const CartView c{dp.sku_id, dp.unit_paise, dp.qty, dp.n_lines, dp.merchant_id};
+    const CartView c{dp.sku_id, dp.unit_paise, dp.qty, dp.category_id,
+                     dp.n_lines, dp.merchant_id, dp.text_flags, 0};
     const Verdict  v = evaluate(dp.schema, c, dp.now_ns);   // re-execute, same inputs
 
     if (v.bits != dp.recorded_bits || v.cart_total_paise != dp.recorded_total) {
