@@ -17,6 +17,8 @@ hdr(){ printf "\n${B}%s${Z}\n" "$1"; }
 
 pkill -f rig-gateway 2>/dev/null; sleep 0.3      # the WAL allows one writer
 mkdir -p wal; rm -f wal/verify*.wal
+# Mandate fixtures carry a validity window; refresh it so a clone verifies on any day.
+./scripts/refresh-windows.sh >/dev/null 2>&1 || true
 W="--wal wal/verify.wal"
 
 hdr "0 · Build"

@@ -1,8 +1,8 @@
 {
   "mandate_id": "mnd_travel_blr",
   "utterance": "book my Bangalore trip, flights and one hotel, under 30,000",
-  "not_before_ns": 1788376997065387008,
-  "not_after_ns": 1788380657065387008,
+  "not_before_ns": 1788380999000000000,
+  "not_after_ns": 1788402659000000000,
   "total_budget_paise": 3000000,
   "merchant_allow": [
     "makemytrip",
