@@ -9,6 +9,9 @@
 #       SKU_MEAL_THALI_001:240:1  SKU_DRINK_LIME_007:60:2
 #       one-shot: mandate sentence, then SKU:RUPEES:QTY for each cart line.
 #
+#   ./scripts/try.sh --sector saas "buy 10 standard seats under 12000 rupees" \
+#                    SKU_SEAT_STANDARD:900:10
+#       one of the shipped industries: food retail saas travel procurement subscription
 #   ./scripts/try.sh --catalog my_products.json "buy 2 licences under 40000" ...
 #       your own product feed. See fixtures/catalog.json for the shape.
 #
@@ -20,7 +23,18 @@ cd "$(dirname "$0")/.."
 B=$'\033[1m'; D=$'\033[2m'; Z=$'\033[0m'; G=$'\033[32m'; R=$'\033[31m'; Y=$'\033[33m'; C=$'\033[36m'
 
 CATALOG="fixtures/catalog.json"
-if [ "${1:-}" = "--catalog" ]; then CATALOG="${2:?--catalog needs a file}"; shift 2; fi
+# The engine has no notion of any industry -- prove it by switching the product feed
+# and changing nothing else. --sector is shorthand for one of the shipped catalogues.
+if [ "${1:-}" = "--sector" ]; then
+  SECTOR="${2:?--sector needs a name}"
+  CATALOG="fixtures/catalogs/$SECTOR.json"
+  if [ ! -f "$CATALOG" ]; then
+    printf "unknown sector: %s\navailable: " "$SECTOR"
+    ls fixtures/catalogs/*.json 2>/dev/null | xargs -n1 basename | sed 's/.json//' | tr '\n' ' '
+    printf "\n"; exit 1
+  fi
+  shift 2
+elif [ "${1:-}" = "--catalog" ]; then CATALOG="${2:?--catalog needs a file}"; shift 2; fi
 [ -f "$CATALOG" ] || { printf "${R}no such catalogue: %s${Z}\n" "$CATALOG"; exit 1; }
 
 UTTER="${1:-}"; shift 2>/dev/null || true

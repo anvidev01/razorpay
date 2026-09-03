@@ -1,0 +1,78 @@
+{
+  "items": [
+    {
+      "sku": "SKU_FLIGHT_DEL_BLR",
+      "name": "Flight DEL-BLR economy",
+      "category": "FLIGHT",
+      "price_rupees": 5400,
+      "keywords": [
+        "flight",
+        "air",
+        "ticket",
+        "delhi",
+        "bangalore"
+      ]
+    },
+    {
+      "sku": "SKU_FLIGHT_BLR_DEL",
+      "name": "Flight BLR-DEL economy",
+      "category": "FLIGHT",
+      "price_rupees": 5200,
+      "keywords": [
+        "flight",
+        "air",
+        "return",
+        "bangalore",
+        "delhi"
+      ]
+    },
+    {
+      "sku": "SKU_HOTEL_3STAR",
+      "name": "3-star hotel, per night",
+      "category": "HOTEL",
+      "price_rupees": 3200,
+      "keywords": [
+        "hotel",
+        "room",
+        "stay",
+        "night"
+      ]
+    },
+    {
+      "sku": "SKU_HOTEL_5STAR",
+      "name": "5-star hotel, per night",
+      "category": "HOTEL",
+      "price_rupees": 14000,
+      "keywords": [
+        "hotel",
+        "luxury",
+        "suite",
+        "night"
+      ]
+    },
+    {
+      "sku": "SKU_CAB_AIRPORT",
+      "name": "Airport transfer",
+      "category": "GROUND",
+      "price_rupees": 900,
+      "keywords": [
+        "cab",
+        "taxi",
+        "transfer",
+        "airport",
+        "ride"
+      ]
+    },
+    {
+      "sku": "SKU_INSURANCE_TRIP",
+      "name": "Trip insurance",
+      "category": "INSURANCE",
+      "price_rupees": 600,
+      "keywords": [
+        "insurance",
+        "cover",
+        "protection"
+      ]
+    }
+  ]
+}

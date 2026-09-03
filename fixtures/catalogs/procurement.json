@@ -1,0 +1,75 @@
+{
+  "items": [
+    {
+      "sku": "SKU_PAPER_A4_BOX",
+      "name": "A4 paper, box of 5 reams",
+      "category": "OFFICE_SUPPLY",
+      "price_rupees": 1400,
+      "keywords": [
+        "paper",
+        "a4",
+        "reams",
+        "stationery"
+      ]
+    },
+    {
+      "sku": "SKU_TONER_BLACK",
+      "name": "Printer toner, black",
+      "category": "OFFICE_SUPPLY",
+      "price_rupees": 4800,
+      "keywords": [
+        "toner",
+        "ink",
+        "cartridge",
+        "printer"
+      ]
+    },
+    {
+      "sku": "SKU_CHAIR_ERGO",
+      "name": "Ergonomic office chair",
+      "category": "FURNITURE",
+      "price_rupees": 12000,
+      "keywords": [
+        "chair",
+        "seat",
+        "ergonomic",
+        "furniture"
+      ]
+    },
+    {
+      "sku": "SKU_DESK_STANDING",
+      "name": "Standing desk",
+      "category": "FURNITURE",
+      "price_rupees": 26000,
+      "keywords": [
+        "desk",
+        "standing",
+        "table",
+        "furniture"
+      ]
+    },
+    {
+      "sku": "SKU_MONITOR_27",
+      "name": "27-inch monitor",
+      "category": "IT_HARDWARE",
+      "price_rupees": 18000,
+      "keywords": [
+        "monitor",
+        "display",
+        "screen"
+      ]
+    },
+    {
+      "sku": "SKU_DOCK_USBC",
+      "name": "USB-C docking station",
+      "category": "IT_HARDWARE",
+      "price_rupees": 7500,
+      "keywords": [
+        "dock",
+        "docking",
+        "hub",
+        "usbc"
+      ]
+    }
+  ]
+}

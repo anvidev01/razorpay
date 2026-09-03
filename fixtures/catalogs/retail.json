@@ -1,0 +1,74 @@
+{
+  "items": [
+    {
+      "sku": "SKU_CASE_SILICONE_XL",
+      "name": "Silicone phone case XL",
+      "category": "PHONE_ACCESSORY",
+      "price_rupees": 250,
+      "keywords": [
+        "case",
+        "cover",
+        "silicone",
+        "phone"
+      ]
+    },
+    {
+      "sku": "SKU_CABLE_USBC_2M",
+      "name": "USB-C cable 2m",
+      "category": "PHONE_ACCESSORY",
+      "price_rupees": 400,
+      "keywords": [
+        "cable",
+        "usbc",
+        "charger",
+        "cord"
+      ]
+    },
+    {
+      "sku": "SKU_SCREEN_GUARD_9H",
+      "name": "Tempered screen guard",
+      "category": "PHONE_ACCESSORY",
+      "price_rupees": 180,
+      "keywords": [
+        "screen",
+        "guard",
+        "tempered",
+        "protector"
+      ]
+    },
+    {
+      "sku": "SKU_POWERBANK_10K",
+      "name": "Power bank 10000mAh",
+      "category": "PHONE_ACCESSORY",
+      "price_rupees": 1500,
+      "keywords": [
+        "powerbank",
+        "battery",
+        "charger"
+      ]
+    },
+    {
+      "sku": "SKU_TABLET_PRO_11",
+      "name": "Tablet Pro 11 inch",
+      "category": "TABLET",
+      "price_rupees": 62000,
+      "keywords": [
+        "tablet",
+        "ipad",
+        "slate"
+      ]
+    },
+    {
+      "sku": "SKU_EARBUDS_TWS",
+      "name": "Wireless earbuds",
+      "category": "AUDIO",
+      "price_rupees": 2200,
+      "keywords": [
+        "earbuds",
+        "headphones",
+        "tws",
+        "audio"
+      ]
+    }
+  ]
+}

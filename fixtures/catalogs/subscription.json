@@ -1,0 +1,50 @@
+{
+  "items": [
+    {
+      "sku": "SKU_TRIAL_PREMIUM",
+      "name": "Premium trial, 7 days",
+      "category": "TRIAL",
+      "price_rupees": 1,
+      "keywords": [
+        "trial",
+        "premium",
+        "try"
+      ]
+    },
+    {
+      "sku": "SKU_PLAN_MONTHLY",
+      "name": "Premium plan, monthly",
+      "category": "PLAN",
+      "price_rupees": 999,
+      "keywords": [
+        "plan",
+        "monthly",
+        "premium",
+        "subscription"
+      ]
+    },
+    {
+      "sku": "SKU_PLAN_ANNUAL",
+      "name": "Premium plan, annual",
+      "category": "PLAN",
+      "price_rupees": 9990,
+      "keywords": [
+        "annual",
+        "yearly",
+        "plan",
+        "subscription"
+      ]
+    },
+    {
+      "sku": "SKU_ADDON_FAMILY",
+      "name": "Family add-on",
+      "category": "ADDON",
+      "price_rupees": 300,
+      "keywords": [
+        "family",
+        "addon",
+        "members"
+      ]
+    }
+  ]
+}

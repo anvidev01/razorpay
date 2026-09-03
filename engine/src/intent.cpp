@@ -390,7 +390,18 @@ IntentDraft translate_local(const std::string& utterance, const std::string& cat
       "make","sure","would","like","could","give","bring","send","thousand","hundred",
       // Indian units of money. Without these, "1 lakh rupees" is read as a request
       // for a product called "lakh" that the merchant does not stock.
-      "lakh","lakhs","crore","crores"};
+      "lakh","lakhs","crore","crores",
+      // GENERAL COMMERCE VERBS. The list above was written for food ordering, so
+      // "restock 20 phone cases" failed: "restock" was an unknown word beside
+      // "phone", and an adjacent unknown qualifies a match (the rule that stops
+      // "chicken tikka" matching chicken biryani), which erased the product. This
+      // engine is not a food engine -- retail restocks, SaaS renews seats, travel
+      // books flights, procurement raises POs. Those verbs are scaffolding too.
+      "restock","reorder","stock","procure","purchase","purchasing","acquire","source",
+      "renew","renewal","book","booking","reserve","reservation","subscribe",
+      "subscription","upgrade","downgrade","provision","add","extend","top",
+      "arrange","schedule","raise","issue","license","licence","seats","seat",
+      "units","unit","quantity","qty","nights","night","tickets","ticket"};
 
     // tokenise, keeping word positions so we can test adjacency
     std::vector<std::string> words;

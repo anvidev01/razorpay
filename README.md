@@ -6,6 +6,13 @@
 every money action an agent takes is explainable, bounded and gated — and provable
 afterwards.**
 
+> **Windows evaluators — please use WSL2 (Ubuntu or Debian), not native Windows.**
+> The durability and audit guarantees are built on POSIX primitives with no MSVC
+> equivalent — `fcntl(F_FULLFSYNC)` for the drive-cache flush, `flock()` for the
+> single-writer hash chain, and `clock_gettime` for the monotonic clock — so a native
+> MSVC build will not compile. Inside WSL2 the Linux instructions below work unchanged,
+> and CI proves them on Ubuntu and macOS on every push.
+
 Razorpay AI Buildathon · **Track 01 — AI Growth & Agentic Commerce** (primary) ·
 **Track 02 — AI Risk Manager** (secondary)
 

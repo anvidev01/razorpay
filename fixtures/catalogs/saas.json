@@ -1,0 +1,77 @@
+{
+  "items": [
+    {
+      "sku": "SKU_SEAT_STANDARD",
+      "name": "Standard seat licence",
+      "category": "LICENCE",
+      "price_rupees": 900,
+      "keywords": [
+        "seat",
+        "licence",
+        "license",
+        "standard",
+        "user"
+      ]
+    },
+    {
+      "sku": "SKU_SEAT_ADMIN",
+      "name": "Admin seat licence",
+      "category": "LICENCE",
+      "price_rupees": 2400,
+      "keywords": [
+        "admin",
+        "seat",
+        "licence",
+        "license"
+      ]
+    },
+    {
+      "sku": "SKU_ADDON_SSO",
+      "name": "SSO add-on",
+      "category": "ADDON",
+      "price_rupees": 12000,
+      "keywords": [
+        "sso",
+        "saml",
+        "addon",
+        "identity"
+      ]
+    },
+    {
+      "sku": "SKU_ADDON_AUDIT",
+      "name": "Audit log retention",
+      "category": "ADDON",
+      "price_rupees": 8000,
+      "keywords": [
+        "audit",
+        "retention",
+        "logs",
+        "addon"
+      ]
+    },
+    {
+      "sku": "SKU_SUPPORT_GOLD",
+      "name": "Gold support plan",
+      "category": "SUPPORT",
+      "price_rupees": 45000,
+      "keywords": [
+        "support",
+        "gold",
+        "sla",
+        "premium"
+      ]
+    },
+    {
+      "sku": "SKU_STORAGE_1TB",
+      "name": "Extra storage 1TB",
+      "category": "ADDON",
+      "price_rupees": 3000,
+      "keywords": [
+        "storage",
+        "disk",
+        "space",
+        "tb"
+      ]
+    }
+  ]
+}

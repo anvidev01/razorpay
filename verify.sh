@@ -75,6 +75,25 @@ rm -f wal/verify_sec_*.wal
 [ "$(sec subscription ok)" = "0x0000" ] && [ "$(sec subscription violation)" = "0x400000" ] \
   && ok "hidden subscription" "Rs 1 today / Rs 999 a month denied 0x400000" || no "subscription trap"
 
+# The natural-language layer must not be a food parser either. Same binary, same
+# stopword list, six product feeds -- if any of these stops drafting, the claim that
+# this is general commerce infrastructure is no longer true.
+nl=0
+for sec in food retail saas travel procurement subscription; do
+  case $sec in
+    food)         q="order me a thali and a lassi under 500 rupees" ;;
+    retail)       q="restock 20 phone cases under 8000 rupees" ;;
+    saas)         q="buy 10 standard seats under 12000 rupees" ;;
+    travel)       q="book a flight and a 3 star hotel under 10000 rupees" ;;
+    procurement)  q="procure 2 monitors under 40000 rupees" ;;
+    subscription) q="start the premium trial" ;;
+  esac
+  ./build/rig-intent "$q" --catalog "fixtures/catalogs/$sec.json" 2>/dev/null \
+    | grep -q "Understood" && nl=$((nl+1))
+done
+[ "$nl" = "6" ] && ok "plain English across six industries" "one stopword list, six product feeds" \
+                || no "sector language coverage" "$nl/6 drafted"
+
 hdr "3 · Gating — bypasses and forgeries"
 out=$(./build/rig-attack 2>&1)
 echo "$out" | grep -q "all bypasses refused" \
