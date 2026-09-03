@@ -295,6 +295,8 @@ Interactive UI: `./build/rig-gateway` → http://127.0.0.1:8787
 | [08 — Testing Your Own Data](docs/08-TESTING-YOUR-DATA.md) | field reference, every failure path, gotchas |
 | [09 — Security Review](docs/09-SECURITY-REVIEW.md) | findings, fixes, and accepted limitations |
 | [10 — Everything From the Terminal](docs/10-TERMINAL.md) | no browser: every command, and which ones touch Razorpay |
+| [11 — Run Your Own Scenario](docs/11-RUN-YOUR-OWN.md) | test your own mandates, carts and product catalogue |
+
 | [Benchmarks](docs/BENCHMARKS.md) | every number, and how it was measured |
 
 ## Future work

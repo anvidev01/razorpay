@@ -1,0 +1,13 @@
+{
+  "_comment": "An example of YOUR OWN catalogue. Copy this shape, put your products in it, and pass it with --catalog. The engine has no idea what a 'seat' is -- it only enforces the mandate the human signed.",
+  "items": [
+    { "sku": "SKU_SEAT_ENTERPRISE", "name": "Enterprise seat", "category": "SAAS_SEAT",
+      "price_rupees": 2400, "keywords": ["seat","licence","license","enterprise","user"] },
+    { "sku": "SKU_SEAT_STANDARD", "name": "Standard seat", "category": "SAAS_SEAT",
+      "price_rupees": 900, "keywords": ["seat","licence","license","standard","basic","user"] },
+    { "sku": "SKU_ADDON_SSO", "name": "SSO add-on", "category": "SAAS_ADDON",
+      "price_rupees": 15000, "keywords": ["sso","addon","add-on","security","saml"] },
+    { "sku": "SKU_ADDON_STORAGE", "name": "Extra storage 1TB", "category": "SAAS_ADDON",
+      "price_rupees": 3000, "keywords": ["storage","disk","space","addon","add-on"] }
+  ]
+}

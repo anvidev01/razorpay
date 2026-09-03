@@ -19,19 +19,28 @@ using simdjson::simdjson_error;
 int main(int argc, char** argv) {
   if (argc < 2) {
     std::fprintf(stderr,
-      "usage: rig-intent \"buy me two meals and a drink under 1000 rupees\" [--out FILE]\n");
+      "usage: rig-intent \"buy me two meals and a drink under 1000 rupees\"\n"
+      "                 [--out FILE] [--minutes N] [--catalog FILE]\n"
+      "\n"
+      "  --catalog  point at your own product feed to test another sector.\n"
+      "             See fixtures/catalog.json for the shape.\n");
     return 2;
   }
   std::string utterance = argv[1], out_path;
+  // The catalogue was hardcoded, so anyone evaluating this on their own sector had
+  // to overwrite a fixture in the repo. It is the merchant's product feed, not a
+  // property of the engine -- so it is an argument.
+  std::string catalog_path = "fixtures/catalog.json";
   int minutes = 30;
   for (int i = 2; i < argc; ++i) {
     const std::string a = argv[i];
     if (a == "--out" && i + 1 < argc) out_path = argv[++i];
     else if (a == "--minutes" && i + 1 < argc) minutes = std::atoi(argv[++i]);
+    else if (a == "--catalog" && i + 1 < argc) catalog_path = argv[++i];
   }
 
-  std::ifstream f("fixtures/catalog.json");
-  if (!f) { std::fprintf(stderr, "cannot read fixtures/catalog.json\n"); return 2; }
+  std::ifstream f(catalog_path);
+  if (!f) { std::fprintf(stderr, "cannot read %s\n", catalog_path.c_str()); return 2; }
   std::ostringstream cb; cb << f.rdbuf();
 
   const rig::IntentDraft d = rig::translate_intent(utterance, cb.str());

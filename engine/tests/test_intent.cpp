@@ -81,6 +81,30 @@ int main(int argc, char** argv) {
     auto d = translate_local("two meals and a drink under the budget of rupees thousand", catalog);
     CHECK(has(d.interpretation, "under Rs 1000"),  "'rupees thousand' parses as 1000");
   }
+  {  // multi-digit quantities. The scan used to stop at the first digit it touched,
+     // so "10 meals" silently became 1 -- a mandate far tighter than the human asked
+     // for, which then denied their own cart and looked like an engine fault.
+    auto d = translate_local("10 meals under 8000 rupees", catalog);
+    CHECK(d.ok && has(d.interpretation, "10 x"),   "'10 meals' is ten, not one");
+    auto e = translate_local("12 meals under 8000 rupees", catalog);
+    CHECK(e.ok && has(e.interpretation, "12 x"),   "'12 meals' is twelve, not one");
+  }
+  {  // teens, and the substring trap: find("six") hits inside "sixteen"
+    auto d = translate_local("sixteen meals under 5000 rupees", catalog);
+    CHECK(d.ok && has(d.interpretation, "16 x"),   "'sixteen' is 16, not 6");
+    auto e = translate_local("eighteen meals under 6000 rupees", catalog);
+    CHECK(e.ok && has(e.interpretation, "18 x"),   "'eighteen' is 18, not 8");
+    auto f = translate_local("twenty meals under 6000 rupees", catalog);
+    CHECK(f.ok && has(f.interpretation, "20 x"),   "'twenty' is 20");
+  }
+  {  // the same first-digit bug in the scale parser: "twelve hundred" was Rs 100
+    auto d = translate_local("a meal under twelve hundred rupees", catalog);
+    CHECK(has(d.interpretation, "under Rs 1200"),  "'twelve hundred' parses as 1200");
+  }
+  {  // a large number next to an item must stay money, not become a count
+    auto d = translate_local("a meal under 800 rupees", catalog);
+    CHECK(d.ok && !has(d.interpretation, "800 x"), "'800 rupees' is not a quantity");
+  }
   {  // nothing in the catalogue -> refuse, never approximate
     auto d = translate_local("order sushi and a beer", catalog);
     CHECK(!d.ok,                                   "refuses a request it cannot fill");

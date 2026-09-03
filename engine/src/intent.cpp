@@ -179,11 +179,28 @@ static IntentDraft translate_claude(const std::string& utterance,
 // Offline fallback. A keyword matcher, NOT a language model. Labelled as such.
 // ---------------------------------------------------------------------------
 static int word_number(const std::string& s) {
+  // ORDER MATTERS: this is a substring search, so compounds must precede their
+  // parts or "sixteen" matches "six" and returns 6.
   static const struct { const char* w; int n; } k[] = {
+    {"eleven",11},{"twelve",12},{"thirteen",13},{"fourteen",14},{"fifteen",15},
+    {"sixteen",16},{"seventeen",17},{"eighteen",18},{"nineteen",19},{"twenty",20},
     {"one",1},{"two",2},{"three",3},{"four",4},{"five",5},
     {"six",6},{"seven",7},{"eight",8},{"nine",9},{"ten",10},{"a ",1},{"an ",1}};
   for (auto& e : k) if (s.find(e.w) != std::string::npos) return e.n;
   return 0;
+}
+
+// Reads the digit RUN nearest the end of a window, not a single character.
+// "10 thalis" and "12 thousand" both used to lose their leading digit because the
+// scan stopped at the first digit it touched: 10 -> 1, and 12 thousand -> 2000.
+// Returns 0 when the window ends in something other than digits.
+static int trailing_number(const std::string& w) noexcept {
+  std::size_t e = w.size();
+  while (e > 0 && std::isspace(static_cast<unsigned char>(w[e-1]))) --e;
+  std::size_t b = e;
+  while (b > 0 && std::isdigit(static_cast<unsigned char>(w[b-1]))) --b;
+  if (b == e) return 0;
+  return std::atoi(w.substr(b, e - b).c_str());
 }
 
 IntentDraft translate_local(const std::string& utterance, const std::string& catalog_json) {
@@ -221,8 +238,7 @@ IntentDraft translate_local(const std::string& utterance, const std::string& cat
       double lead = 1;
       const std::string before = low.substr(at > 14 ? at - 14 : 0, at > 14 ? 14 : at);
       if (const int w = word_number(before)) lead = w;
-      else { for (auto rit = before.rbegin(); rit != before.rend(); ++rit)
-               if (std::isdigit((unsigned char)*rit)) { lead = *rit - '0'; break; } }
+      else if (const int n = trailing_number(before)) lead = n;
       budget = std::max(budget, lead * mult);
     };
     scale("thousand", 1000.0);
@@ -268,7 +284,12 @@ IntentDraft translate_local(const std::string& utterance, const std::string& cat
       const std::string before = low.substr(hit > 12 ? hit - 12 : 0,
                                             hit > 12 ? 12 : hit);
       int q = word_number(before);
-      if (!q) { for (char ch : before) if (std::isdigit((unsigned char)ch)) { q = ch - '0'; break; } }
+      if (!q) {
+        // Nearest digit run, whole. Values >= 50 are money by this file's own
+        // convention (see the budget scan above), so they are not a count.
+        const int n = trailing_number(before);
+        if (n > 0 && n < 50) q = n;
+      }
       picks.push_back({std::string(sku), std::string(cat), std::string(name), price,
                        q ? q : 1, hit, specific});
     }
@@ -309,7 +330,9 @@ IntentDraft translate_local(const std::string& utterance, const std::string& cat
     static const char* kStop[] = {
       "buy","get","order","please","want","need","some","the","and","with","for","under",
       "over","below","within","budget","total","rupees","rupee","each","one","two","three",
-      "four","five","six","seven","eight","nine","ten","different","category","categories",
+      "four","five","six","seven","eight","nine","ten",
+      "eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen",
+      "eighteen","nineteen","twenty","different","category","categories",
       "should","other","also","plus","from","that","this","them","they","have","has","cost",
       "less","than","than","around","about","maximum","max","limit","spend","upto","only",
       "make","sure","would","like","could","give","bring","send","thousand","hundred"};
