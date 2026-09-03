@@ -178,6 +178,36 @@ static IntentDraft translate_claude(const std::string& utterance,
 // ---------------------------------------------------------------------------
 // Offline fallback. A keyword matcher, NOT a language model. Labelled as such.
 // ---------------------------------------------------------------------------
+// Damerau-Levenshtein distance <= 1: one substitution, insertion, deletion, OR one
+// transposition of adjacent characters. Transpositions matter -- "byriani" for
+// "biryani" and "mojtio" for "mojito" are the commonest way people mistype, and plain
+// Levenshtein scores both as 2, so a distance-1 check would miss exactly the typos
+// users actually make.
+//
+// Against the STOPWORD list this decides what to ignore; against product vocabulary it
+// only ever produces a HINT that a human retypes. Guessing which PRODUCT someone meant
+// is how "mojito" once became a lime soda, so nothing here is ever applied silently.
+static bool within_one_edit(const std::string& a, const std::string& b) noexcept {
+  const std::size_t la = a.size(), lb = b.size();
+  if (la > lb + 1 || lb > la + 1) return false;
+
+  std::size_t i = 0, j = 0;
+  while (i < la && j < lb && a[i] == b[j]) { ++i; ++j; }   // common prefix
+  if (i == la && j == lb) return true;                     // identical
+
+  if (la == lb) {
+    // one adjacent transposition
+    if (i + 1 < la && a[i] == b[i+1] && a[i+1] == b[i] &&
+        a.compare(i + 2, std::string::npos, b, i + 2, std::string::npos) == 0)
+      return true;
+    // one substitution
+    return a.compare(i + 1, std::string::npos, b, j + 1, std::string::npos) == 0;
+  }
+  // one insertion or deletion: skip the extra character in the longer string
+  if (la > lb) return a.compare(i + 1, std::string::npos, b, j, std::string::npos) == 0;
+  return a.compare(i, std::string::npos, b, j + 1, std::string::npos) == 0;
+}
+
 static int word_number(const std::string& s) {
   // ORDER MATTERS: this is a substring search, so compounds must precede their
   // parts or "sixteen" matches "six" and returns 6.
@@ -364,7 +394,24 @@ IntentDraft translate_local(const std::string& utterance, const std::string& cat
       bool known = false;
       for (const auto& v : vocab)
         if (v.find(t) != std::string::npos || t.find(v) != std::string::npos) { known = true; break; }
-      if (!known) { unknown.push_back(t); unknown_at.push_back(static_cast<long>(w)); }
+      if (known) continue;
+
+      // A MISSPELLED FILLER WORD must not poison the product next to it. "3 drinks
+      // undeer 300" refused outright, because "undeer" is not a stopword, so it
+      // became an unknown word adjacent to "drinks" -- and an adjacent unknown is
+      // read as a qualifier ("chicken tikka" is not "chicken biryani"), which erased
+      // the match. Vocabulary is checked first above, so a real product word can
+      // never be reinterpreted as a typo'd stopword.
+      if (t.size() >= 4) {
+        bool near_stop = false;
+        for (const char* sw : kStop) {
+          const std::string cand(sw);
+          if (cand.size() >= 4 && within_one_edit(t, cand)) { near_stop = true; break; }
+        }
+        if (near_stop) continue;
+      }
+
+      unknown.push_back(t); unknown_at.push_back(static_cast<long>(w));
     }
 
     // Group runs of unknown words into phrases: "suji halwa" is one dish, not two
@@ -399,6 +446,20 @@ IntentDraft translate_local(const std::string& utterance, const std::string& cat
     }
     for (std::size_t i = 0; i < refused.size(); ++i)
       d.unmatched += (i ? ", " : "") + refused[i];
+
+    // Refusing is right, but refusing without a clue is a dead end: a judge who
+    // types "byriani" is told the catalogue has no such thing and left to guess
+    // which letter was wrong. Offer the nearest vocabulary word as a HINT. It is
+    // never applied -- the human retypes it, which keeps the human the one who
+    // decides what is being bought.
+    for (const auto& u : unknown) {
+      if (u.size() < 4 || !d.suggestion.empty()) continue;
+      for (const auto& v : vocab)
+        if (v.size() >= 4 && v != u && within_one_edit(u, v)) {
+          d.suggestion = u + "\" -> did you mean \"" + v + "\"?";
+          break;
+        }
+    }
   }
 
   if (picks.empty()) {

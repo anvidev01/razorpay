@@ -105,6 +105,26 @@ int main(int argc, char** argv) {
     auto d = translate_local("a meal under 800 rupees", catalog);
     CHECK(d.ok && !has(d.interpretation, "800 x"), "'800 rupees' is not a quantity");
   }
+  {  // A MISSPELLED FILLER WORD must not poison the product beside it.
+     // "3 drinks undeer 300" refused outright: "undeer" was an unknown word next to
+     // "drinks", and an adjacent unknown is read as a qualifier (the rule that stops
+     // "chicken tikka" matching chicken biryani), which erased the match.
+    auto d = translate_local("order me 3 drinks undeer 300 rupees", catalog);
+    CHECK(d.ok,                                    "a typo in a filler word still drafts");
+    CHECK(has(d.interpretation, "3 x"),            "quantity survives the typo");
+    CHECK(has(d.interpretation, "under Rs 300"),   "budget survives the typo");
+  }
+  {  // THE LINE THAT MUST NOT MOVE: typo tolerance stops at filler words.
+     // Guessing which PRODUCT someone meant is how "mojito" once became a lime soda.
+    auto a = translate_local("order me a mojtio under 300 rupees", catalog);
+    CHECK(!a.ok,                                   "a misspelled PRODUCT is refused, not guessed");
+    CHECK(has(a.suggestion, "mojito"),             "but it says what you probably meant");
+    CHECK(!has(a.interpretation, "Fresh lime"),    "and never substitutes a different drink");
+    auto b = translate_local("order me a byriani under 500 rupees", catalog);
+    CHECK(!b.ok,                                   "two-edit product typo also refused");
+    auto c = translate_local("order sushi and a beer", catalog);
+    CHECK(!c.ok && c.suggestion.empty(),           "no hint invented for genuinely absent items");
+  }
   {  // nothing in the catalogue -> refuse, never approximate
     auto d = translate_local("order sushi and a beer", catalog);
     CHECK(!d.ok,                                   "refuses a request it cannot fill");

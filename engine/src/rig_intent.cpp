@@ -49,6 +49,8 @@ int main(int argc, char** argv) {
     std::printf("  %sCannot draft a mandate:%s %s\n", Y, Z, d.error.c_str());
     if (!d.unmatched.empty())
       std::printf("  %snot in this catalogue:%s %s\n", Y, Z, d.unmatched.c_str());
+    if (!d.suggestion.empty())
+      std::printf("  %s\"%s%s\n", D, d.suggestion.c_str(), Z);
     std::printf("\n");
     return 1;
   }

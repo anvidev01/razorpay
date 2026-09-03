@@ -22,6 +22,10 @@ struct IntentDraft {
   std::string mandate_json;  // the DRAFT mandate, unsigned
   std::string error;
   std::string unmatched;     // words the person asked for that this catalogue has no item for
+  std::string suggestion;    // "byriani" -> "biryani". A HINT ONLY: never applied
+                             // automatically, because silently swapping one product
+                             // for another is the failure this whole system exists
+                             // to prevent. The human retypes it, or does not.
   std::uint64_t latency_ms = 0;
   int         input_tokens  = 0;
   int         output_tokens = 0;

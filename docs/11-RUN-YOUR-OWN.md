@@ -98,6 +98,23 @@ That is correct behaviour, not a failure. It will not invent a SKU the merchant 
 not sell. Use `--catalog` with your own feed, or word the request closer to the
 catalogue.
 
+### Typos
+
+A typo in a **filler** word is tolerated — `3 drinks undeer 300 rupees` drafts
+correctly. Misspelling `under` cannot change what is bought, only the sentence
+scaffolding around it.
+
+A typo in a **product** name is refused, with a hint:
+
+```
+not in this catalogue: mojtio
+"mojtio" -> did you mean "mojito"?
+```
+
+The hint is never applied. You retype it. That line is deliberate: guessing which
+product someone meant is precisely how "mojito" once became a lime soda in this
+codebase, and the human stays the one who decides what is being bought.
+
 **The translator is not the security boundary.** It drafts; a human signs. If it drafts
 something wrong, the human does not sign it. Read the drafted mandate before judging a
 verdict — a surprising `DENY` is usually a mandate tighter than you expected, and the
