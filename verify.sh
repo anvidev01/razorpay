@@ -191,7 +191,7 @@ echo "$rev" | grep -q "gateway ahead by" \
   || no "revenue model"
 echo "$rev" | grep -q "of authorised value completed" \
   && ok "agent checkout completion rate" \
-       "$(echo "$rev" | sed 's/\x1b\[[0-9;]*m//g' | grep 'intent gateway' | sed 's/^ *//' | cut -c1-58)" \
+       "$(echo "$rev" | sed 's/\x1b\[[0-9;]*m//g' | grep 'of authorised value completed' | head -1 | sed 's/^ *//' | cut -c1-56)" \
   || no "completion rate"
 echo "$rev" | grep -q "Assumptions, stated" \
   && ok "model assumptions published, not buried" "synthetic data labelled as such" \
