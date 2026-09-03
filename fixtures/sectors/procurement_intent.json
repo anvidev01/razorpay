@@ -1,8 +1,8 @@
 {
   "mandate_id": "mnd_proc_office",
   "utterance": "monthly office consumables, only from approved vendors, under 15,000",
-  "not_before_ns": 1788380999000000000,
-  "not_after_ns": 1788402659000000000,
+  "not_before_ns": 1788409425000000000,
+  "not_after_ns": 1788431085000000000,
   "total_budget_paise": 1500000,
   "merchant_allow": [
     "office_depot_in",

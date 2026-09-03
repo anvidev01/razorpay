@@ -14,7 +14,7 @@ and *impossible to route around*.
 
 | Operation | Measured p50 | Ratio vs kernel |
 |---|---:|---:|
-| Policy kernel, 8-line cart (production) | **30.8 ns** | 1× |
+| Policy kernel, 8-line cart (production) | **58 ns** | 1× |
 | simdjson parse of the cart | 160 ns | 5.7× |
 | **Ed25519 signature verify** | **36 458 ns** | **1 302×** |
 | `F_FULLFSYNC` durability | 3 960 000 ns | 141 000× |
@@ -240,7 +240,7 @@ Verdict evaluate(const IntentSchema&, const CartView&, uint64_t now_ns) noexcept
 
 ### On NEON / SIMD
 
-The kernel is currently **scalar**, and that is the correct engineering call. At 30.8 ns
+The kernel is currently **scalar**, and that is the correct engineering call. At 58 ns
 for 8 lines it is already ~5× cheaper than the parse that feeds it; vectorising the
 constraint search would optimise 13 % of the decision cost and add an arm64-only code
 path to audit. `MAXC = 16` also means the search domain is one cache line, so the
@@ -256,7 +256,7 @@ with the measurement that justifies it. (Note: this is arm64 — there is no AVX
 | simdjson On-Demand parse + extract | 160 ns |
 | intern 8 SKUs | ~30 ns |
 | integrity tag re-check | ~50 ns |
-| **kernel** | **30.8 ns** |
+| **kernel** | **58 ns** |
 | **decision total** | **≈ 225 ns** |
 
 ---

@@ -41,7 +41,7 @@ Evidence for all three, with sources: **[docs/06 — The Four Blind Spots](docs/
     └── holds no credentials ───────────────────────────────────────────────────────────────────┘
 ```
 
-The agent **proposes**. A deterministic C++ kernel **decides** in ~31 ns. A payment token
+The agent **proposes**. A deterministic C++ kernel **decides** in ~28 ns. A payment token
 is minted only after that decision is durable in a tamper-evident log. The agent holds no
 Razorpay credentials, so bypassing the policy is not a prompt-engineering problem — it
 requires forging an Ed25519 signature.
@@ -155,7 +155,7 @@ of blocking. Method and assumptions: **[docs/07 appendix](docs/07-RISK-METRICS.m
 
 | | p50 |
 |---|---:|
-| Policy kernel (8-line cart) | **30.8 ns** |
+| Policy kernel (8-line cart) | **58 ns** |
 | simdjson parse + extract | 160 ns |
 | **Full decision** | **≈ 225 ns** |
 | Durable audit, group-committed | 37 µs (27,000/s) |

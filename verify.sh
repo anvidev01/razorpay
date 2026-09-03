@@ -193,7 +193,7 @@ hdr "7 · Performance (measured, not claimed)"
 # figure moves with load, and quoting someone else's idle-machine number as a pass
 # condition would be dishonest.
 k=$(./build/bench-engine-kernel 8 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | grep -oE 'p50= *[0-9.]+' | grep -oE '[0-9.]+' | head -1)
-[ -n "$k" ] && ok "policy kernel, 8-line cart" "p50 ${k} ns on this machine (README: 30.8 ns idle)" \
+[ -n "$k" ] && ok "policy kernel, 8-line cart" "p50 ${k} ns on this machine (README: ~58 ns on Apple M4)" \
              || no "kernel benchmark"
 ./build/rig-load 2000 >/dev/null 2>&1 && ok "durable commit under load" "group-committed WAL" || no "load"
 fi

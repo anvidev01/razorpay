@@ -11,8 +11,8 @@
 |---|---:|---:|---|
 | simdjson On-Demand parse + field extract (509 B cart, 8 lines) | **160 ns** | 248 ns | 3.19 GB/s |
 | SKU intern (FNV-1a → `uint32_t`, open-addressed) | ~30 ns | — | 8 SKUs |
-| Policy kernel — prototype, verdict bits only (8-line cart) | 28.4 ns | 36 ns | branch-free |
-| **Policy kernel — PRODUCTION, with per-line attribution** | **30.8 ns** | **37 ns** | the shipped kernel |
+| **Policy kernel — PRODUCTION, 3-line cart** (the demo cart) | **28.2 ns** | **31.7 ns** | the shipped kernel |
+| **Policy kernel — PRODUCTION, 8-line cart** | **58 ns** | **64 ns** | the shipped kernel |
 | **Total in-process decision** | **≈ 225 ns** | **≈ 325 ns** | |
 | WAL record append (buffered `write`, 256 B) | 2.2 µs | 9.4 µs | not yet durable |
 | WAL `fsync` | 33.5 µs | 87.7 µs | **does not flush drive cache on macOS** |
@@ -24,30 +24,29 @@ honest durability costs *4 milliseconds*. The gateway is therefore not a
 "fast matching engine" problem — it is an **amortised-durability** problem.
 Group commit is the entire design.
 
-### The cost of explainability (measured)
+### The cost of explainability
 
-Interleaved A/B, best-of-5 to control for machine drift:
+An earlier revision recorded an interleaved A/B of the prototype kernel (verdict bits
+only) against the production kernel (with per-line attribution) and put the difference
+at +2.4 ns.
 
-```
-prototype  (verdict bits only)          p50 = 28.4 ns
-production (+ per-line attribution)     p50 = 30.8 ns
-                                        ---------------
-per-line explainability costs           +2.4 ns  (+8%)
-```
+**That comparison is not currently reproducible and should not be quoted.**
+`engine/bench/bench_kernel.cpp` is not wired into `engine/CMakeLists.txt` — only
+`bench-engine-kernel` builds — so there is no prototype binary to A/B against. The
+claim is left here as a record of what was measured then, not as a live number.
 
-Recording *which line* failed and *why*, for every line, costs 8% of the kernel.
-That is the price of the audit trail, and it is worth stating precisely rather than
-hiding: 2.4 nanoseconds buys the difference between "this cart was denied" and
-"line 3 was denied for these two reasons".
+What *is* reproducible is the production kernel at any cart size: `./build/bench-engine-kernel N`.
 
 ## 1. Policy kernel scaling (measured)
 
+Apple M4, Release, `./build/bench-engine-kernel N`, re-measured 2026-09-03:
+
 ```
-cart_lines= 1  p50=   6.0 ns  p99=  16.0 ns
-cart_lines= 4  p50=  14.8 ns  p99=  19.8 ns
-cart_lines= 8  p50=  28.3 ns  p99=  36.4 ns   <- typical food-delivery cart
-cart_lines=16  p50=  56.4 ns  p99=  69.8 ns
-cart_lines=32  p50= 115.2 ns  p99= 135.8 ns
+cart_lines= 1  p50=  16.5 ns  p99=  23.4 ns  min=  14.6 ns
+cart_lines= 3  p50=  28.2 ns  p99=  31.7 ns  min=  25.2 ns   <- the demo lunch cart
+cart_lines= 4  p50=  34.2 ns  p99=  38.5 ns  min=  30.8 ns
+cart_lines= 8  p50=  58.0 ns  p99=  63.8 ns  min=  52.4 ns   <- typical food-delivery cart
+cart_lines=16  p50= 105.8 ns  p99= 114.1 ns  min=  95.8 ns
 ```
 
 Linear at **≈3.5 ns per cart line**, with a p99/p50 ratio of 1.29 — the branch-free
@@ -149,7 +148,38 @@ The rail keeps one `CURL*` for the life of the process. A fresh handle per order
 full DNS + TLS handshake every time, which on a cold connection was 3.4 seconds --
 enough to make the demo look frozen.
 
-**This is the number that matters for the pitch.** The policy kernel decides in ~31 ns.
+**This is the number that matters for the pitch.** The policy kernel decides in ~53 ns.
 The network call it protects takes ~69 ms. The safety layer is roughly **two million
 times faster than the thing it guards**, so it is free in any sense a merchant cares
 about.
+
+## Why this number moved: 30.8 ns → 58 ns (8-line cart)
+
+An earlier revision of this file reported **30.8 ns** for the production kernel on an
+8-line cart. Today the same benchmark on the same machine reports **58 ns p50**. The
+record should say so rather than quietly carrying the older number.
+
+**What I can support:** the current numbers, reproduced above, and the fact that the
+kernel gained three checks since that measurement — aggregate quantity caps (an
+`agg_qty[MAXC]` accumulator plus a second pass attributing an overrun back to every
+contributing line), the recurring-commitment check, and branch-free substitution
+category matching.
+
+**What I cannot support:** attributing the delta to those three specifically. I tried
+to build the pre-fix revision (`ab1b53c`) to measure it directly and it does not
+compile — that commit predates the cross-platform CMake fix. So the attribution is a
+reasonable hypothesis, not a measurement, and it is labelled as one here.
+
+The aggregate cap is the check that closed a **critical bypass**: quantity was enforced
+per line, and the *agent* chooses how many lines it sends, so ten lines of one item
+bought ten of a max-one item and returned `ALLOW`. Whatever share of the 27 ns it
+accounts for, it is bought correctness that the gateway cannot ship without.
+
+**Why the headline is unaffected:** the payment rail costs **69 ms**. At 58 ns the whole
+policy decision is about **0.00008%** of the request. It would still be the right trade
+at ten times the cost.
+
+Measured on **Apple M4, Release**, 8-line cart:
+`p50 = 58.0 ns · p99 = 63.8 ns · min = 52.4 ns`. Reproduce with
+`./build/bench-engine-kernel 8`. If your machine disagrees, your machine is right and
+this file is stale — the benchmark is the source of truth.
