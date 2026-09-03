@@ -98,6 +98,22 @@ That is correct behaviour, not a failure. It will not invent a SKU the merchant 
 not sell. Use `--catalog` with your own feed, or word the request closer to the
 catalogue.
 
+### Amounts
+
+Plain numbers, spelled-out numbers and Indian units all parse:
+
+| you type | budget |
+|---|---|
+| `under 500 rupees` | ₹500 |
+| `under 5 thousand rupees` | ₹5,000 |
+| `under twelve hundred rupees` | ₹1,200 |
+| `under 1 lakh rupees` | ₹1,00,000 |
+| `under 1.5 lakh rupees` | ₹1,50,000 |
+| `under 1 crore rupees` | ₹1,00,00,000 |
+
+Always read the `Understood` line before signing. It states the budget the mandate
+will actually carry, and that is the number the kernel enforces.
+
 ### Typos
 
 A typo in a **filler** word is tolerated — `3 drinks undeer 300 rupees` drafts

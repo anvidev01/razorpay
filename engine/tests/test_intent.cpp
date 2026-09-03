@@ -101,6 +101,30 @@ int main(int argc, char** argv) {
     auto d = translate_local("a meal under twelve hundred rupees", catalog);
     CHECK(has(d.interpretation, "under Rs 1200"),  "'twelve hundred' parses as 1200");
   }
+  {  // LAKH AND CRORE. This is an Indian payments product and these are the units
+     // people actually write money in. "under 1 lakh rupees" understood neither the
+     // unit nor the amount: the budget fell back to the sum of item ceilings, so a
+     // Rs 1,00,000 request silently became a Rs 304 mandate.
+    auto a = translate_local("a meal under 1 lakh rupees", catalog);
+    CHECK(has(a.interpretation, "under Rs 100000"),  "'1 lakh' is 100000");
+    auto b = translate_local("a meal under 2 lakh rupees", catalog);
+    CHECK(has(b.interpretation, "under Rs 200000"),  "'2 lakh' is 200000");
+    auto c = translate_local("a meal under 1 crore rupees", catalog);
+    CHECK(has(c.interpretation, "under Rs 10000000"),"'1 crore' is 10000000");
+    auto d = translate_local("a meal under two lakh rupees", catalog);
+    CHECK(has(d.interpretation, "under Rs 200000"),  "'two lakh' works spelled out");
+    auto e = translate_local("a meal under 1.5 lakh rupees", catalog);
+    CHECK(has(e.interpretation, "under Rs 150000"),  "'1.5 lakh' is 150000, not 5 lakh");
+    // and the unit itself is a budget word, never a product
+    CHECK(a.unmatched.find("lakh") == std::string::npos,
+                                                     "'lakh' is not read as a product");
+  }
+  {  // the older units must not regress now that larger ones are checked first
+    auto a = translate_local("a meal under 5 thousand rupees", catalog);
+    CHECK(has(a.interpretation, "under Rs 5000"),    "'5 thousand' still 5000");
+    auto b = translate_local("a meal under 500 rupees", catalog);
+    CHECK(has(b.interpretation, "under Rs 500"),     "plain numbers still work");
+  }
   {  // a large number next to an item must stay money, not become a count
     auto d = translate_local("a meal under 800 rupees", catalog);
     CHECK(d.ok && !has(d.interpretation, "800 x"), "'800 rupees' is not a quantity");

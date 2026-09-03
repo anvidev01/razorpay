@@ -208,6 +208,23 @@ static bool within_one_edit(const std::string& a, const std::string& b) noexcept
   return a.compare(i, std::string::npos, b, j + 1, std::string::npos) == 0;
 }
 
+// Like trailing_number, but keeps a decimal point: "1.5 lakh" is how people write
+// 150,000 in India, and an integer-only read turns it into 5 lakh.
+static double trailing_amount(const std::string& w) noexcept {
+  std::size_t e = w.size();
+  while (e > 0 && std::isspace(static_cast<unsigned char>(w[e-1]))) --e;
+  std::size_t b = e; bool dot = false;
+  while (b > 0) {
+    const char c = w[b-1];
+    if (std::isdigit(static_cast<unsigned char>(c))) { --b; continue; }
+    if (c == '.' && !dot && b > 1 &&
+        std::isdigit(static_cast<unsigned char>(w[b-2]))) { dot = true; --b; continue; }
+    break;
+  }
+  if (b == e) return 0;
+  return std::atof(w.substr(b, e - b).c_str());
+}
+
 static int word_number(const std::string& s) {
   // ORDER MATTERS: this is a substring search, so compounds must precede their
   // parts or "sixteen" matches "six" and returns 6.
@@ -259,18 +276,23 @@ IntentDraft translate_local(const std::string& utterance, const std::string& cat
     // money count; anything smaller is a count and must not become the cap.
     for (double v : nums) if (v >= 50) budget = std::max(budget, v);
 
-    // Spelled-out amounts: "rupees thousand", "five hundred", "two thousand".
-    // Without this, "under the budget of rupees thousand" silently loses the budget --
-    // which is exactly the kind of miss the human confirmation step exists to catch.
+    // Spelled-out amounts: "rupees thousand", "five hundred", "two thousand",
+    // and the two units Indians actually write money in -- lakh and crore.
+    // Without this, "under 1 lakh rupees" silently lost the budget entirely and fell
+    // back to the sum of item ceilings: a Rs 1,00,000 request became a Rs 304 mandate.
     const auto scale = [&](const char* word, double mult) {
       const auto at = low.find(word);
       if (at == std::string::npos) return;
       double lead = 1;
       const std::string before = low.substr(at > 14 ? at - 14 : 0, at > 14 ? 14 : at);
       if (const int w = word_number(before)) lead = w;
-      else if (const int n = trailing_number(before)) lead = n;
+      else if (const double n = trailing_amount(before)) lead = n;
       budget = std::max(budget, lead * mult);
     };
+    // Largest first: "crore" and "lakh" must win over a "hundred"/"thousand" that
+    // happens to appear in the same sentence.
+    scale("crore", 10000000.0);
+    scale("lakh", 100000.0);
     scale("thousand", 1000.0);
     scale("hundred", 100.0);
   }
@@ -365,7 +387,10 @@ IntentDraft translate_local(const std::string& utterance, const std::string& cat
       "eighteen","nineteen","twenty","different","category","categories",
       "should","other","also","plus","from","that","this","them","they","have","has","cost",
       "less","than","than","around","about","maximum","max","limit","spend","upto","only",
-      "make","sure","would","like","could","give","bring","send","thousand","hundred"};
+      "make","sure","would","like","could","give","bring","send","thousand","hundred",
+      // Indian units of money. Without these, "1 lakh rupees" is read as a request
+      // for a product called "lakh" that the merchant does not stock.
+      "lakh","lakhs","crore","crores"};
 
     // tokenise, keeping word positions so we can test adjacency
     std::vector<std::string> words;
