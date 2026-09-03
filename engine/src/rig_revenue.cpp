@@ -187,6 +187,28 @@ int main(int argc, char** argv) {
               gateway.prompts, d.test_txns);
   std::printf("                                            legitimate purchases\n");
 
+  // THE TRACK 01 NUMBER. Everything above is loss avoided, which is a risk metric.
+  // A merchant asks a different question: of the agent traffic that was legitimate,
+  // how much of it actually completed? That is conversion, and it is the number that
+  // decides whether a merchant switches agent acceptance on at all.
+  {
+    const auto rate = [](const Ledger& l) {
+      const double inside = (double)(l.good_completed + l.killed_by_risk);
+      return inside > 0 ? 100.0 * (double)l.good_completed / inside : 100.0;
+    };
+    const double total = d.test_txns ? (double)d.test_txns : 1.0;
+    const double unatt = 100.0 * (total - (double)gateway.prompts) / total;
+    std::printf("\n  %sAgent checkout completion%s  %sthe merchant's question, "
+                "not the risk team's%s\n", B, Z, D, Z);
+    std::printf("    intent gateway        %s%5.1f%%%s of authorised value completed"
+                "   (%s%.1f%%%s of it unattended)\n", G, rate(gateway), Z, G, unatt, Z);
+    std::printf("    aggressive blocker    %s%5.1f%%%s of authorised value completed\n",
+                R, rate(naive_hi), Z);
+    std::printf("    %sa declined agent cart is a lost sale, not a saved rupee. An\n"
+                "    uncertain signal becomes one tap instead of a refusal, so nothing\n"
+                "    the human authorised is permanently lost.%s\n", D, Z);
+  }
+
   std::printf("\n  %sThe trade being made%s\n", B, Z);
   std::printf("    Nobody ships the timid setting. A risk owner asked to stop agentic\n");
   std::printf("    fraud ships one that CATCHES -- and at 0.80 recall a blocker destroys\n");
