@@ -69,7 +69,14 @@ int main(int argc, char** argv) {
   }
 
   const char* G = "\033[32m"; const char* R = "\033[31m"; const char* D = "\033[2m"; const char* Z = "\033[0m";
+  const char* Y = "\033[33m";
   std::printf("\n  %saudit replay%s  %s\n", D, Z, path);
+  if (rep.not_found) {
+    std::printf("  chain     : %sno such log%s -- %s\n", Y, Z, rep.detail.c_str());
+    std::printf("  %sthe log is missing, not corrupt. check the path, or run "
+                "./scripts/seed.sh then make a decision first.%s\n\n", D, Z);
+    return 2;
+  }
   std::printf("  chain     : %llu records, SHA-256 chain %s%s%s\n",
     (unsigned long long)rep.records, rep.intact ? G : R,
     rep.intact ? "INTACT" : "BROKEN", Z);

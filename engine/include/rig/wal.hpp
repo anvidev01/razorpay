@@ -123,6 +123,10 @@ struct WalRecord {
 struct ChainReport {
   std::uint64_t records    = 0;
   bool          intact     = true;
+  // A log that cannot be opened is NOT a log whose chain failed. Conflating the two
+  // makes a mistyped path look like a tamper detection, which is the single most
+  // alarming thing this tool can say -- so it gets its own flag.
+  bool          not_found  = false;
   std::uint64_t break_seq  = 0;
   std::string   detail;
   // Recovery state: how many bytes form a verified prefix, and the chain head there.

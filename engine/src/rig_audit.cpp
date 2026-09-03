@@ -159,6 +159,13 @@ static int run(int argc, char** argv) {
     B, Z, (unsigned long long)decisions, G, (unsigned long long)allowed, Z,
     Y, (unsigned long long)review, Z, R, (unsigned long long)denied, Z,
     (unsigned long long)paid, (unsigned long long)dupes);
+  if (rep.not_found) {
+    // Distinct exit code (2) so a mistyped path is never mistaken for tampering.
+    std::printf("  %schain%s    %sno such log%s -- %s\n", B, Z, Y, Z, rep.detail.c_str());
+    std::printf("  %sthe log is missing, not corrupt. check the path, or run "
+                "./scripts/seed.sh then make a decision first.%s\n\n", D, Z);
+    return 2;
+  }
   std::printf("  %schain%s    %llu records, SHA-256 %s%s%s%s\n\n", B, Z,
     (unsigned long long)rep.records, rep.intact ? G : R,
     rep.intact ? "INTACT -- no record altered since it was written" : "BROKEN", Z,

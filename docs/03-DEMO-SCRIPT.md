@@ -133,8 +133,12 @@ group commit (256/2ms)     2000 decisions in  13.1 ms ->     6.5 us/decision ( 1
 ## 1:55 – 2:45 · Dual-audit
 
 ```bash
-./build/rig-eval fixtures/lunch_intent.json fixtures/lunch_cart.json   --wal wal/rig.wal
-./build/rig-eval fixtures/lunch_intent.json fixtures/blender_cart.json --wal wal/rig.wal
+F=fixtures                      # keeps every line short enough to copy safely
+
+./build/rig-eval $F/lunch_intent.json $F/lunch_cart.json \
+  --wal wal/rig.wal
+./build/rig-eval $F/lunch_intent.json $F/blender_cart.json \
+  --wal wal/rig.wal
 ./build/rig-audit wal/rig.wal
 ```
 
@@ -187,7 +191,8 @@ OK  C++ engine and Java auditor agree on every money action
 > "Blocking is easy. Blocking **without breaking the user's goal** is the product."
 
 ```bash
-./build/rig-eval fixtures/lunch_intent.json fixtures/blender_cart.json --wal wal/demo.wal
+./build/rig-eval $F/lunch_intent.json $F/blender_cart.json \
+  --wal wal/demo.wal
 ```
 
 ```
@@ -308,7 +313,8 @@ no capability token minted -- this cart cannot reach the payment rail
 ./build/rig-load 2000             # group commit: 249/s -> 153,121/s
 
 # One decision, fully explained
-./build/rig-eval fixtures/lunch_intent.json fixtures/blender_cart.json --wal wal/rig.wal
+./build/rig-eval $F/lunch_intent.json $F/blender_cart.json \
+  --wal wal/rig.wal
 ./build/rig-eval ... --json       # same thing, machine-readable
 
 # The audit trail

@@ -87,6 +87,11 @@ hdr "3b · Reversals are money actions too"
 pkill -f "rig-gateway --port 8798" 2>/dev/null; sleep 0.5; rm -f wal/verify_rev.wal
 env -u RAZORPAY_KEY_ID -u RAZORPAY_KEY_SECRET \
   nohup ./build/rig-gateway --port 8798 --wal wal/verify_rev.wal >/tmp/verify_rev.log 2>&1 </dev/null &
+GW_PID=$!
+# Detach from job control, or the shell prints "Terminated: 15" into the middle of the
+# report when we kill it below -- which reads like a crash in a tool that exists to
+# tell you whether anything is broken.
+disown "$GW_PID" 2>/dev/null || true
 for i in $(seq 1 60); do curl -s -m 1 http://127.0.0.1:8798/api/health >/dev/null 2>&1 && break; sleep 0.2; done
 
 rid=$(curl -s -m 20 -X POST "http://127.0.0.1:8798/api/decide?execute=1" \
@@ -111,7 +116,7 @@ rev 24000 "" | grep -q '"authorised":true' \
   || no "reversal happy path"
 rev 100 "" | grep -q R_REVERSAL_DUPLICATE \
   && ok "a purchase cannot be refunded twice" || no "reversal duplicate"
-pkill -f "rig-gateway --port 8798" 2>/dev/null
+kill "$GW_PID" 2>/dev/null; wait "$GW_PID" 2>/dev/null
 
 hdr "4 · Explainability — audit trail and replay"
 rm -f wal/verify_a.wal

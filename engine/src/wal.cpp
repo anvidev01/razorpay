@@ -145,7 +145,8 @@ ChainReport wal_scan(const std::string& path,
                      const std::function<bool(const WalRecord&)>& cb) {
   ChainReport rep;
   const int fd = ::open(path.c_str(), O_RDONLY);
-  if (fd < 0) { rep.intact = false; rep.detail = "cannot open " + path; return rep; }
+  if (fd < 0) { rep.intact = false; rep.not_found = true;
+               rep.detail = "no such log: " + path; return rep; }
 
   Hash256 expect_prev{};
   std::vector<std::uint8_t> buf;
