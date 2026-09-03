@@ -19,8 +19,26 @@ printf "\n${B}Key${Z}  %s…%s  ${D}(%s, secret %s chars)${Z}\n" \
   "${RAZORPAY_KEY_ID:0:12}" "${RAZORPAY_KEY_ID: -4}" "$mode" "${#RAZORPAY_KEY_SECRET}"
 
 PORT="${1:-8787}"
+# This is the command a judge runs to check the Razorpay integration is real, so it
+# must not also require them to have started a server in another terminal. If one is
+# already up we use it untouched; otherwise we start our own and clean it up on exit.
+SPAWNED=""
 if ! curl -s -m 2 "http://127.0.0.1:$PORT/api/health" >/dev/null 2>&1; then
-  printf "${R}Gateway is not running on :$PORT${Z} — start it with ./run.sh\n"; exit 1
+  PORT=8791
+  # A hash chain takes exactly one writer, so never share the WAL of a running gateway.
+  rm -f wal/prove.wal
+  printf "${D}No gateway on :8787 — starting a temporary one on :%s${Z}\n" "$PORT"
+  nohup ./build/rig-gateway --port "$PORT" --wal wal/prove.wal \
+        >/tmp/prove_gateway.log 2>&1 </dev/null &
+  SPAWNED=$!
+  disown "$SPAWNED" 2>/dev/null || true
+  for _ in $(seq 1 60); do
+    curl -s -m 1 "http://127.0.0.1:$PORT/api/health" >/dev/null 2>&1 && break; sleep 0.2
+  done
+  if ! curl -s -m 2 "http://127.0.0.1:$PORT/api/health" >/dev/null 2>&1; then
+    printf "${R}Could not start a gateway.${Z} See /tmp/prove_gateway.log\n"; exit 1
+  fi
+  trap 'kill "$SPAWNED" 2>/dev/null; wait "$SPAWNED" 2>/dev/null' EXIT
 fi
 rail=$(curl -s -m 3 "http://127.0.0.1:$PORT/api/health" | python3 -c "import json,sys;print(json.load(sys.stdin)['rail'])")
 printf "${B}Rail${Z} %s\n\n" "$rail"
@@ -71,3 +89,4 @@ for o in d.get('items',[]):
 
 printf "\n${G}Proven:${Z} allowed carts create real Razorpay orders carrying your audit metadata;\n"
 printf "denied carts never reach the rail at all.\n\n"
+[ -n "$SPAWNED" ] && printf "${D}(temporary gateway stopped)${Z}\n\n"
