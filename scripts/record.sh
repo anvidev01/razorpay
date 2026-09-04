@@ -3,9 +3,13 @@
 # mistype, no markdown fences to paste by accident -- the two failure modes that
 # have already cost a take.
 #
-#   ./scripts/record.sh          all eight beats, in order
-#   ./scripts/record.sh 4        jump straight to beat 4 (for a retake)
+#   ./scripts/record.sh          rehearsal: beat banners and spoken cues on screen
+#   ./scripts/record.sh --clean  RECORDING: commands and output only, no cues
+#   ./scripts/record.sh 4        jump to beat 4 (combine: --clean 4)
 #   ./scripts/record.sh --list   show the beats and exit
+#
+# Use --clean for the real take. The cues are for rehearsal; on camera they read as a
+# teleprompter and undercut the demo.
 #
 # SPACE / ENTER advances. q quits. Ctrl-C always works.
 set -uo pipefail
@@ -32,6 +36,9 @@ if [ "${1:-}" = "--list" ]; then
   done; printf "\n"; exit 0
 fi
 
+CLEAN=0
+if [ "${1:-}" = "--clean" ]; then CLEAN=1; shift; fi
+
 START=${1:-1}
 case "$START" in ''|*[!0-9]*) START=1 ;; esac
 [ "$START" -lt 1 ] && START=1
@@ -46,6 +53,7 @@ pause(){
 
 beat(){                       # $1 = index, $2 = spoken cue
   local i=$1
+  if [ "$CLEAN" = "1" ]; then printf "\n\n"; return 0; fi
   printf "\n\n${C}════════════════════════════════════════════════════════════════${Z}\n"
   printf "  ${B}%s${Z}  ${M}%s${Z}\n" "${BEATS[$i]%%|*}" "${BEATS[$i]#*|}"
   printf "${C}════════════════════════════════════════════════════════════════${Z}\n"
@@ -59,15 +67,24 @@ run(){
   eval "$@"
 }
 
+# Reminder lines: rehearsal only, silent during a take.
+note(){
+  local nl=""; [ "$1" = "--nl" ] && { nl=$'\n'; shift; }
+  [ "$CLEAN" = "1" ] && return 0
+  printf "%s${D}  → %s${Z}\n" "$nl" "$1"
+}
+
 trap 'printf "\n${D}stopped.${Z}\n"; exit 0' INT
 
 clear
-printf "${B}Razorpay Intent Gateway — recording driver${Z}\n"
-printf "${D}space advances · q quits · start at a beat with: ./scripts/record.sh N${Z}\n"
+if [ "$CLEAN" = "0" ]; then
+  printf "${B}Razorpay Intent Gateway — recording driver${Z}\n"
+  printf "${D}space advances · q quits · --clean hides these cues for the real take${Z}\n"
+fi
 
 # A stale WAL is the difference between ALLOW and R_DUPLICATE_CHARGE on camera.
-printf "\n${D}seeding (fresh WAL, mandate windows refreshed)...${Z}\n"
-./scripts/seed.sh >/dev/null 2>&1 && printf "${G}ready${Z}\n" || printf "${Y}seed failed — check ./verify.sh${Z}\n"
+./scripts/seed.sh >/dev/null 2>&1 || printf "${Y}seed failed — check ./verify.sh${Z}\n"
+[ "$CLEAN" = "1" ] && clear
 pause || exit 0
 
 # ── 1 ────────────────────────────────────────────────────────────────────────
@@ -76,8 +93,8 @@ if [ "$START" -le 1 ]; then
   pause || exit 0
   run ./build/bench-engine-kernel 3
   run ./build/bench-engine-kernel 8
-  printf "\n${D}  → it scales with the cart, because it reads every line.${Z}\n"
-  printf "${D}  → the rail it protects costs 69 ms. this is a millionth of that.${Z}\n"
+  note --nl "it scales with the cart, because it reads every line."
+  note "the rail it protects costs 69 ms. this is a millionth of that."
   pause || exit 0
 fi
 
@@ -93,15 +110,15 @@ if [ "$START" -le 3 ]; then
   beat 2 "a decision is worthless unless it is durable before the money moves"
   pause || exit 0
   run "grep -A6 'F_FULLFSYNC' engine/include/rig/clock.hpp"
-  printf "\n${D}  → fsync() on macOS returns success while the bytes sit in drive cache.${Z}\n"
+  note --nl "fsync() on macOS returns success while the bytes sit in drive cache."
   pause || exit 0
   printf "\n${B}  the honest fence is 118x more expensive${Z}\n"
   printf "${D}  WAL fsync                    33.5 us   <- does not flush drive cache${Z}\n"
   printf "${D}  WAL fcntl(F_FULLFSYNC)    3 960 us   <- true durability${Z}\n"
   pause || exit 0
   run ./build/rig-load 2000
-  printf "\n${D}  → group commit: one F_FULLFSYNC for the whole batch.${Z}\n"
-  printf "${D}  → same fence, ~600x the throughput, nobody waits over 2 ms.${Z}\n"
+  note --nl "group commit: one F_FULLFSYNC for the whole batch."
+  note "same fence, ~600x the throughput, nobody waits over 2 ms."
   pause || exit 0
 fi
 
@@ -119,13 +136,13 @@ if [ "$START" -le 4 ]; then
   run ./build/rig-audit wal/rig.wal
   pause || exit 0
   run ./build/rig-replay wal/rig.wal
-  printf "\n${D}  → the engine re-executes every decision from recorded inputs.${Z}\n"
+  note --nl "the engine re-executes every decision from recorded inputs."
   pause || exit 0
   run "java -cp control-plane/out com.razorpay.rig.ReplayAuditor wal/rig.wal"
-  printf "\n${D}  → a Java re-implementation that shares no code. zero divergences.${Z}\n"
+  note --nl "a Java re-implementation that shares no code. zero divergences."
   pause || exit 0
   run ./scripts/tamper.sh
-  printf "\n${D}  → one flipped bit and the chain refuses to verify.${Z}\n"
+  note --nl "one flipped bit and the chain refuses to verify."
   pause || exit 0
 fi
 
@@ -136,11 +153,11 @@ if [ "$START" -le 5 ]; then
   pause || exit 0
   run "./build/rig-eval fixtures/lunch_intent.json \\
     fixtures/blender_cart.json --wal wal/demo.wal"
-  printf "\n${D}  → three violations at once; the kernel never short-circuits.${Z}\n"
-  printf "${D}  → per-line attribution: line three is the problem.${Z}\n"
-  printf "${D}  → 'repair' says what would make this pass.${Z}\n"
-  printf "${D}  → no capability token: there is nothing to pay with.${Z}\n"
-  printf "\n${Y}  NOW CUT TO THE UI — scenario 3 · Auto-repair — ~20 seconds${Z}\n"
+  note --nl "three violations at once; the kernel never short-circuits."
+  note "per-line attribution: line three is the problem."
+  note "'repair' says what would make this pass."
+  note "no capability token: there is nothing to pay with."
+  [ "$CLEAN" = "1" ] || printf "\n${Y}  NOW CUT TO THE UI — scenario 3 · Auto-repair — ~20 s${Z}\n"
   pause || exit 0
 fi
 
@@ -149,7 +166,7 @@ if [ "$START" -le 6 ]; then
   beat 5 "let the wall of REFUSED sit for two seconds before speaking"
   pause || exit 0
   run ./build/rig-attack
-  printf "\n${D}  → the agent holds no Razorpay credentials at any point.${Z}\n"
+  note --nl "the agent holds no Razorpay credentials at any point."
   pause || exit 0
 fi
 
@@ -158,7 +175,7 @@ if [ "$START" -le 7 ]; then
   beat 6 "nothing changed but the fixtures"
   pause || exit 0
   run ./scripts/sectors.sh
-  printf "\n${D}  → not one food concept in the kernel. this is payments infrastructure.${Z}\n"
+  note --nl "not one food concept in the kernel. this is payments infrastructure."
   pause || exit 0
 fi
 
@@ -168,7 +185,7 @@ if [ "$START" -le 8 ]; then
   printf "\n${D}  Tell the bug story here, then run the last command.${Z}\n"
   pause || exit 0
   run ./verify.sh
-  printf "\n${D}  → forty checks, and it exits non-zero if any of this was a lie.${Z}\n"
+  note --nl "forty checks, and it exits non-zero if any of this was a lie."
 fi
 
-printf "\n\n${G}${B}  end of script.${Z}  ${D}retake a beat with: ./scripts/record.sh N${Z}\n\n"
+[ "$CLEAN" = "1" ] || printf "\n\n${G}${B}  end of script.${Z}  ${D}retake: ./scripts/record.sh N${Z}\n\n"
