@@ -13,8 +13,77 @@ afterwards.**
 > MSVC build will not compile. Inside WSL2 the Linux instructions below work unchanged,
 > and CI proves them on Ubuntu and macOS on every push.
 
-Razorpay AI Buildathon · **Track 01 — AI Growth & Agentic Commerce** (primary) ·
-**Track 02 — AI Risk Manager** (secondary)
+| | |
+|---|---|
+| **Track** | 01 — AI Growth & Agentic Commerce *(secondary: 02 — AI Risk Manager)* |
+| **Project** | Razorpay Intent Gateway |
+| **What it solves** | An AI agent can spend money the human never authorised, because every payment rail checks *who is asking* and *how much* — and nothing checks *what is in the cart*. This is the layer that reads the cart. |
+| **Runs on** | Linux, macOS, WSL2 · one command · CI on Ubuntu + macOS |
+| **5-min walkthrough** | ⚠️ **PASTE THE UNLISTED VIDEO URL HERE BEFORE SUBMITTING** — script: [docs/03](docs/03-DEMO-SCRIPT.md) |
+
+**How this repo answers the four things you evaluate on:**
+
+| what you look at | where it is |
+|---|---|
+| **Problem taste** — did you pick something that actually matters | [The problem](#the-problem-in-the-rails-own-terms) — NPCI's ₹10,000 block, live with Zomato/Swiggy/Zepto, with [sourced evidence](docs/06-AGENTIC-BLIND-SPOTS.md) |
+| **Build quality** — does it run, is it structured, would you trust it | [`./verify.sh`](#build-quality--one-command-proves-every-claim) — 42 checks, exits non-zero if any claim here is false |
+| **AI judgment** — the right tool in the right place, and where you chose *not* to use one | [Where I used a model, and where I refused to](#ai-judgment--where-i-used-a-model-and-where-i-refused-to) |
+| **Failure recovery** — what broke, and what you did about it | [What broke](#what-broke-and-how-i-got-out) — four real ones, including a critical bypass in my own engine |
+
+---
+
+## What broke, and how I got out
+
+Four things went wrong that were worth the repo remembering. Each is linked to the commit
+or document that fixed it.
+
+### 1 · My own engine approved a purchase the mandate forbade
+
+**Quantity caps were enforced per line.** But the *agent* chooses how many lines it sends.
+So ten lines of one item bought **ten of a max-one item** — verdict `0x0000`, `ALLOW`, no
+violation, because every line was individually legal.
+
+I found it writing an adversarial test, not from a failing case. Fixed with per-constraint
+aggregation (`agg_qty[MAXC]`) plus a second pass attributing the overrun back to every
+contributing line, so the audit trail still names them. It made the kernel measurably
+slower and [BENCHMARKS](docs/BENCHMARKS.md) records the before and after — **including the
+part I could not measure**, because the pre-fix revision no longer compiles.
+
+That bug is the argument for the whole project: every layer above the kernel drifts, so
+the check has to sit at the bottom and read the actual cart.
+
+### 2 · My risk metrics were fiction
+
+I first reported **precision 1.00** on 24 hand-written cases — that the thresholds had
+also been tuned against. On a proper held-out split the same detector scored **0.278
+precision at a 12.1% false-positive rate**, and 906 legitimate transactions were at a
+first-time merchant.
+
+The root cause was design, not tuning: it fired on any single signal. Rebuilt with
+weighted corroboration (burst 3, velocity 2, new merchant 1, odd hour 1, flag at ≥3) →
+**0.908 precision, 0.301 recall, 0.002 FPR**. [docs/07 §6](docs/07-RISK-METRICS.md)
+publishes the fiction alongside the fix rather than quietly replacing the number.
+
+### 3 · CI had never passed, and I had not noticed
+
+The badge above was **red for 30 consecutive runs**. macOS passed every time, so nothing
+local ever told me. Two independent causes, both found by reproducing the CI environment
+in an `ubuntu:24.04` container:
+
+- `bench_engine_kernel.cpp` included `<mach/mach_time.h>` — Darwin-only. `clock.hpp`
+  existed to solve exactly this and the benchmark had never been converted.
+- The sanitizer job compiled `engine/src/*.cpp`, which globs twelve `rig_*.cpp` tools,
+  each with its own `main()`. Its fallback compiled `kernel.cpp` alone, which cannot
+  resolve `translate_local`. **Both paths were broken**, so that job had never once run.
+
+A judge cloning this on Linux would have got a compile error instead of a demo.
+
+### 4 · A use-after-poison at 2 AM
+
+simdjson `ondemand` string views point into a buffer that is invalidated on the next
+parse. ASan caught it; the permanent fix was interning every SKU to a `uint32_t` at the
+parse boundary, so no downstream code can hold a dangling view.
+Full write-up: [docs/04](docs/04-INCIDENT-2AM.md).
 
 ---
 
@@ -64,6 +133,48 @@ requires forging an Ed25519 signature.
 Auto-blocking on a probabilistic score is how a risk system destroys good revenue. That
 is why behavioural signals escalate instead of blocking — and why the false-positive cost
 is measurable: **[docs/07 — Honest Risk Metrics](docs/07-RISK-METRICS.md)**.
+
+## AI judgment — where I used a model, and where I refused to
+
+A model appears in exactly one place in this system, and the decision to keep it out of
+everywhere else is the architecture.
+
+```
+  "order me lunch under 500"
+        │
+   ┌────▼──────────────────────────────────────┐
+ 1 │  TRANSLATE   language → DRAFT mandate     │  ← the ONLY place a model runs
+   │              src/intent.cpp               │
+   └────┬──────────────────────────────────────┘
+        │  a draft. not an authorisation.
+   ┌────▼──────────────────────────────────────┐
+ 2 │  HUMAN       reads one sentence, signs    │  ← Ed25519, on the user's device
+   └────┬──────────────────────────────────────┘
+   ┌────▼──────────────────────────────────────┐
+ 3 │  KERNEL      evaluate(mandate, cart, now) │  ← deterministic C++
+ 4 │  TOKEN       single-use, cart-bound       │     no model, no network
+ 5 │  RAZORPAY    the actual payment           │
+   └───────────────────────────────────────────┘
+```
+
+**Where a model is the right tool.** Turning *"order me lunch, a thali and a drink, under
+500"* into a structured mandate is genuinely a language problem — messy input, no fixed
+grammar, and a human checks the output before it means anything. `ANTHROPIC_API_KEY` is
+read in exactly one function.
+
+**Where I deliberately did not use one, and why:**
+
+| decision | why not a model |
+|---|---|
+| **The policy verdict** | `evaluate()` takes a mandate and a cart. **There is no utterance parameter** — by the time money is decided, the sentence no longer exists. A model cannot reach the decision even in principle. Determinism is also what makes replay possible: same inputs, same verdict, on any machine, which is what turns a log into evidence. |
+| **Prompt-injection detection** | The scanner is **telemetry only**. It raises `REVIEW`, never `DENY`. A probabilistic signal that auto-blocks turns every false positive into a lost sale — and in payments a false positive costs more than the fraud it prevents ([the model](#what-it-earns-not-just-what-it-blocks--track-01)). |
+| **Behavioural risk** | Weighted corroboration over counters, not a classifier. It has to be explainable to a disputes team, and *"three signals agreed"* is defensible where a model score is not. |
+| **The fallback** | With no API key the translator is an offline keyword matcher, and the UI **says so**. The demo cannot fail because a model is down, and no security property depends on the model being correct. |
+
+**The test for whether the boundary holds:** if the model hallucinates, is prompt-injected,
+or goes down, the worst outcome is a **bad draft that a human does not sign**. It cannot
+sign a mandate, mint a token, or call Razorpay. Getting past the gateway is not a
+prompt-engineering problem — it requires forging an Ed25519 signature.
 
 ## One engine, five industries
 
@@ -122,7 +233,7 @@ of blocking. Method and assumptions: **[docs/07 appendix](docs/07-RISK-METRICS.m
 |---|---|
 | **Explainable** | The kernel evaluates *every* rule and accumulates a bitfield — it never short-circuits, so a bad cart reports **all** its reasons with per-line attribution. Every decision is replayed by two independent implementations. |
 | **Bounded** | `int64` paise with checked overflow, per-SKU and per-cart caps, quantity caps, substitution ceilings, mandate TTL, merchant allowlist, single-use nonces, hourly velocity and spend limits. |
-| **Gated** | No capability token exists until its decision is durable. Five bypass attempts all refused by construction. Anomalies gated behind human confirmation. |
+| **Gated** | No capability token exists until its decision is durable. Eight bypass attempts all refused by construction — three forged mandates at admission, five routes around the gateway. Anomalies gated behind human confirmation. |
 | **Audit trail** | `./build/rig-audit` — the whole transaction in one screen. `rig-evidence` for the dispute-grade JSON. |
 | **Graceful failure** | Three, end to end — see below. |
 
@@ -172,15 +283,15 @@ Method, caveats and how each was measured: **[docs/BENCHMARKS.md](docs/BENCHMARK
 > The claim is **not** "microsecond checkout." A checkout is ~200 ms. The claim is that
 > the safety layer is *free*: ~225 ns on a 200 ms transaction.
 
-## Verify every claim — one command
+## Build quality — one command proves every claim
 
 ```bash
 git clone https://github.com/anvidev01/razorpay.git && cd razorpay
-./verify.sh            # 25 checks, ~90s   (--quick skips benchmarks/sanitizers, ~15s)
+./verify.sh            # 42 checks, ~90s   (--quick skips benchmarks/sanitizers, ~15s)
 ```
 
 Builds from clean, then proves each claim in this README and prints PASS/FAIL:
-the 43 kernel vectors and 25 intent regressions, all three graceful failures,
+the 66 kernel vectors and 48 intent regressions, all three graceful failures,
 eight refused bypasses including three forged mandates, both auditors agreeing,
 tamper detection, the risk confusion matrix, both clock/durability code paths
 (macOS and Linux), ASan/UBSan, and a real payment through the rail. Exit code is
@@ -278,7 +389,7 @@ Individually:
       --confirm approve --ref mfa_device_9f21 --execute                          # REVIEW → human → paid
 ./build/rig-audit wal/rig.wal                                           # the 30-second audit trail
 ./build/rig-evidence wal/rig.wal 3                                      # dispute-grade JSON
-./build/rig-attack                                                      # 5 bypasses, all refused
+./build/rig-attack                                                      # 8 bypasses, all refused
 ./build/rig-riskeval                                                    # confusion matrix
 ./build/rig-replay wal/rig.wal                                          # C++ replays its own log
 java -cp control-plane/out com.razorpay.rig.ReplayAuditor wal/rig.wal    # independent Java audit
