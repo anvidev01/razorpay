@@ -46,7 +46,7 @@ case "$START" in ''|*[!0-9]*) START=1 ;; esac
 
 pause(){
   printf "\n${D}   [space] next   [q] quit${Z} "
-  local k; IFS= read -rsn1 k </dev/tty || true
+  local k; IFS= read -rsn1 k </dev/null || true
   printf "\r\033[K"
   [ "$k" = "q" ] && return 1 || return 0
 }
