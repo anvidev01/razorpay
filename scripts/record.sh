@@ -25,8 +25,8 @@ BEATS=(
   "1:35|Durability"
   "2:20|Two languages, one verdict"
   "2:55|Try to break it"
-  "3:30|Six industries, one number"
-  "4:03|Graceful failure  (cut to the UI)"
+  "3:30|Five industries, one number"
+  "4:03|Graceful failure + retry storm  (cut to the UI)"
   "4:28|The bug I found in myself"
 )
 
@@ -208,7 +208,14 @@ if [ "$START" -le 8 ]; then
   pause || exit 0
   run "./build/rig-eval fixtures/lunch_intent.json \\
     fixtures/blender_cart.json --wal wal/demo.wal"
-  note "three violations, the failing line named, and a repair block"
+  note "three violations, the failing line named, no capability token"
+  pause || exit 0
+  # Retry storm: the SAME basket re-generated. First ALLOW, second collapses.
+  run "./build/rig-eval fixtures/grocery_intent.json \\
+    fixtures/cart_retry_a.json --wal wal/demo.wal"
+  run "./build/rig-eval fixtures/grocery_intent.json \\
+    fixtures/cart_retry_b.json --wal wal/demo.wal"
+  note "semantic idempotency collapsed the retry — no second charge"
   cue "NOW CUT TO THE BROWSER — scenario 3 · Auto-repair — ~20 seconds"
   pause || exit 0
 fi
