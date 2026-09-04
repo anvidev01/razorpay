@@ -6,12 +6,13 @@
 **Before every take:** `./scripts/seed.sh`
 **Pace:** ~145 WPM. **WAIT** means two seconds of silence — let the output land.
 
-**733 spoken words.** With pauses that is **5:23 at 145 WPM**, or **5:03 at 155** — and you
-will speak faster on camera than in rehearsal. **Time one run.** If it goes over five
-minutes, the cut list at the bottom removes 80 words and brings it to **4:50 at 145**.
+**752 spoken words.** With pauses that is **5:26 at 145 WPM**, **5:05 at 155**, and
+**4:47 at 165** — a normal pace for material you know cold. **Time one run.** If it goes
+over, the cut list at the bottom removes 74 words and takes it to **4:56 at 145**.
 
-Read what is on **your** screen: nanosecond figures shift a little by machine and thermal
-state.
+Read what is on **your** screen. `rig-load` throughput swings between 117,000 and 153,000
+run to run, and nanosecond figures shift with thermal state — say what you see, not what
+is printed here.
 
 ---
 
@@ -97,8 +98,8 @@ state.
 > lie, four milliseconds for the truth.** Never a speed problem — an **amortised
 > durability** problem.
 >
-> Using **group commit** I batch 256 records and pay for **one** flush. We go from **250
-> decisions a second to 153,000**."
+> Using **group commit** I batch 256 records and pay for **one** flush — **250 decisions a
+> second becomes over a hundred thousand**, and nobody waits more than two milliseconds."
 
 ---
 
@@ -109,9 +110,13 @@ state.
 
 **SAY**
 
-> "Every decision goes into a **hash-chained write-ahead log** using **SHA-256**, enforced
-> by a **`flock` single writer**. My C++ engine runs a **deterministic replay** of its own
-> log."
+> "A **hash-chained write-ahead log**, **SHA-256**, **`flock` single writer**.
+>
+> Read the order: **mandate signed, cart proposed, decision, then token minted**. The
+> token comes **after** the decision is durable — so there can never be a payment this log
+> doesn't explain.
+>
+> And the engine runs a **deterministic replay** of its own log."
 
 > **SPACE** → `java -cp control-plane/out com.razorpay.rig.ReplayAuditor wal/rig.wal`
 > **WAIT**
@@ -126,7 +131,9 @@ state.
 
 **SAY**
 
-> "Flip **one bit** and it is instantly **tamper-evident**."
+> "Flip **one bit** and the chain breaks at that record **and every record after it** —
+> eight verified records become four. **Tamper-evident**: you can change it, you just
+> cannot change it **quietly**."
 
 ---
 
@@ -137,7 +144,8 @@ state.
 
 **SAY**
 
-> "Can the gateway be bypassed? Here are **eight attacks. All refused.**
+> "Can the gateway be bypassed? **Eight attacks — three that forge the human's
+> authorisation, five that try to route around the engine entirely. All refused.**
 >
 > The user signs a **scoped mandate** using **Ed25519 asymmetric signing** on their
 > device. My gateway holds only the **public half**, so I **cannot forge a mandate even
@@ -154,9 +162,8 @@ state.
 
 **SAY**
 
-> "And none of this is specific to one merchant. Same binary, **different product feed**.
-> **SaaS seats** split across three lines to beat a twenty-five cap. Travel, procurement,
-> and the subscription dark pattern — **₹1 today, ₹999 every month after**.
+> "And none of this is specific to one merchant. **SaaS seats** split across three lines
+> to beat a cap. The subscription dark pattern — **₹1 today, ₹999 a month after**.
 >
 > Five sectors, five controls, **one binary. Nothing changed but the catalogue.**"
 
@@ -165,13 +172,10 @@ state.
 
 **SAY**
 
-> "And I built **agent-aware risk** in as defense-in-depth. Unusual behaviour doesn't
-> auto-block — it escalates to the human via **MFA**, so **zero legitimate sales are
-> killed**.
->
-> A declined agent cart is a lost sale. That **nets ₹50,000 ahead** of an aggressive
-> blocker, and **98 percent completes with no human at all** — on a **held-out split** of
-> traffic I've **labelled as synthetic**."
+> "And **agent-aware risk** is built in as defense-in-depth. Unusual behaviour doesn't
+> auto-block — it escalates via **MFA**, so **zero legitimate sales are killed**. That
+> **nets ₹50,000 ahead** of an aggressive blocker, and **98 percent completes with no
+> human at all** — on a **held-out split** of traffic I've **labelled as synthetic**."
 
 ---
 
@@ -186,23 +190,13 @@ state.
 > failing line**, and sends an **auto-repair** hint. And it mints **no capability token**
 > — so this cart cannot reach the rail at all."
 
-> **SPACE** → `./build/rig-eval fixtures/grocery_intent.json fixtures/cart_retry_a.json --wal wal/demo.wal`
-> **SPACE** → `./build/rig-eval fixtures/grocery_intent.json fixtures/cart_retry_b.json --wal wal/demo.wal`
-
-**SAY**
-
-> "And when an agent times out and **re-generates** the request, **semantic idempotency**
-> collapses it onto the original decision. **No second charge.**"
-
 > *Cut to the browser. Scenario `3 · Auto-repair`. The only UI in the video, ~20 seconds.*
 
 **SAY**
 
-> "All of this has a **merchant-facing interface** — signed mandates, live verdicts, the
-> dispute evidence pack. Here the agent drops the blender, resubmits, and **the lunch
-> still arrives**.
->
-> Blocking without breaking what the user wanted is the product."
+> "All of this has a **merchant-facing interface**. The agent drops the blender,
+> resubmits, and **the lunch still arrives**. Blocking without breaking what the user
+> wanted is the product."
 
 ---
 
@@ -222,8 +216,8 @@ state.
 > records the before and after, **including the part I couldn't measure**, because the
 > pre-fix revision no longer compiles.
 >
-> That bug is the argument for this project. **Every wrapper drifts. The check must sit
-> at the bottom.**"
+> That bug is the argument for this project. **Every wrapper drifts. The check sits at
+> the bottom.**"
 
 > **SPACE** → `./verify.sh`
 > **WAIT**
@@ -237,16 +231,19 @@ state.
 
 ## If you run long
 
-Cut in this order. Nothing else depends on them.
+Delete these in order — **74 words**, taking it to **4:56 at 145 WPM**. Nothing else
+depends on them.
 
-- **`tamper.sh`** (2:20) — the command and its one line, 12 words
-- **the retry pair** (4:03) — both commands and their 33 words
-- **the "no capability token" clause** (4:03) — 11 words
-- **the zero-init measurement** (0:55) — 24 words
+- **the tamper beat** (2:20) — the command and its 32 words. Say *"and it's
+  tamper-evident"* over the replay output instead.
+- **the interface clause** (4:03) — *"All of this has a merchant-facing interface."*
+  The browser is already on screen; it does not need announcing.
+- **the sector examples** (3:30) — *"SaaS seats split across three lines to beat a cap.
+  The subscription dark pattern — ₹1 today, ₹999 a month after."* The screen lists all
+  five; keep only *"nothing changed but the catalogue."*
 
-Cut the last one **last**: it is the detail that most convincingly shows you profiled rather than
-guessed. **Never cut** the closing beat, the *"no AI model here"* line, or the two
-adversarial-test lines at 4:28.
+**Never cut:** the closing beat, the *"no AI model in this path"* line, the ordering
+invariant at 2:20, or the two adversarial-test lines at 4:28.
 
 ## The five lines that make it trustworthy
 
