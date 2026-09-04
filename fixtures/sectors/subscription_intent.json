@@ -1,8 +1,8 @@
 {
   "mandate_id": "mnd_trial_trap",
   "utterance": "buy the one-off design tool licence, under 500 rupees, no subscriptions",
-  "not_before_ns": 1788498882000000000,
-  "not_after_ns": 1788520542000000000,
+  "not_before_ns": 1788499422000000000,
+  "not_after_ns": 1788521082000000000,
   "total_budget_paise": 50000,
   "merchant_allow": [
     "appstore_in"
