@@ -44,16 +44,24 @@ START=${1:-1}
 case "$START" in ''|*[!0-9]*) START=1 ;; esac
 [ "$START" -lt 1 ] && START=1
 
+# During a take the terminal is the frame, so the prompt itself must not appear --
+# it sat on screen for the whole beat while the operator was speaking. In --clean the
+# wait is completely silent; only rehearsal shows the hint.
 pause(){
-  printf "\n${D}   [space] next   [q] quit${Z} "
-  local k; IFS= read -rsn1 k </dev/tty || true
-  printf "\r\033[K"
+  local k
+  if [ "$CLEAN" = "1" ]; then
+    IFS= read -rsn1 k </dev/tty || true
+  else
+    printf "\n${D}   [space] next   [q] quit${Z} "
+    IFS= read -rsn1 k </dev/tty || true
+    printf "\r\033[K"
+  fi
   [ "$k" = "q" ] && return 1 || return 0
 }
 
 beat(){                       # $1 = index, $2 = spoken cue
   local i=$1
-  if [ "$CLEAN" = "1" ]; then printf "\n\n"; return 0; fi
+  if [ "$CLEAN" = "1" ]; then printf "\n"; return 0; fi
   printf "\n\n${C}════════════════════════════════════════════════════════════════${Z}\n"
   printf "  ${B}%s${Z}  ${M}%s${Z}\n" "${BEATS[$i]%%|*}" "${BEATS[$i]#*|}"
   printf "${C}════════════════════════════════════════════════════════════════${Z}\n"
