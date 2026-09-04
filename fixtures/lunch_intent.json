@@ -2,8 +2,8 @@
   "mandate_id": "mnd_8f21c4",
   "utterance": "order me lunch, keep it under 500 rupees",
   "subject_agent": "agent_swiggy_v3",
-  "not_before_ns": 1788512536000000000,
-  "not_after_ns": 1788534196000000000,
+  "not_before_ns": 1788515789000000000,
+  "not_after_ns": 1788537449000000000,
   "total_budget_paise": 50000,
   "merchant_allow": [
     "swiggy",

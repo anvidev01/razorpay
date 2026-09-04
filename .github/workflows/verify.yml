@@ -55,14 +55,15 @@ jobs:
       - name: Kernel and intent suites under sanitizers
         run: |
           set -e
-          for t in tests/test_kernel.cpp tests/test_intent.cpp; do
+          # The library sources only. engine/src/*.cpp also globs the twelve rig_*.cpp
+          # tools, each with its own main(), so the glob can never link -- and the old
+          # fallback compiled kernel.cpp alone, which cannot resolve translate_local.
+          # Both paths failed, so this job had never passed. Same list verify.sh uses.
+          LIB="engine/src/kernel.cpp engine/src/parse.cpp engine/src/crypto.cpp engine/src/intent.cpp"
+          for t in test_kernel test_intent; do
             g++ -std=c++20 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer \
-                -Iengine/include engine/src/*.cpp "engine/$t" \
-                $(pkg-config --cflags --libs simdjson) -lcrypto -lcurl \
-                -o /tmp/san_$(basename "$t" .cpp) 2>/dev/null || \
-            g++ -std=c++20 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer \
-                -Iengine/include engine/src/kernel.cpp "engine/$t" \
-                -o /tmp/san_$(basename "$t" .cpp)
+                -Iengine/include $LIB "engine/tests/$t.cpp" \
+                $(pkg-config --cflags --libs simdjson) -lcrypto -lcurl -o "/tmp/san_$t"
           done
           /tmp/san_test_kernel
           /tmp/san_test_intent fixtures/catalog.json

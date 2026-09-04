@@ -6,16 +6,19 @@
 #include <cstdlib>
 #include <vector>
 #include <algorithm>
-#include <mach/mach_time.h>
+#include "rig/clock.hpp"     // mono_ns(): CLOCK_UPTIME_RAW on macOS, CLOCK_MONOTONIC elsewhere
+#if defined(__APPLE__)
 #include <pthread.h>
-#include <sys/qos.h>
+#include <sys/qos.h>          // QoS pinning is a Darwin API; there is no portable equivalent
+#endif
 
 using namespace rig;
 
 int main(int argc, char** argv) {
+#if defined(__APPLE__)
+  // Pin to a P-core so the benchmark is not sampled on an efficiency core.
   pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
-  mach_timebase_info_data_t tb; mach_timebase_info(&tb);
-  const double t2ns = double(tb.numer) / tb.denom;
+#endif
   const int n = argc > 1 ? std::atoi(argv[1]) : 8;
 
   InternTable t;
@@ -43,12 +46,12 @@ int main(int argc, char** argv) {
   const int BATCH = 1000, ROUNDS = 20000;
   std::vector<double> per; per.reserve(ROUNDS);
   for (int r = 0; r < ROUNDS; ++r) {
-    const std::uint64_t t0 = mach_absolute_time();
+    const std::uint64_t t0 = mono_ns();
     for (int i = 0; i < BATCH; ++i) {
       sink ^= evaluate(s, c, 1).bits;
       asm volatile("" :: "r"(sink) : "memory");
     }
-    per.push_back(double(mach_absolute_time() - t0) * t2ns / BATCH);
+    per.push_back(double(mono_ns() - t0) / BATCH);
   }
   std::sort(per.begin(), per.end());
   std::printf("cart_lines=%2d  production kernel: p50=%7.1f ns  p99=%7.1f ns  min=%6.1f ns  (sink=%u)\n",
