@@ -6,7 +6,7 @@
 **Before every take:** `./scripts/seed.sh`
 **Pace:** ~145 WPM. **WAIT** means two seconds of silence — let the output land.
 
-**752 spoken words.** With pauses that is **5:26 at 145 WPM**, **5:05 at 155**, and
+**769 spoken words.** With pauses that is **5:38 at 145 WPM**, **5:17 at 155**, and
 **4:47 at 165** — a normal pace for material you know cold. **Time one run.** If it goes
 over, the cut list at the bottom removes 74 words and takes it to **4:56 at 145**.
 
@@ -145,7 +145,8 @@ is printed here.
 **SAY**
 
 > "Can the gateway be bypassed? **Eight attacks — three that forge the human's
-> authorisation, five that try to route around the engine entirely. All refused.**
+> authorisation, five that try to route around the engine entirely. All refused** — and
+> replaying a used token fails because the **nonce is already burned**.
 >
 > The user signs a **scoped mandate** using **Ed25519 asymmetric signing** on their
 > device. My gateway holds only the **public half**, so I **cannot forge a mandate even
@@ -195,8 +196,8 @@ is printed here.
 **SAY**
 
 > "All of this has a **merchant-facing interface**. The agent drops the blender,
-> resubmits, and **the lunch still arrives**. Blocking without breaking what the user
-> wanted is the product."
+> resubmits, and **the lunch still arrives** — **graceful degradation**. Blocking without
+> breaking what the user wanted is the product."
 
 ---
 
@@ -228,6 +229,18 @@ is printed here.
 > a lie.** This is **bounded, gated, explainable payments infrastructure.**"
 
 ---
+
+## If you have time spare
+
+Time your run first. If you land under **4:40**, add the **retry storm** back — it is the
+one control a judge is least likely to have seen, and it demonstrates rather than claims:
+
+> **SPACE** → `./build/rig-eval fixtures/grocery_intent.json fixtures/cart_retry_a.json --wal wal/demo.wal`
+> **SPACE** → `./build/rig-eval fixtures/grocery_intent.json fixtures/cart_retry_b.json --wal wal/demo.wal`
+>
+> **SAY:** "And when an agent times out and **re-generates** the request — a **retry
+> storm** — **semantic idempotency** collapses it onto the original decision. **No second
+> charge.**"
 
 ## If you run long
 
