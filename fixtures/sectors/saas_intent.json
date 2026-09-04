@@ -1,8 +1,8 @@
 {
   "mandate_id": "mnd_saas_seats",
   "utterance": "add up to 25 engineering seats this month, nothing above 1,200 a seat",
-  "not_before_ns": 1788525503000000000,
-  "not_after_ns": 1788547163000000000,
+  "not_before_ns": 1788527465000000000,
+  "not_after_ns": 1788549125000000000,
   "total_budget_paise": 3500000,
   "merchant_allow": [
     "atlassian",

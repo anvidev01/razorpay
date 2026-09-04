@@ -6,13 +6,28 @@
 **Before every take:** `./scripts/seed.sh`
 **Pace:** ~145 WPM. **WAIT** means two seconds of silence — let the output land.
 
-**687 spoken words.** With pauses that is **5:04 at 145 WPM**, or **4:45 at 155** — you will
-speak faster on camera than in rehearsal. Time one run before you commit to it. Read what is on **your** screen:
-nanosecond figures shift a little by machine and thermal state.
+**733 spoken words.** With pauses that is **5:23 at 145 WPM**, or **5:03 at 155** — and you
+will speak faster on camera than in rehearsal. **Time one run.** If it goes over five
+minutes, the cut list at the bottom removes 80 words and brings it to **4:50 at 145**.
+
+Read what is on **your** screen: nanosecond figures shift a little by machine and thermal
+state.
 
 ---
 
-# 0:00 — The decision, measured
+# 0:00 — The problem, in one line
+
+> *No command yet. Terminal on screen, empty prompt. Say this first.*
+
+**SAY**
+
+> "An AI agent can spend your money on something you never agreed to buy — and **every
+> payment rail will approve it**. They check *who is asking* and *how much*. **Nothing
+> checks the cart.**"
+
+---
+
+# 0:10 — The decision, measured
 
 > **SPACE** → `./build/bench-engine-kernel 3`
 > **SPACE** → `./build/bench-engine-kernel 8`
@@ -31,24 +46,24 @@ nanosecond figures shift a little by machine and thermal state.
 
 ---
 
-# 0:28 — The gap
+# 0:38 — The gap
 
 > *No command. Keep the benchmark on screen.*
 
 **SAY**
 
-> "**Agentic commerce** is shipping. NPCI's **UAP**, Razorpay's **Agent Pay**, Google's
-> **AP2**, OpenAI's **ACP**. Every one of them asks: is this a **registered agent**, and
-> is it **under the limit**? Neither reads the cart.
+> "**Agentic commerce** is shipping — NPCI's **UAP**, Razorpay's **Agent Pay**, Google's
+> **AP2**, OpenAI's **ACP**. Every one asks: **registered agent**, and **under the
+> limit**.
 >
 > So an agent told to buy a **₹400 lunch** can order a **₹6,000 blender** — under the
 > **₹10,000 cap** — and **every system approves it**.
 >
-> I built the **Mandate Engine** to actually read the cart."
+> I built the **Mandate Engine** to read the cart."
 
 ---
 
-# 0:55 — Inside the kernel
+# 1:00 — Inside the kernel
 
 > **SPACE** → `sed -n '/Verdict evaluate/,/^}/p' engine/src/kernel.cpp | head -40`
 
@@ -79,8 +94,8 @@ nanosecond figures shift a little by machine and thermal state.
 > cache**.
 >
 > The honest command is **`F_FULLFSYNC`**: **thirty-three microseconds for the comfortable
-> lie, four milliseconds for the truth.** This was never a speed problem — it's an
-> **amortised durability** problem.
+> lie, four milliseconds for the truth.** Never a speed problem — an **amortised
+> durability** problem.
 >
 > Using **group commit** I batch 256 records and pay for **one** flush. We go from **250
 > decisions a second to 153,000**."
@@ -183,8 +198,11 @@ nanosecond figures shift a little by machine and thermal state.
 
 **SAY**
 
-> "The agent drops the blender, resubmits, and **the lunch still arrives**. Blocking
-> without breaking what the user wanted is the product."
+> "All of this has a **merchant-facing interface** — signed mandates, live verdicts, the
+> dispute evidence pack. Here the agent drops the blender, resubmits, and **the lunch
+> still arrives**.
+>
+> Blocking without breaking what the user wanted is the product."
 
 ---
 

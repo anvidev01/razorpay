@@ -19,9 +19,10 @@ B=$'\033[1m'; D=$'\033[2m'; Z=$'\033[0m'
 C=$'\033[36m'; G=$'\033[32m'; Y=$'\033[33m'; M=$'\033[35m'
 
 BEATS=(
-  "0:00|The decision, measured"
-  "0:28|The gap  (no command — talk only)"
-  "0:55|Inside the kernel"
+  "0:00|The problem, one line  (no command — talk only)"
+  "0:10|The decision, measured"
+  "0:38|The gap  (no command — talk only)"
+  "1:00|Inside the kernel"
   "1:35|Durability"
   "2:20|Two languages, one verdict"
   "2:55|Try to break it"
@@ -113,9 +114,16 @@ fi
 [ "$CLEAN" = "1" ] && clear
 pause || exit 0
 
-# ── 1 · 0:00 ────────────────────────────────────────────────────────────────
+# ── 1 · 0:00 · problem, no command ──────────────────────────────────────────
 if [ "$START" -le 1 ]; then
-  beat 0 "an authorisation decision on a shopping cart"
+  beat 0 "an agent can spend your money on something you never agreed to buy"
+  cue "NO COMMAND. Empty prompt on screen. Say the problem, then advance."
+  pause || exit 0
+fi
+
+# ── 2 · 0:10 ────────────────────────────────────────────────────────────────
+if [ "$START" -le 3 ]; then
+  beat 2 "an authorisation decision on a shopping cart"
   pause || exit 0
   run ./build/bench-engine-kernel 3
   run ./build/bench-engine-kernel 8
@@ -132,8 +140,8 @@ if [ "$START" -le 2 ]; then
 fi
 
 # ── 3 · 0:55 ── the C++ segment ─────────────────────────────────────────────
-if [ "$START" -le 3 ]; then
-  beat 2 "branch-free, integer paise, never short-circuits"
+if [ "$START" -le 4 ]; then
+  beat 3 "branch-free, integer paise, never short-circuits"
   pause || exit 0
   run "sed -n '/Verdict evaluate/,/^}/p' engine/src/kernel.cpp | head -40"
   note "24 reject codes, per-line attribution, 7 ns zero-init tax"
@@ -142,8 +150,8 @@ if [ "$START" -le 3 ]; then
 fi
 
 # ── 4 · 1:35 ────────────────────────────────────────────────────────────────
-if [ "$START" -le 4 ]; then
-  beat 3 "a decision is worthless unless it is durable before the money moves"
+if [ "$START" -le 5 ]; then
+  beat 4 "a decision is worthless unless it is durable before the money moves"
   cue "SPEAK FIRST — set up 'on macOS the disk lies' before the grep."
   pause || exit 0
   run "grep -A6 'F_FULLFSYNC' engine/include/rig/clock.hpp"
@@ -157,8 +165,8 @@ if [ "$START" -le 4 ]; then
 fi
 
 # ── 5 · 2:20 ────────────────────────────────────────────────────────────────
-if [ "$START" -le 5 ]; then
-  beat 4 "two independent implementations agreeing is evidence"
+if [ "$START" -le 6 ]; then
+  beat 5 "two independent implementations agreeing is evidence"
   rm -f wal/rig.wal          # a retake must not collide with its own last take
   pause || exit 0
   run "./build/rig-eval fixtures/lunch_intent.json \\
@@ -180,8 +188,8 @@ if [ "$START" -le 5 ]; then
 fi
 
 # ── 6 · 2:55 ────────────────────────────────────────────────────────────────
-if [ "$START" -le 6 ]; then
-  beat 5 "let the wall of REFUSED sit for two seconds before speaking"
+if [ "$START" -le 7 ]; then
+  beat 6 "let the wall of REFUSED sit for two seconds before speaking"
   pause || exit 0
   run ./build/rig-attack
   note "8 refused, exactly 1 authorised. the agent holds no Razorpay credentials."
@@ -189,8 +197,8 @@ if [ "$START" -le 6 ]; then
 fi
 
 # ── 7 · 3:30 ────────────────────────────────────────────────────────────────
-if [ "$START" -le 7 ]; then
-  beat 6 "nothing changed but the catalogue"
+if [ "$START" -le 8 ]; then
+  beat 7 "nothing changed but the catalogue"
   pause || exit 0
   run ./scripts/sectors.sh
   note "not one food concept in the kernel"
@@ -202,8 +210,8 @@ if [ "$START" -le 7 ]; then
 fi
 
 # ── 8 · 4:03 ────────────────────────────────────────────────────────────────
-if [ "$START" -le 8 ]; then
-  beat 7 "blocking without breaking what the user wanted is the product"
+if [ "$START" -le 9 ]; then
+  beat 8 "blocking without breaking what the user wanted is the product"
   rm -f wal/demo.wal
   pause || exit 0
   run "./build/rig-eval fixtures/lunch_intent.json \\
