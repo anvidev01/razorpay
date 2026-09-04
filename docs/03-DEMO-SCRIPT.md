@@ -17,9 +17,9 @@ WAIT   two seconds of silence. Do not fill it.
 Numbers move a few ns by machine — **say what is on your screen**, not what is on this
 page.
 
-**Length: 894 spoken words + 6 pauses.** That is **5:18 at 175 wpm**, which is a normal
-pace for rehearsed technical material. **If your first timed run is over five minutes,
-apply the cut list at the bottom** — it removes 118 words and lands you at 4:36.
+**Length: 873 spoken words + 6 pauses.** That is **5:11 at 175 wpm** — a normal pace for
+rehearsed technical material. **Time yourself once. If you go over 5:00, apply the cut
+list at the bottom**: five named passages, 91 words, which brings it to **4:40**.
 
 ---
 
@@ -49,14 +49,11 @@ apply the cut list at the bottom** — it removes 118 words and lands you at 4:3
 **SAY**
 
 > "**Agentic commerce** is shipping. NPCI's **UAP**, Razorpay's **Agent Pay**, Google's
-> **AP2**, OpenAI's **ACP**. Every one asks two questions: is this a **registered
-> agent**, and is the amount **under the limit**.
+> **AP2**, OpenAI's **ACP**. Every one asks: is this a **registered agent**, and is it
+> **under the limit**. **Neither reads the cart.**
 >
-> **Neither reads the cart.**
->
-> So an agent told to buy a **₹400 lunch** can order a **₹6,000 blender** instead —
-> **under the ten-thousand-rupee cap**, from a registered agent, and **every system in
-> the chain approves it**.
+> So an agent told to buy a **₹400 lunch** can order a **₹6,000 blender** — **under the
+> ten-thousand-rupee cap**, from a registered agent, and **every system approves it**.
 >
 > I built the layer that reads the cart."
 
@@ -70,19 +67,21 @@ apply the cut list at the bottom** — it removes 118 words and lands you at 4:3
 
 > "This is the **policy kernel**. **Branch-free** — no allocation, no syscall, no lock,
 > **no floating point**. Money is **integer paise**, because a rounded fraction of a
-> rupee becomes a reconciliation bug six months later.
+> rupee is a reconciliation bug six months later.
 >
-> Violations accumulate into a **bitfield**, and it **never short-circuits** — you get
-> **every** reason a cart failed, not the first. **Twenty-four reject codes**, with
-> **per-line attribution**: 'line three failed, for these two reasons'.
+> Violations accumulate into a **bitfield** and it **never short-circuits** — **every**
+> reason a cart failed, not the first. **Twenty-four reject codes**, with **per-line
+> attribution**.
 >
-> None of that is free, and I measured what it costs. The verdict struct is deliberately
-> **not** zero-initialised — zeroing 512 bytes measured as a **seven-nanosecond tax** on
-> every call. `BENCHMARKS.md` records that, and it also records the one measurement I
-> **couldn't** reproduce, rather than quietly keeping the number.
+> I measured what that costs: the verdict struct is deliberately **not** zero-initialised,
+> because zeroing 512 bytes cost **seven nanoseconds** a call.
 >
-> And it's a **pure function with no I/O**: same inputs, same verdict, any machine.
-> **That matters more than the speed** — here's why."
+> And notice what **isn't** here. **There is no model in this path.** An LLM drafts the
+> mandate — that's a language problem. But `evaluate` takes **a mandate and a cart**. No
+> utterance parameter, so a model **cannot reach the decision even in principle**.
+>
+> It's a **pure function with no I/O** — which is what makes the audit trail
+> **replayable**."
 
 ---
 
@@ -90,9 +89,9 @@ apply the cut list at the bottom** — it removes 118 words and lands you at 4:3
 
 **SAY** *(before any command — this sets up the problem)*
 
-> "A decision is worthless unless it's **durable before the money moves**. The payment
-> token is minted **only after** the decision is on disk — so the disk is the bottleneck.
-> And on macOS, the disk lies."
+> "A decision is worthless unless it's **durable before the money moves**. The token is
+> minted **only after** the decision is on disk — so the disk is the bottleneck, and on
+> macOS the disk lies."
 
 > **SPACE** → `grep -A6 'F_FULLFSYNC' engine/include/rig/clock.hpp`
 
@@ -102,20 +101,18 @@ apply the cut list at the bottom** — it removes 118 words and lands you at 4:3
 > while your bytes sit in volatile memory.
 >
 > The honest primitive is **`F_FULLFSYNC`**: **thirty-three microseconds for the
-> comfortable lie, four milliseconds for the truth.** That caps you at **two hundred and
-> fifty decisions a second** — so this was never a speed problem. It's an **amortised
-> durability** problem."
+> comfortable lie, four milliseconds for the truth** — which caps you at **two hundred
+> and fifty decisions a second**. Never a speed problem. An **amortised durability**
+> problem."
 
 > **SPACE** → `./build/rig-load 2000`
 > **WAIT**
 
 **SAY**
 
-> "**Group commit**: batch 256 records or two milliseconds, then pay for **one** flush
-> across all of them. Two hundred and forty-nine a second becomes **a hundred and
-> fifty-three thousand**.
->
-> And that log isn't only for durability. **It's the evidence.**"
+> "**Group commit**: batch 256 records, pay for **one** flush. Two hundred and forty-nine
+> a second becomes **a hundred and fifty-three thousand**. And that log isn't only
+> durability — **it's the evidence.**"
 
 ---
 
@@ -177,19 +174,16 @@ apply the cut list at the bottom** — it removes 118 words and lands you at 4:3
 **SAY**
 
 > "And none of it is specific to one merchant. Same binary, different product feed —
-> **SaaS seats** split across three lines to beat a twenty-five seat cap, and **₹1 today,
-> ₹999 every month after**, denied while every limit-based check passes. **Nothing
-> changed but the catalogue.**"
+> **SaaS seats** split across three lines to beat a twenty-five cap, and **₹1 today,
+> ₹999 a month after**. **Nothing changed but the catalogue.**"
 
 > **SPACE** → `./build/rig-revenue`
 
 **SAY**
 
-> "And this is the number a merchant cares about. **A declined agent cart is a lost sale,
-> not a saved rupee.**
->
-> **Ninety-eight percent of legitimate traffic completes with no human at all** —
-> measured on a **held-out split**, on synthetic traffic I've **labelled as synthetic**."
+> "And the number a merchant cares about. **A declined agent cart is a lost sale, not a
+> saved rupee.** **Ninety-eight percent completes with no human at all** — on a
+> **held-out split**, on synthetic traffic I've **labelled as synthetic**."
 
 ---
 
@@ -225,16 +219,15 @@ apply the cut list at the bottom** — it removes 118 words and lands you at 4:3
 >
 > **Quantity caps were enforced per line** — but the *agent* chooses how many lines it
 > sends. So **ten lines of one item bought ten of a max-one item**, and it returned
-> **`ALLOW`**. Every line was individually legal. The mandate said **at most one**.
+> **`ALLOW`**. Every line was individually legal.
 >
 > I found it writing an adversarial test, not from a failing case. Fixed with
 > per-constraint aggregation — and `BENCHMARKS.md` records the before and after,
-> **including the part I couldn't measure**, because the pre-fix revision no longer
-> compiles.
+> **including the part I couldn't measure**.
 >
-> **That bug is the argument for this entire project.** Every layer above the kernel
-> drifts, so the check has to sit at the **bottom**, read the **actual cart**, and be
-> simple enough to **prove**.
+> **That bug is the argument for this project.** Every layer above the kernel drifts, so
+> the check sits at the **bottom**, reads the **actual cart**, and is simple enough to
+> **prove**.
 >
 > Clone it and run `./verify.sh`. **Forty-two checks — it exits non-zero if any of this
 > was a lie.**"
@@ -258,41 +251,39 @@ Each beat ends on the sentence that opens the next. If you drop one, bridge it.
 
 ## Running long? Cut exactly these
 
-Timed yourself over 5:00? Delete these five passages, in this order. They total **118
-words** and take you to **4:36**. Nothing above them depends on them.
+Timed over 5:00? Delete these five passages in order. **91 words**, taking you to
+**4:40**. Nothing else depends on them.
 
-**1 · the `tamper.sh` beat** (2:20) — 22 words. Skip the command too.
+**1 · the `tamper.sh` line** (2:20) — 22 words. Skip the command too.
 
 > ~~"And flip one bit — the chain refuses to verify. So the trail can't be edited. But can
 > the gateway be bypassed?"~~
 > Replace with: **"So — can the gateway be bypassed?"**
 
-**2 · the paise aside** (0:55) — 16 words.
+**2 · the paise aside** (0:55) — 15 words.
 
-> ~~", because a rounded fraction of a rupee becomes a reconciliation bug six months
-> later"~~ → end the sentence at **"integer paise"**.
+> ~~", because a rounded fraction of a rupee is a reconciliation bug six months later"~~
+> → end the sentence at **"integer paise"**.
 
-**3 · one bypass example** (2:55) — 14 words.
+**3 · one bypass example** (2:55) — 17 words.
 
-> ~~"**Skip the gateway** — there is no token at all."~~
+> ~~"**Raise the budget after signing** — the signature covers the exact bytes."~~
 
-**4 · the SaaS example** (3:30) — 20 words. Keep the subscription one; it is the stronger
-case because every limit-based check passes.
+**4 · the sector opener** (3:30) — 9 words.
 
-> ~~"**SaaS seats** split across three lines to beat a twenty-five seat cap, and"~~
+> ~~"And none of it is specific to one merchant."~~ → open on **"Same binary, different
+> product feed"**.
 
-**5 · the measurement aside** (0:55) — 52 words.
+**5 · the zero-init measurement** (0:55) — 28 words.
 
-> ~~"None of that is free, and I measured what it costs. The verdict struct is
-> deliberately not zero-initialised — zeroing 512 bytes measured as a seven-nanosecond
-> tax on every call. BENCHMARKS.md records that, and it also records the one measurement
-> I couldn't reproduce, rather than quietly keeping the number."~~
+> ~~"I measured what that costs: the verdict struct is deliberately not zero-initialised,
+> because zeroing 512 bytes cost seven nanoseconds a call."~~
 
-Cut 5 **last**. It is the detail that most convincingly shows you profiled rather than
-guessed, *and* it carries one of the five trust lines — so lose it only if the clock
-forces you.
+Cut 5 **last** — it is the detail that most convincingly shows you profiled rather than
+guessed.
 
-**Never cut:** the closing beat, or any of the five lines below.
+**Never cut:** the closing beat, the *"no model in this path"* passage, or any of the five
+lines below.
 
 ## The five lines that make it trustworthy
 
