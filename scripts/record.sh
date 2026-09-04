@@ -63,8 +63,44 @@ beat(){                       # $1 = index, $2 = spoken cue
 note(){ [ "$CLEAN" = "1" ] || printf "${D}  → %s${Z}\n" "$1"; }
 cue(){  [ "$CLEAN" = "1" ] || printf "\n${Y}  %s${Z}\n" "$1"; }
 
-# Echo the command as if typed, then run it. The viewer must see the command.
-run(){ printf "\n${G}\$${Z} ${B}%s${Z}\n\n" "$*"; eval "$@"; }
+# Type the command out, then run it.
+#
+# Printing the command and its output in the same instant reads as a paste, not as
+# someone working -- the viewer never sees the command as a separate act. So the
+# characters land one at a time, then there is a beat (as if pressing Enter) before
+# any output appears.
+#
+# Typing the command out character by character costs about 23 seconds across the
+# sixteen commands in this script -- 8% of a five-minute video, spent on an animation
+# rather than on substance. So it is OFF by default. What IS kept is a short beat
+# between the command and its output, which is what actually stops the two reading as
+# one paste, and costs about five seconds in total.
+#
+#   RIG_TYPE_MS=16  type it out, if you decide you prefer the look
+TYPE_MS="${RIG_TYPE_MS:-0}"
+
+type_out(){
+  local str="$1" i c
+  if [ "$TYPE_MS" = "0" ]; then printf "${B}%s${Z}" "$str"; return; fi
+  local delay
+  delay=$(awk -v m="$TYPE_MS" 'BEGIN{printf "%.3f", m/1000}')
+  printf "${B}"
+  for (( i=0; i<${#str}; i++ )); do
+    c="${str:$i:1}"
+    printf '%s' "$c"
+    # a newline in a wrapped command is a natural place to breathe
+    if [ "$c" = $'\n' ]; then sleep 0.12; else sleep "$delay"; fi
+  done
+  printf "${Z}"
+}
+
+run(){
+  printf "\n${G}\$${Z} "
+  type_out "$*"
+  sleep 0.35                 # the beat between hitting Enter and output appearing
+  printf "\n\n"
+  eval "$@"
+}
 
 trap 'printf "\n${D}stopped.${Z}\n"; exit 0' INT
 
