@@ -1,6 +1,6 @@
 # Razorpay Intent Gateway
 
-[![verify](https://github.com/anvidev01/razorpay/actions/workflows/verify.yml/badge.svg)](https://github.com/anvidev01/razorpay/actions/workflows/verify.yml)
+[![verify](https://github.com/anvidev01/mandate-engine/actions/workflows/verify.yml/badge.svg)](https://github.com/anvidev01/mandate-engine/actions/workflows/verify.yml)
 
 **An AI payment security layer that sits between an AI buyer and the payment rail, so
 every money action an agent takes is explainable, bounded and gated — and provable
@@ -286,7 +286,7 @@ Method, caveats and how each was measured: **[docs/BENCHMARKS.md](docs/BENCHMARK
 ## Build quality — one command proves every claim
 
 ```bash
-git clone https://github.com/anvidev01/razorpay.git && cd razorpay
+git clone https://github.com/anvidev01/mandate-engine.git && cd mandate-engine
 ./verify.sh            # 42 checks, ~90s   (--quick skips benchmarks/sanitizers, ~15s)
 ```
 
