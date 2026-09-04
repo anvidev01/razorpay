@@ -54,9 +54,11 @@ apply the cut list at the bottom** — it removes 118 words and lands you at 4:3
 >
 > **Neither reads the cart.**
 >
-> So a **₹62,000 tablet** in a ₹250 phone-case restock is under the limit, from a
-> registered agent — and **every system approves it**. I built the layer that reads the
-> cart."
+> So an agent told to buy a **₹400 lunch** can order a **₹6,000 blender** instead —
+> **under the ten-thousand-rupee cap**, from a registered agent, and **every system in
+> the chain approves it**.
+>
+> I built the layer that reads the cart."
 
 ---
 

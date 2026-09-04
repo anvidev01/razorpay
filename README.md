@@ -32,7 +32,7 @@ That assumption breaks in three places:
 
 | gap | what goes wrong |
 |---|---|
-| **Intent** | A restocking agent buys a ₹62,000 tablet instead of ₹250 phone cases. An ops agent adds 30 seats against a 25-seat cap. Every amount is under the block, so every system approves it. |
+| **Intent** | A restocking agent buys a ₹9,000 tablet instead of ₹250 phone cases — 36× the intended price, and still inside the ₹10,000 block. An ops agent adds 30 seats against a 25-seat cap. Nothing in the chain compares the cart to what the human authorised. |
 | **Behaviour** | Agents retry by **re-generating** the request, not re-sending it — so the rail sees a new order and charges twice. Hidden text on a merchant page redirects the agent mid-checkout. |
 | **Liability** | No human-bound proof tied to that specific transaction. No click trail, no cardholder session. The merchant absorbs the chargeback. |
 
