@@ -34,7 +34,7 @@ apply the cut list at the bottom** — it removes 118 words and lands you at 4:3
 > "That's an authorisation decision on a shopping cart. **Twenty-eight nanoseconds** for
 > three lines, **fifty-eight** for eight — it scales, because it reads **every line**.
 >
-> The rail it protects costs **sixty-nine milliseconds**, so this check is **a
+> The rail it protects costs **about seventy milliseconds**, so this check is **a
 > millionth** of the request.
 >
 > **Checking is free** — which makes it worth asking why nothing in the payment chain
@@ -74,11 +74,12 @@ apply the cut list at the bottom** — it removes 118 words and lands you at 4:3
 >
 > Violations accumulate into a **bitfield**, and it **never short-circuits** — you get
 > **every** reason a cart failed, not the first. **Twenty-four reject codes**, with
-> **per-line attribution**: 'line three failed, for these two reasons'. That costs
-> **eight percent**, and `BENCHMARKS.md` states the price rather than hiding it.
+> **per-line attribution**: 'line three failed, for these two reasons'.
 >
-> The verdict struct is deliberately **not** zero-initialised — zeroing 512 bytes measured
-> as a **seven-nanosecond tax** per call.
+> None of that is free, and I measured what it costs. The verdict struct is deliberately
+> **not** zero-initialised — zeroing 512 bytes measured as a **seven-nanosecond tax** on
+> every call. `BENCHMARKS.md` records that, and it also records the one measurement I
+> **couldn't** reproduce, rather than quietly keeping the number.
 >
 > And it's a **pure function with no I/O**: same inputs, same verdict, any machine.
 > **That matters more than the speed** — here's why."
@@ -280,13 +281,16 @@ case because every limit-based check passes.
 
 > ~~"**SaaS seats** split across three lines to beat a twenty-five seat cap, and"~~
 
-**5 · the second half of the kernel close** (0:55) — 46 words.
+**5 · the measurement aside** (0:55) — 52 words.
 
-> ~~"The verdict struct is deliberately not zero-initialised — zeroing 512 bytes measured
-> as a seven-nanosecond tax per call."~~
+> ~~"None of that is free, and I measured what it costs. The verdict struct is
+> deliberately not zero-initialised — zeroing 512 bytes measured as a seven-nanosecond
+> tax on every call. BENCHMARKS.md records that, and it also records the one measurement
+> I couldn't reproduce, rather than quietly keeping the number."~~
 
-Cut 5 **last**. It is the single detail that most convincingly shows you profiled rather
-than guessed, so lose it only if the clock forces you.
+Cut 5 **last**. It is the detail that most convincingly shows you profiled rather than
+guessed, *and* it carries one of the five trust lines — so lose it only if the clock
+forces you.
 
 **Never cut:** the closing beat, or any of the five lines below.
 

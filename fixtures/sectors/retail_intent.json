@@ -1,8 +1,8 @@
 {
   "mandate_id": "mnd_retail_q3",
   "utterance": "restock phone accessories, under 40,000 rupees, from our two usual distributors",
-  "not_before_ns": 1788508630000000000,
-  "not_after_ns": 1788530290000000000,
+  "not_before_ns": 1788511081000000000,
+  "not_after_ns": 1788532741000000000,
   "total_budget_paise": 4000000,
   "merchant_allow": [
     "amazon_business",
