@@ -14,6 +14,33 @@ state, and `rig-load` moves a little run to run.
 
 ---
 
+# −0:16 — The hook  *(the only face-to-camera moment in the video)*
+
+> **FACE TO CAMERA.** Nothing on screen but you. This is the **only** time you appear —
+> everything after this is screen recording.
+> Look **directly into the lens**, not at your own preview. Neutral expression, a slight
+> smile at most. **No gestures** — hands still, this is too short to need them.
+> Terminal already open behind the camera, `record.sh --clean` waiting on beat 1.
+
+**SAY**
+
+> "Agentic commerce demos show an agent buying something. This is the layer underneath,
+> that decides whether it's **allowed** to.
+>
+> I spent this week attacking it myself. **It failed three times** — all three are in this
+> video."
+
+> **CUT TO SCREEN SHARE** on the word **"video"**. Do not pause between the two — the
+> terminal should already be filling the frame as the word ends. Then press **SPACE** and
+> continue from the cold open below.
+
+> **VOICE** — Level and unhurried; you are stating a fact, not selling. Slight stress on
+> **allowed** — it is the whole distinction. Then a real beat before *"I spent this week"*,
+> and take the last sentence slower than the first two. **Do not smile on "failed three
+> times."** Say it the way you would report a test result.
+
+---
+
 # 0:00 — Cold open
 
 > **SPACE** → runs the blender denial. **Do not narrate the command.**
