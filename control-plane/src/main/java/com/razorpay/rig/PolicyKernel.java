@@ -102,6 +102,7 @@ public final class PolicyKernel {
         bits |= (d.textFlags & R_INJECTION_SUSPECTED);
 
         long total = 0;
+        long[] aggQty = new long[MAXC];
         int n = Math.min(d.nLines, MAX_CART);
         for (int i = 0; i < n; i++) {
             int  sku = d.sku[i];
@@ -130,7 +131,11 @@ public final class PolicyKernel {
             long ceiling = cap + (cap * d.substMaxDeltaBp) / 10000;
             if (ci < 0 && sub >= 0 && up > ceiling) bits |= R_SUBSTITUTION_DELTA;
 
-            if (eff >= 0 && q > Integer.toUnsignedLong(d.constraintQty[safe])) bits |= R_QTY_EXCEEDED;
+            // AGGREGATE, not per line. The agent chooses how many lines it sends, so a
+            // per-line check lets ten lines of one item buy ten of a max-one item. The
+            // C++ kernel was fixed for this; this auditor was not, and the two silently
+            // disagreed on exactly the attack the fix exists to stop.
+            if (eff >= 0) aggQty[safe] += q;
             // two independent unit-price bounds; the second applies even to an unknown SKU
             if ((ci >= 0 && up > d.constraintUnit[safe]) || up > d.totalBudgetPaise)
                 bits |= R_UNIT_PRICE_EXCEEDED;
@@ -143,6 +148,10 @@ public final class PolicyKernel {
                 bits |= R_ARITH_OVERFLOW;
             }
         }
+        for (int ci = 0; ci < MAXC; ci++)
+            if (ci < d.nConstraints
+                && aggQty[ci] > Integer.toUnsignedLong(d.constraintQty[ci])) bits |= R_QTY_EXCEEDED;
+
         if (total > d.totalBudgetPaise) bits |= R_CART_TOTAL_EXCEEDED;
         return new Result(bits, total);
     }

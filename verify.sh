@@ -143,6 +143,24 @@ rm -f wal/verify_a.wal
 ./build/rig-eval fixtures/lunch_intent.json fixtures/blender_cart.json --wal wal/verify_a.wal >/dev/null 2>&1
 ./build/rig-replay wal/verify_a.wal 2>&1 | grep -q "divergent : .*0" \
   && ok "C++ replays its own log, 0 divergent" || no "cpp replay"
+# The two implementations must agree on the SPLIT-QUANTITY attack specifically, not
+# just on the demo fixtures. They silently disagreed on it once: the C++ kernel was
+# fixed to aggregate and the Java auditor was left checking per line, so "zero
+# divergences" held only because no logged decision exercised the case.
+rm -f wal/verify_agg.wal
+python3 -c "
+import json
+json.dump({'mandate_id':'mnd_8f21c4','merchant':'swiggy','agent_session_id':'aggchk',
+ 'lines':[{'sku':'SKU_SIDE_RAITA_014','unit_paise':4500,'qty':1} for _ in range(6)]},
+ open('/tmp/rig_agg.json','w'))"
+./build/rig-eval fixtures/lunch_intent.json /tmp/rig_agg.json --wal wal/verify_agg.wal >/dev/null 2>&1
+cpp_agg=$(./build/rig-replay wal/verify_agg.wal 2>&1 | grep -oE 'divergent : .*[0-9]' | grep -oE '[0-9]+$')
+jav_agg=$(java -cp control-plane/out com.razorpay.rig.ReplayAuditor wal/verify_agg.wal 2>&1 \
+          | sed 's/\x1b\[[0-9;]*m//g' | grep -oE 'divergent : *[0-9]+' | grep -oE '[0-9]+$')
+[ "$cpp_agg" = "0" ] && [ "$jav_agg" = "0" ] \
+  && ok "both kernels aggregate quantity identically" "6 lines x qty1 against a cap of 2" \
+  || no "aggregate-quantity divergence" "cpp=$cpp_agg java=$jav_agg"
+
 java -cp control-plane/out com.razorpay.rig.ReplayAuditor wal/verify_a.wal 2>&1 | grep -q "agree on every money action" \
   && ok "Java re-implementation agrees bit-for-bit" "shares no code with the engine" || no "java replay"
 ./build/rig-evidence wal/verify_a.wal 3 2>/dev/null | python3 -c "

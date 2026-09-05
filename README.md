@@ -287,7 +287,7 @@ Method, caveats and how each was measured: **[docs/BENCHMARKS.md](docs/BENCHMARK
 
 ```bash
 git clone https://github.com/anvidev01/razorpay-mandate-engine.git && cd razorpay-mandate-engine
-./verify.sh            # 42 checks, ~90s   (--quick skips benchmarks/sanitizers, ~15s)
+./verify.sh            # 43 checks, ~90s   (--quick skips benchmarks/sanitizers, ~15s)
 ```
 
 Builds from clean, then proves each claim in this README and prints PASS/FAIL:

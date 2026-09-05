@@ -239,7 +239,7 @@ if [ "$START" -le 10 ]; then
   beat 9 "quantity caps were per line, and the agent picks how many lines it sends"
   cue "SPEAK FIRST — tell the bug story, then run verify.sh under it."
   run ./verify.sh
-  note "42 checks, non-zero exit if any of it was a lie"
+  note "43 checks, non-zero exit if any of it was a lie"
 fi
 
 [ "$CLEAN" = "1" ] || printf "\n\n${G}${B}  end of script.${Z}  ${D}retake: ./scripts/record.sh N${Z}\n\n"
