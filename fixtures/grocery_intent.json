@@ -2,8 +2,8 @@
   "mandate_id": "mnd_grocery_7c",
   "utterance": "order my usual weekly groceries, under 1000 rupees, sensible swaps are fine if something is out of stock",
   "subject_agent": "agent_bigbasket_v2",
-  "not_before_ns": 1788626616000000000,
-  "not_after_ns": 1788648276000000000,
+  "not_before_ns": 1788628191000000000,
+  "not_after_ns": 1788649851000000000,
   "total_budget_paise": 100000,
   "merchant_allow": [
     "bigbasket",

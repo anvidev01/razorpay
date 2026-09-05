@@ -104,7 +104,9 @@ echo "$out" | grep -q "does not cover this mandate" && ok "mandate altered after
 hdr "3b · Reversals are money actions too"
 # The WAL takes one writer, and a killed process does not release its lock instantly.
 pkill -f "rig-gateway --port 8798" 2>/dev/null; sleep 0.5; rm -f wal/verify_rev.wal
-env -u RAZORPAY_KEY_ID -u RAZORPAY_KEY_SECRET \
+# RIG_IGNORE_DOTENV pins this to the mock rail. Reversals here must never issue a real
+# refund against the test account, and the gateway now reads .env on its own.
+RIG_IGNORE_DOTENV=1 env -u RAZORPAY_KEY_ID -u RAZORPAY_KEY_SECRET \
   nohup ./build/rig-gateway --port 8798 --wal wal/verify_rev.wal >/tmp/verify_rev.log 2>&1 </dev/null &
 GW_PID=$!
 # Detach from job control, or the shell prints "Terminated: 15" into the middle of the
@@ -274,6 +276,23 @@ fi
 grep -q "not razorpay-test" scripts/prove-razorpay.sh \
   && ok "the Razorpay proof refuses a mock gateway" "or it reads back an id that never existed" \
   || no "prove-razorpay mock guard"
+
+# The gateway binary must read .env itself. It used to rely on whichever wrapper started
+# it, so `./build/rig-gateway` launched directly ran on the mock rail with a populated
+# .env sitting beside it -- the UI looked right, order ids looked real, and nothing
+# reached Razorpay. Only one word in the header said so.
+if [ -f .env ] && grep -q RAZORPAY_KEY_ID .env; then
+  pkill -f "rig-gateway --port 8794" 2>/dev/null; sleep 0.3; rm -f wal/envchk.wal
+  env -u RAZORPAY_KEY_ID -u RAZORPAY_KEY_SECRET \
+    nohup ./build/rig-gateway --port 8794 --wal wal/envchk.wal >/dev/null 2>&1 </dev/null &
+  EPID=$!; disown "$EPID" 2>/dev/null || true
+  for _ in $(seq 1 40); do curl -s -m1 http://127.0.0.1:8794/api/health >/dev/null 2>&1 && break; sleep 0.2; done
+  erail=$(curl -s -m3 http://127.0.0.1:8794/api/health | python3 -c "import json,sys;print(json.load(sys.stdin).get('rail',''))" 2>/dev/null)
+  kill "$EPID" 2>/dev/null; wait "$EPID" 2>/dev/null; rm -f wal/envchk.wal
+  [ "$erail" = "razorpay-test" ] \
+    && ok "the gateway reads .env on its own" "bare launch, no exported keys -> $erail" \
+    || no "gateway .env loading" "bare launch gave rail=$erail (expected razorpay-test)"
+fi
 
 hdr "8 · End to end through the payment rail"
 pkill -f rig-gateway 2>/dev/null; sleep 0.3; rm -f wal/rig.wal

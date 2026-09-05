@@ -545,8 +545,42 @@ static int run(int argc, char** argv) {
   }
 }
 
+// Load .env from the working directory if the credentials are not already exported.
+//
+// Only the shell wrappers used to do this, so `./build/rig-gateway` started directly ran
+// on the mock rail even with a populated .env sitting next to it -- silently, apart from
+// one word in the header. That is a bad failure for a demo: the UI looks right, the order
+// ids look real, and nothing reached Razorpay. The binary now reads the file itself, so
+// the rail cannot depend on which wrapper happened to start it.
+static void load_dotenv_if_unset() {
+  // Explicit opt-out. verify.sh's reversal section deliberately runs on the mock rail so
+  // it never issues a real refund against the test account; without this it would pick up
+  // .env and start refunding for real.
+  if (const char* off = std::getenv("RIG_IGNORE_DOTENV"); off && *off && *off != '0') return;
+  if (const char* k = std::getenv("RAZORPAY_KEY_ID"); k && *k) return;   // already set
+  std::ifstream f(".env");
+  if (!f) return;
+  std::string line;
+  while (std::getline(f, line)) {
+    if (line.empty() || line[0] == '#') continue;
+    const auto eq = line.find('=');
+    if (eq == std::string::npos) continue;
+    std::string key = line.substr(0, eq), val = line.substr(eq + 1);
+    const auto trim = [](std::string& x) {
+      while (!x.empty() && (x.front() == ' ' || x.front() == '\t')) x.erase(x.begin());
+      while (!x.empty() && (x.back() == ' ' || x.back() == '\t' || x.back() == '\r')) x.pop_back();
+      if (x.size() > 1 && (x.front() == '"' || x.front() == '\'') && x.back() == x.front())
+        x = x.substr(1, x.size() - 2);
+    };
+    trim(key); trim(val);
+    if (key.rfind("export ", 0) == 0) key = key.substr(7), trim(key);
+    if (!key.empty()) ::setenv(key.c_str(), val.c_str(), 0);   // 0 = do not overwrite
+  }
+}
+
 int main(int argc, char** argv) {
   try {
+    load_dotenv_if_unset();
     return run(argc, argv);
   } catch (const std::exception& e) {
     std::fprintf(stderr, "\n  error: %s\n\n", e.what());

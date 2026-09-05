@@ -270,8 +270,8 @@ state, and `rig-load` moves a little run to run.
 
 **SAY**
 
-> "Run `verify.sh --quick` — **thirty-seven checks in three seconds**. The full run is
-> **forty-seven**. **It exits non-zero if any of this was a lie.**"
+> "Run `verify.sh --quick` — **thirty-eight checks in three seconds**. The full run is
+> **forty-eight**. **It exits non-zero if any of this was a lie.**"
 
 > **VOICE** — Direct address; this is an instruction to the judge. Slow the final sentence
 > right down and stop dead on **lie**. Do not add anything after it. Do not smile it away.
