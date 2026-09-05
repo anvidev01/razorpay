@@ -19,16 +19,17 @@ B=$'\033[1m'; D=$'\033[2m'; Z=$'\033[0m'
 C=$'\033[36m'; G=$'\033[32m'; Y=$'\033[33m'; M=$'\033[35m'
 
 BEATS=(
-  "0:00|The problem, one line  (no command — talk only)"
-  "0:10|The decision, measured"
-  "0:38|The gap  (no command — talk only)"
+  "0:00|Cold open — the denial, already on screen"
+  "0:18|Why now  (no command — talk only)"
+  "0:42|The documented failure  (no command — talk only)"
   "1:00|Inside the kernel"
-  "1:35|Durability"
-  "2:20|Two languages, one verdict"
-  "2:55|Try to break it"
-  "3:30|Five industries, one number"
-  "4:03|Graceful failure  (cut to the UI)"
-  "4:28|The bug I found in myself"
+  "1:34|Measured"
+  "1:50|Durability"
+  "2:22|Two languages, one verdict"
+  "2:56|Try to break it"
+  "3:19|Five industries, one number"
+  "3:49|Live Razorpay read-back"
+  "4:14|The bug, and what to run"
 )
 
 if [ "${1:-}" = "--list" ]; then
@@ -134,112 +135,111 @@ fi
 # the END of a beat, never after a banner, so nobody presses space just to reveal a
 # header.
 
-# ── 1 · 0:00 · the problem, no command ──────────────────────────────────────
+# ── 1 · 0:00 · cold open — run the denial, then speak over it ───────────────
 if [ "$START" -le 1 ]; then
-  beat 0 "an agent can spend your money on something you never agreed to buy"
-  cue "NO COMMAND. Empty prompt on screen. Say the problem, then press space."
+  beat 0 "a six-thousand-rupee blender out of a five-hundred-rupee lunch budget"
+  rm -f wal/demo.wal
+  run "./build/rig-eval fixtures/lunch_intent.json \\
+    fixtures/blender_cart.json --wal wal/demo.wal"
+  note "DO NOT narrate the command. Let 0x000D land, then speak."
   pause || exit 0
 fi
 
-# ── 2 · 0:10 · the decision, measured ───────────────────────────────────────
+# ── 2 · 0:18 · why now, no command ──────────────────────────────────────────
 if [ "$START" -le 2 ]; then
-  beat 1 "an authorisation decision on a shopping cart"
-  run ./build/bench-engine-kernel 3
-  run ./build/bench-engine-kernel 8
-  note "28 ns for 3 lines, 58 for 8 — it scales because it reads every line"
-  note "the rail costs ~70 ms. this is a millionth of it. checking is free."
+  beat 1 "Razorpay+NPCI on Claude; NPCI's Unified Agent Protocol in four days"
+  cue "NO COMMAND. Keep the denial on screen."
   pause || exit 0
 fi
 
-# ── 3 · 0:38 · the gap, no command ──────────────────────────────────────────
+# ── 3 · 0:42 · the documented failure, no command ───────────────────────────
 if [ "$START" -le 3 ]; then
-  beat 2 "NPCI UAP, Agent Pay, AP2, ACP — none of them read the cart"
-  cue "NO COMMAND. Talk over the benchmark still on screen."
+  beat 2 "OpenAI Operator bought the eggs it was asked to find"
+  cue "NO COMMAND. Still on the denial."
   pause || exit 0
 fi
 
 # ── 4 · 1:00 · inside the kernel (the C++ segment) ──────────────────────────
 if [ "$START" -le 4 ]; then
-  beat 3 "branch-free, integer paise, never short-circuits"
+  beat 3 "branch-free, integer paise, no model in this path"
   run "sed -n '/Verdict evaluate/,/^}/p' engine/src/kernel.cpp | head -40"
   note "24 reject codes, per-line attribution, 7 ns zero-init tax"
-  note "no model in this path — a pure function, which is what makes replay possible"
+  note "evaluate() has NO utterance parameter"
   pause || exit 0
 fi
 
-# ── 5 · 1:35 · durability ───────────────────────────────────────────────────
+# ── 5 · 1:34 · measured ─────────────────────────────────────────────────────
 if [ "$START" -le 5 ]; then
-  beat 4 "a decision is worthless unless it is durable before the money moves"
-  cue "SPEAK FIRST — set up 'on macOS the disk lies' before the grep."
+  beat 4 "28 ns for three lines, 59 for eight — it reads every line"
+  run ./build/bench-engine-kernel 3
+  run ./build/bench-engine-kernel 8
+  note "read YOUR screen — thermal state moves this 50-59 ns"
+  pause || exit 0
+fi
+
+# ── 6 · 1:50 · durability ───────────────────────────────────────────────────
+if [ "$START" -le 6 ]; then
+  beat 5 "durable before money moves; on macOS the disk lies"
   run "grep -A6 'F_FULLFSYNC' engine/include/rig/clock.hpp"
-  note "fsync returns success while the bytes sit in the drive's volatile cache"
-  note "33 us for the lie, 4 ms for the truth — 250 decisions/s is not a gateway"
+  note "fsync returns success while bytes sit in the drive's volatile cache"
   pause || exit 0
   run ./build/rig-load 2000
-  note "group commit: one F_FULLFSYNC for the whole batch"
-  note "and that log is not only durability — it is the evidence"
+  note "~120 decisions per fsync: 47 us each, ~21,000/s"
   pause || exit 0
 fi
 
-# ── 6 · 2:20 · two languages, one verdict ───────────────────────────────────
-if [ "$START" -le 6 ]; then
-  beat 5 "two independent implementations agreeing is evidence"
+# ── 7 · 2:22 · two languages, one verdict ───────────────────────────────────
+if [ "$START" -le 7 ]; then
+  beat 6 "mandate, cart, decision, THEN token — the ordering invariant"
   rm -f wal/rig.wal          # a retake must not collide with its own last take
   run "./build/rig-eval fixtures/lunch_intent.json \\
     fixtures/lunch_cart.json --wal wal/rig.wal"
-  pause || exit 0
   run "./build/rig-eval fixtures/lunch_intent.json \\
     fixtures/blender_cart.json --wal wal/rig.wal"
-  pause || exit 0
   run ./build/rig-audit wal/rig.wal
   run ./build/rig-replay wal/rig.wal
-  note "the engine re-executes every decision from its recorded inputs"
   pause || exit 0
   run "java -cp control-plane/out com.razorpay.rig.ReplayAuditor wal/rig.wal"
-  note "484 lines of Java, no shared code, zero divergences"
+  note "no shared code, zero divergences"
   pause || exit 0
   run ./scripts/tamper.sh
-  note "one flipped bit and the chain refuses to verify"
+  note "seven verified records become three"
   pause || exit 0
 fi
 
-# ── 7 · 2:55 · try to break it ──────────────────────────────────────────────
-if [ "$START" -le 7 ]; then
-  beat 6 "let the wall of REFUSED sit for two seconds before speaking"
-  run ./build/rig-attack
-  note "8 refused, exactly 1 authorised. the agent holds no Razorpay credentials."
-  pause || exit 0
-fi
-
-# ── 8 · 3:30 · five industries, one number ──────────────────────────────────
+# ── 8 · 2:56 · try to break it ──────────────────────────────────────────────
 if [ "$START" -le 8 ]; then
-  beat 7 "nothing changed but the catalogue"
+  beat 7 "let the wall of REFUSED sit for two seconds before speaking"
+  run ./build/rig-attack
+  note "3 forgeries + 5 bypasses, all refused; 1 legitimate payment"
+  pause || exit 0
+fi
+
+# ── 9 · 3:19 · five industries, one number ──────────────────────────────────
+if [ "$START" -le 9 ]; then
+  beat 8 "nothing changed but the product feed"
   run ./scripts/sectors.sh
-  note "five sectors, five controls, one binary"
   pause || exit 0
   run ./build/rig-revenue
-  note "a declined agent cart is a lost sale, not a saved rupee"
-  note "nets Rs 50,000 ahead; 98% unattended on a held-out split"
+  note "100% of authorised value completes, 98% unattended; blocker 94%"
   pause || exit 0
 fi
 
-# ── 9 · 4:03 · graceful failure + retry storm ───────────────────────────────
-if [ "$START" -le 9 ]; then
-  beat 8 "blocking without breaking what the user wanted is the product"
-  rm -f wal/demo.wal
-  run "./build/rig-eval fixtures/lunch_intent.json \\
-    fixtures/blender_cart.json --wal wal/demo.wal"
-  note "three violations, the failing line named, no capability token"
-  cue "NOW CUT TO THE BROWSER — scenario 3 · Auto-repair — ~20 seconds"
-  pause || exit 0
-fi
-
-# ── 10 · 4:28 · the bug I found in myself ───────────────────────────────────
+# ── 10 · 3:49 · the live read-back — the moment a README cannot give ────────
 if [ "$START" -le 10 ]; then
-  beat 9 "quantity caps were per line, and the agent picks how many lines it sends"
-  cue "SPEAK FIRST — tell the bug story, then run verify.sh under it."
-  run ./verify.sh
-  note "46 checks, non-zero exit if any of it was a lie"
+  beat 9 "that order id was created seconds ago; nothing local can fake it"
+  run ./scripts/prove-razorpay.sh
+  note "read back out of api.razorpay.com with mandate_id and wal_seq"
+  pause || exit 0
+fi
+
+# ── 11 · 4:14 · the bug, and what to run ────────────────────────────────────
+if [ "$START" -le 11 ]; then
+  beat 10 "quantity caps were per line, and the agent picks how many lines"
+  cue "SPEAK FIRST — tell the bug story, then run verify under the last line."
+  pause || exit 0
+  run ./verify.sh --quick
+  note "36 checks in 3 seconds; the full run is 46"
 fi
 
 [ "$CLEAN" = "1" ] || printf "\n\n${G}${B}  end of script.${Z}  ${D}retake: ./scripts/record.sh N${Z}\n\n"
