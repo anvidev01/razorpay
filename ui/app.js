@@ -35,6 +35,17 @@ let lastDecisionSeq = 0;
 let seen = new Set();
 
 // ---------- chat ----------
+// SKU names, categories and merchant ids come from the AGENT, which this whole system
+// treats as untrusted. They were interpolated straight into innerHTML, so a cart line
+// named `<img src=x onerror=...>` executed script in the merchant's console -- a stored
+// XSS in the one screen a disputes team would open. Everything agent-supplied goes
+// through esc() before it reaches the DOM.
+function esc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function msg(kind, who, html) {
   const d = document.createElement('div');
   d.className = 'msg ' + kind;
@@ -107,13 +118,13 @@ function render(j) {
   if (d.commit_us) $('s-commit').textContent = d.commit_us + ' µs';
 
   const reasons = (d.reasons || []).map((r) =>
-    `<div class="reason"><code>${r.code}</code><span>${r.detail}</span></div>`).join('');
+    `<div class="reason"><code>${esc(r.code)}</code><span>${esc(r.detail)}</span></div>`).join('');
 
   const lines = (d.lines || []).map((l) => `
     <div class="l">
       <span class="pill ${l.ok ? 'ok' : 'no'}">${l.ok ? 'ok' : 'deny'}</span>
-      <span class="sku">${l.sku}</span>
-      ${l.substituted_for ? `<span class="rchip sub">↔ ${l.substituted_for}</span>` : ''}
+      <span class="sku">${esc(l.sku)}</span>
+      ${l.substituted_for ? `<span class="rchip sub">↔ ${esc(l.substituted_for)}</span>` : ''}
     </div>`).join('');
 
   const chips = [];
@@ -129,7 +140,7 @@ function render(j) {
   const live = d.rail === 'razorpay-test';
   const host = live ? 'api.razorpay.com' : 'mock rail';
   if (d.paid) {
-    chips.push(`<span class="rchip pay">PAID · ${d.payment_order_id}</span>`);
+    chips.push(`<span class="rchip pay">PAID · ${esc(d.payment_order_id)}</span>`);
     chips.push(`<span class="rchip pay">POST ${host}/v1/orders → ${d.payment_http_status} · ${d.payment_latency_ms} ms</span>`);
   } else if (d.payment_http_status) {
     chips.push(`<span class="rchip payno">POST ${host}/v1/orders → ${d.payment_http_status} · ${d.payment_error || 'failed'}</span>`);
@@ -151,8 +162,8 @@ function render(j) {
   verdictEl.className = 'verdict ' + cls;
   verdictEl.innerHTML = `
     <div class="vtop">
-      <span class="vbadge">${oc}</span>
-      <span class="vbits">${d.verdict_hex}</span>
+      <span class="vbadge">${esc(oc)}</span>
+      <span class="vbits">${esc(d.verdict_hex)}</span>
       <span class="vmeta">kernel ${ns ? ns.toFixed(1) + ' ns' : '—'}<br>
         durable ${d.commit_us} µs · wal seq ${d.wal_seq}</span>
     </div>
@@ -200,8 +211,8 @@ async function refreshAudit() {
         : r.kind === 'bad' ? 'style="color:var(--red)"' : '';
     return `<div class="walrow ${r.type === 'POLICY_DECISION' ? 'dec' : ''} ${isNew ? 'new' : ''}">
       <span class="seq">${r.seq}</span>
-      <span class="ty" ${tone}>${r.type}</span>
-      <span class="hx">${r.detail || r.hash}</span></div>`;
+      <span class="ty" ${tone}>${esc(r.type)}</span>
+      <span class="hx">${esc(r.detail || r.hash)}</span></div>`;
   }).join('');
   j.rows.forEach((r) => seen.add(r.seq));
   walEl.scrollTop = walEl.scrollHeight;

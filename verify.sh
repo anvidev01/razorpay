@@ -266,6 +266,16 @@ import json,sys;assert len(json.load(sys.stdin)['items'])>0" 2>/dev/null \
   && ok "machine-readable catalogue" "/api/catalog" || no "catalogue endpoint"
 curl -s -m 3 -D- -o /dev/null http://127.0.0.1:8799/api/health | grep -qi "access-control-allow-origin" \
   && no "CORS wildcard present" || ok "no CORS wildcard on the money API"
+
+# The console renders agent-supplied SKU names. They were interpolated straight into
+# innerHTML, so a cart line called `<img src=x onerror=...>` ran script in the merchant's
+# browser -- a stored XSS in the screen a disputes team opens.
+if grep -q 'function esc(' ui/app.js \
+   && ! grep -qE '\$\{l\.sku\}|\$\{r\.detail \|\| r\.hash\}' ui/app.js; then
+  ok "agent-supplied text is escaped in the UI" "no unescaped SKU reaches innerHTML"
+else
+  no "UI escapes agent input"
+fi
 pkill -f "rig-gateway --port 8799" 2>/dev/null
 
 printf "\n${B}%d passed, %d failed${Z}\n" "$PASS" "$FAIL"

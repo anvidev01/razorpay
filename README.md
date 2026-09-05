@@ -26,7 +26,7 @@ afterwards.**
 | what you look at | where it is |
 |---|---|
 | **Problem taste** — did you pick something that actually matters | [The problem](#the-problem-in-the-rails-own-terms) — NPCI's ₹10,000 block, live with Zomato/Swiggy/Zepto, with [sourced evidence](docs/06-AGENTIC-BLIND-SPOTS.md) |
-| **Build quality** — does it run, is it structured, would you trust it | [`./verify.sh`](#build-quality--one-command-proves-every-claim) — 43 checks, exits non-zero if any claim here is false |
+| **Build quality** — does it run, is it structured, would you trust it | [`./verify.sh`](#build-quality--one-command-proves-every-claim) — 44 checks, exits non-zero if any claim here is false |
 | **AI judgment** — the right tool in the right place, and where you chose *not* to use one | [Where I used a model, and where I refused to](#ai-judgment--where-i-used-a-model-and-where-i-refused-to) |
 | **Failure recovery** — what broke, and what you did about it | [What broke](#what-broke-and-how-i-got-out) — four real ones, including a critical bypass in my own engine |
 
@@ -287,7 +287,7 @@ Method, caveats and how each was measured: **[docs/BENCHMARKS.md](docs/BENCHMARK
 
 ```bash
 git clone https://github.com/anvidev01/razorpay-mandate-engine.git && cd razorpay-mandate-engine
-./verify.sh            # 43 checks, ~90s   (--quick skips benchmarks/sanitizers, ~15s)
+./verify.sh            # 44 checks, ~90s   (--quick skips benchmarks/sanitizers, ~15s)
 ```
 
 Builds from clean, then proves each claim in this README and prints PASS/FAIL:
@@ -360,6 +360,23 @@ That table *is* the product: three of seven reach the rail.
 export RAZORPAY_KEY_ID=rzp_test_xxx RAZORPAY_KEY_SECRET=yyy
 ./run.sh
 ```
+
+### Cross-checking the two kernels
+
+```bash
+./scripts/crosscheck.sh 7 120
+```
+
+Generates adversarial carts across every control — unknown SKUs, substitution
+categories, price and quantity caps, recurring tails, disallowed merchants,
+overflow-scale amounts — and requires the C++ kernel and the independent Java auditor to
+reach the **same verdict on every one**.
+
+This exists because they silently disagreed once: the C++ kernel aggregates quantity
+across cart lines, the Java auditor was left checking per line, and *"zero divergences"*
+held only because no logged decision exercised the split-quantity case. One hand-written
+regression is not enough to trust a dual-implementation claim.
+
 
 Without keys the rail is a deterministic mock and **says so** in the header and in
 every log line. With them you get real `order_...` ids from the Orders API.
