@@ -21,14 +21,13 @@ C=$'\033[36m'; G=$'\033[32m'; Y=$'\033[33m'; M=$'\033[35m'
 BEATS=(
   "0:00|Cold open — the denial, already on screen"
   "0:18|Why now  (no command — talk only)"
-  "0:42|The documented failure  (no command — talk only)"
   "1:00|Inside the kernel"
-  "1:34|Measured"
   "1:50|Durability"
   "2:22|Two languages, one verdict"
   "2:56|Try to break it"
   "3:19|Five industries, one number"
   "3:49|Live Razorpay read-back"
+  "4:05|Third outcome — CUT TO BROWSER, no command"
   "4:14|The bug, and what to run"
 )
 
@@ -152,34 +151,18 @@ if [ "$START" -le 2 ]; then
   pause || exit 0
 fi
 
-# ── 3 · 0:42 · the documented failure, no command ───────────────────────────
+# ── 3 · 1:00 · inside the kernel (the C++ segment) ──────────────────────────
 if [ "$START" -le 3 ]; then
-  beat 2 "OpenAI Operator bought the eggs it was asked to find"
-  cue "NO COMMAND. Still on the denial."
-  pause || exit 0
-fi
-
-# ── 4 · 1:00 · inside the kernel (the C++ segment) ──────────────────────────
-if [ "$START" -le 4 ]; then
-  beat 3 "branch-free, integer paise, no model in this path"
+  beat 2 "branch-free, integer paise, no model in this path"
   run "sed -n '/Verdict evaluate/,/^}/p' engine/src/kernel.cpp | head -40"
   note "24 reject codes, per-line attribution, 7 ns zero-init tax"
   note "evaluate() has NO utterance parameter"
   pause || exit 0
 fi
 
-# ── 5 · 1:34 · measured ─────────────────────────────────────────────────────
-if [ "$START" -le 5 ]; then
-  beat 4 "28 ns for three lines, 59 for eight — it reads every line"
-  run ./build/bench-engine-kernel 3
-  run ./build/bench-engine-kernel 8
-  note "read YOUR screen — thermal state moves this 50-59 ns"
-  pause || exit 0
-fi
-
-# ── 6 · 1:50 · durability ───────────────────────────────────────────────────
-if [ "$START" -le 6 ]; then
-  beat 5 "durable before money moves; on macOS the disk lies"
+# ── 4 · 1:50 · durability ───────────────────────────────────────────────────
+if [ "$START" -le 4 ]; then
+  beat 3 "durable before money moves; on macOS the disk lies"
   run "grep -A6 'F_FULLFSYNC' engine/include/rig/clock.hpp"
   note "fsync returns success while bytes sit in the drive's volatile cache"
   pause || exit 0
@@ -188,9 +171,9 @@ if [ "$START" -le 6 ]; then
   pause || exit 0
 fi
 
-# ── 7 · 2:22 · two languages, one verdict ───────────────────────────────────
-if [ "$START" -le 7 ]; then
-  beat 6 "mandate, cart, decision, THEN token — the ordering invariant"
+# ── 5 · 2:22 · two languages, one verdict ───────────────────────────────────
+if [ "$START" -le 5 ]; then
+  beat 4 "mandate, cart, decision, THEN token — the ordering invariant"
   rm -f wal/rig.wal          # a retake must not collide with its own last take
   run "./build/rig-eval fixtures/lunch_intent.json \\
     fixtures/lunch_cart.json --wal wal/rig.wal"
@@ -207,17 +190,17 @@ if [ "$START" -le 7 ]; then
   pause || exit 0
 fi
 
-# ── 8 · 2:56 · try to break it ──────────────────────────────────────────────
-if [ "$START" -le 8 ]; then
-  beat 7 "let the wall of REFUSED sit for two seconds before speaking"
+# ── 6 · 2:56 · try to break it ──────────────────────────────────────────────
+if [ "$START" -le 6 ]; then
+  beat 5 "let the wall of REFUSED sit for two seconds before speaking"
   run ./build/rig-attack
   note "3 forgeries + 5 bypasses, all refused; 1 legitimate payment"
   pause || exit 0
 fi
 
-# ── 9 · 3:19 · five industries, one number ──────────────────────────────────
-if [ "$START" -le 9 ]; then
-  beat 8 "nothing changed but the product feed"
+# ── 7 · 3:19 · five industries, one number ──────────────────────────────────
+if [ "$START" -le 7 ]; then
+  beat 6 "nothing changed but the product feed"
   run ./scripts/sectors.sh
   pause || exit 0
   run ./build/rig-revenue
@@ -225,17 +208,24 @@ if [ "$START" -le 9 ]; then
   pause || exit 0
 fi
 
-# ── 10 · 3:49 · the live read-back — the moment a README cannot give ────────
-if [ "$START" -le 10 ]; then
-  beat 9 "that order id was created seconds ago; nothing local can fake it"
+# ── 8 · 3:49 · the live read-back — the moment a README cannot give ────────
+if [ "$START" -le 8 ]; then
+  beat 7 "that order id was created seconds ago; nothing local can fake it"
   run ./scripts/prove-razorpay.sh
   note "read back out of api.razorpay.com with mandate_id and wal_seq"
   pause || exit 0
 fi
 
-# ── 11 · 4:14 · the bug, and what to run ────────────────────────────────────
-if [ "$START" -le 11 ]; then
-  beat 10 "quantity caps were per line, and the agent picks how many lines"
+# ── 9 · 4:05 · third outcome — browser only, no terminal command ────────────
+if [ "$START" -le 9 ]; then
+  beat 8 "allow and deny you have seen; this is the third outcome"
+  cue "CUT TO BROWSER. Click 5 · Hidden instructions, then Approve · MFA."
+  pause || exit 0
+fi
+
+# ── 10 · 4:14 · the bug, and what to run ────────────────────────────────────
+if [ "$START" -le 10 ]; then
+  beat 9 "quantity caps were per line, and the agent picks how many lines"
   cue "SPEAK FIRST — tell the bug story, then run verify under the last line."
   pause || exit 0
   run ./verify.sh --quick

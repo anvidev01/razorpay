@@ -6,7 +6,7 @@
 **Before every take:** `./scripts/seed.sh`, then fire one Razorpay call off camera — the
 first call pays a TLS handshake (**3,315 ms cold vs 194 ms warm**).
 
-**765 spoken words.** At 150 wpm that is **5:26** with pauses; **5:16** at 155 and **5:06** at 160. **Time one run before you commit to it** — if your limit is a hard 5:00, the cut list below names what goes.
+**748 spoken words.** At 150 wpm that is **5:19** with pauses; **5:09** at 155 and **5:00** at 160. This is as lean as it gets without dropping something a judge scores — **time one run**, and if you are still over, cut the `tamper`/audit narration at 2:22.
 Re-time against your own reading pace before committing to it.
 
 Read what is on **your** screen. The 8-line kernel reads 50–59 ns depending on thermal
@@ -93,27 +93,14 @@ state, and `rig-load` moves a little run to run.
 > attribution**.
 >
 > And there is **no model in this path**. `evaluate` takes a mandate and a cart — **no
-> utterance parameter**. A language model cannot reach this decision even in principle."
+> utterance parameter**. A language model cannot reach this decision even in principle.
+>
+> **Twenty-eight nanoseconds**, on a checkout that takes two hundred milliseconds. **The
+> check is free.**"
 
 > **VOICE** — Fastest beat in the script; these are credentials, deliver them cleanly and
 > keep moving. Slow only for **seven nanoseconds**. Then stop, and take the last paragraph
 > deliberately — *no utterance parameter* is the line a judge will quote.
-
----
-
-# 1:34 — Measured
-
-> **SPACE** → `./build/bench-engine-kernel 3`
-> **SPACE** → `./build/bench-engine-kernel 8`
-
-**SAY**
-
-> "**Twenty-eight nanoseconds** for three lines, **fifty-nine** for eight — it scales
-> because it **reads every line**. The rail it protects takes about **two hundred
-> milliseconds**. This check is **free**."
-
-> **VOICE** — Let both numbers appear before speaking. Even pace on the two figures so the
-> scaling is audible. Hard stop before **free**, then say it plainly and stop again.
 
 ---
 
