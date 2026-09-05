@@ -17,7 +17,7 @@
 | WAL record append (buffered `write`, 256 B) | 2.2 µs | 9.4 µs | not yet durable |
 | WAL `fsync` | 33.5 µs | 87.7 µs | **does not flush drive cache on macOS** |
 | WAL `fcntl(F_FULLFSYNC)` — true durability | **3 960 µs** | 5 016 µs | max observed 27.9 ms |
-| **Durable decision, group-committed (measured end-to-end)** | **47 µs** | — | ~21 000 decisions/s |
+| **Durable decision, group-committed (measured end-to-end)** | **~70 µs** | — | >10 000 decisions/s |
 
 **The engineering thesis in one line:** the policy decision costs *225 nanoseconds*;
 honest durability costs *4 milliseconds*. The gateway is therefore not a
@@ -120,8 +120,12 @@ by a 256-record batch. That was wrong for two reasons the measurement exposed:
 2. **The 2 ms timer usually closes the batch first**, so the observed figure is
    125 decisions per fsync rather than the full batch.
 
-The honest number is **47 µs per durable decision at ~21 000 decisions/s**, converging on
-**~120 decisions per fsync** — measured at both n=2 000 (48.5 µs) and n=20 000 (46.9 µs).
+The honest number is **~70 µs per durable decision at >10 000 decisions/s**, amortising
+**66-100 decisions per fsync**. Five consecutive runs of `rig-load 2000` on the same
+machine spanned **57-86 µs** and **11 600-17 500/s** — the figure moves with machine load,
+so **read what your own run prints** rather than quoting this one. The un-grouped baseline
+is **~130/s**: `decide()` fences twice per decision when it mints a token, which is the
+0.5 decisions-per-fsync noted below.
 
 > **This benchmark broke once and flattered itself by 10×.** `rig-load` submitted one
 > identical cart in a loop, so every iteration after the first was a *duplicate*. The

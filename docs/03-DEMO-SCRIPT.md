@@ -116,11 +116,11 @@ state, and `rig-load` moves a little run to run.
 > macOS returns **success** while your bytes sit in the **drive's volatile cache**.
 >
 > The honest primitive is **`F_FULLFSYNC`** — **thirty-three microseconds for the lie,
-> four milliseconds for the truth** — which caps you at **two hundred and fifty a
+> four milliseconds for the truth** — which caps you at about **a hundred and thirty a
 > second**.
 >
-> **Group commit** amortises one flush across about **a hundred and twenty** decisions:
-> **forty-seven microseconds** each, **twenty-one thousand a second**."
+> **Group commit** amortises one flush across **scores of** decisions: about **seventy
+> microseconds** each, **over ten thousand a second**."
 
 > **VOICE** — Relish **success** — that word is the whole betrayal. Slow right down through
 > *thirty-three microseconds / four milliseconds*; it is the sharpest contrast you have.
@@ -270,8 +270,8 @@ state, and `rig-load` moves a little run to run.
 
 **SAY**
 
-> "Run `verify.sh --quick` — **thirty-six checks in three seconds**. The full run is
-> **forty-six**. **It exits non-zero if any of this was a lie.**"
+> "Run `verify.sh --quick` — **thirty-seven checks in three seconds**. The full run is
+> **forty-seven**. **It exits non-zero if any of this was a lie.**"
 
 > **VOICE** — Direct address; this is an instruction to the judge. Slow the final sentence
 > right down and stop dead on **lie**. Do not add anything after it. Do not smile it away.

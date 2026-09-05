@@ -26,7 +26,7 @@ afterwards.**
 | what you look at | where it is |
 |---|---|
 | **Problem taste** — did you pick something that actually matters | [The problem](#the-problem-in-the-rails-own-terms) — NPCI's ₹10,000 block, live with Zomato/Swiggy/Zepto, with [sourced evidence](docs/06-AGENTIC-BLIND-SPOTS.md) |
-| **Build quality** — does it run, is it structured, would you trust it | [`./verify.sh`](#build-quality--one-command-proves-every-claim) — 46 checks, exits non-zero if any claim here is false |
+| **Build quality** — does it run, is it structured, would you trust it | [`./verify.sh`](#build-quality--one-command-proves-every-claim) — 47 checks, exits non-zero if any claim here is false |
 | **AI judgment** — the right tool in the right place, and where you chose *not* to use one | [Where I used a model, and where I refused to](#ai-judgment--where-i-used-a-model-and-where-i-refused-to) |
 | **Failure recovery** — what broke, and what you did about it | [What broke](#what-broke-and-how-i-got-out) — four real ones, including a critical bypass in my own engine |
 
@@ -276,7 +276,7 @@ of blocking. Method and assumptions: **[docs/07 appendix](docs/07-RISK-METRICS.m
 | Policy kernel (8-line cart) | **58 ns** |
 | simdjson parse + extract | 160 ns |
 | **Full decision** | **≈ 225 ns** |
-| Durable audit, group-committed | 47 µs (~21,000/s) |
+| Durable audit, group-committed | ~70 µs (>10,000/s) |
 
 Method, caveats and how each was measured: **[docs/BENCHMARKS.md](docs/BENCHMARKS.md)**
 
@@ -287,7 +287,7 @@ Method, caveats and how each was measured: **[docs/BENCHMARKS.md](docs/BENCHMARK
 
 ```bash
 git clone https://github.com/anvidev01/razorpay-mandate-engine.git && cd razorpay-mandate-engine
-./verify.sh            # 46 checks, ~90s   (--quick skips benchmarks/sanitizers, ~15s)
+./verify.sh            # 47 checks, ~90s   (--quick skips benchmarks/sanitizers, ~15s)
 ```
 
 Builds from clean, then proves each claim in this README and prints PASS/FAIL:
