@@ -174,19 +174,18 @@ fi
 # ── 5 · 2:22 · two languages, one verdict ───────────────────────────────────
 if [ "$START" -le 5 ]; then
   beat 4 "mandate, cart, decision, THEN token — the ordering invariant"
+  # SILENT SETUP. rig-audit needs decisions in the log to show anything, but the script
+  # cues no command for them -- so they must not appear on screen. Run them quietly.
   rm -f wal/rig.wal          # a retake must not collide with its own last take
-  run "./build/rig-eval fixtures/lunch_intent.json \\
-    fixtures/lunch_cart.json --wal wal/rig.wal"
-  run "./build/rig-eval fixtures/lunch_intent.json \\
-    fixtures/blender_cart.json --wal wal/rig.wal"
+  ./build/rig-eval fixtures/lunch_intent.json fixtures/lunch_cart.json \
+      --wal wal/rig.wal >/dev/null 2>&1
+  ./build/rig-eval fixtures/lunch_intent.json fixtures/blender_cart.json \
+      --wal wal/rig.wal >/dev/null 2>&1
   run ./build/rig-audit wal/rig.wal
   run ./build/rig-replay wal/rig.wal
   pause || exit 0
   run "java -cp control-plane/out com.razorpay.rig.ReplayAuditor wal/rig.wal"
   note "no shared code, zero divergences"
-  pause || exit 0
-  run ./scripts/tamper.sh
-  note "seven verified records become three"
   pause || exit 0
 fi
 
