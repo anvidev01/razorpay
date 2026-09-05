@@ -313,6 +313,6 @@ body = re.sub(r"<h2>Keyword coverage</h2>\s*<p>(.*?)</p>",
               r'<h2>Keyword coverage</h2><div class="kw">\1</div>', body, flags=re.S)
 
 open(OUT, "w").write(
-    "<title>Intent Gateway Recording Script</title>\n"
+    "<title>Mandate Engine Recording Script</title>\n"
     "<style>%s</style>\n<div class=page>\n%s\n</div>\n" % (CSS, body))
 print("wrote", OUT)
