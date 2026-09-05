@@ -5,7 +5,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 [ -f .env ] && { set -a; . ./.env; set +a; }
-G=$'\033[32m'; R=$'\033[31m'; D=$'\033[2m'; B=$'\033[1m'; Z=$'\033[0m'
+G=$'\033[32m'; R=$'\033[31m'; D=$'\033[2m'; B=$'\033[1m'; Z=$'\033[0m'; Y=$'\033[33m'
 
 if [ -z "${RAZORPAY_KEY_ID:-}" ]; then
   printf "${R}No RAZORPAY_KEY_ID.${Z} Put it in .env (see .env.example).\n"; exit 1
@@ -23,7 +23,20 @@ PORT="${1:-8787}"
 # must not also require them to have started a server in another terminal. If one is
 # already up we use it untouched; otherwise we start our own and clean it up on exit.
 SPAWNED=""
-if ! curl -s -m 2 "http://127.0.0.1:$PORT/api/health" >/dev/null 2>&1; then
+# A gateway already on :8787 is only usable if it is on the REAL rail. If it was started
+# without the keys it reports rail=mock, invents an order id, and then step 2 asks the
+# real Razorpay API for an id that never existed -- "The id provided does not exist",
+# which reads as a broken project rather than a mis-started server. Refuse to use it.
+EXIST_RAIL=$(curl -s -m 2 "http://127.0.0.1:$PORT/api/health" 2>/dev/null \
+             | python3 -c "import json,sys;print(json.load(sys.stdin).get('rail',''))" 2>/dev/null)
+if [ -n "$EXIST_RAIL" ] && [ "$EXIST_RAIL" != "razorpay-test" ]; then
+  printf "${Y}The gateway on :%s is running on the '%s' rail, not razorpay-test.${Z}\n" \
+         "$PORT" "$EXIST_RAIL"
+  printf "${D}It was started without the keys, so it cannot create a real order.\n"
+  printf "Starting a temporary one that can, and leaving yours alone.${Z}\n"
+  EXIST_RAIL=""
+fi
+if [ -z "$EXIST_RAIL" ]; then
   PORT=8791
   # A hash chain takes exactly one writer, so never share the WAL of a running gateway.
   rm -f wal/prove.wal

@@ -267,6 +267,14 @@ fi
 ./build/rig-load 2000 >/dev/null 2>&1 && ok "durable commit under load" "group-committed WAL" || no "load"
 fi
 
+# prove-razorpay.sh is the command a judge runs to check the integration is real. If a
+# mock gateway is already on :8787 it used to reuse it, invent an order id, then ask the
+# real Razorpay API for an id that never existed -- "The id provided does not exist",
+# which reads as a broken project rather than a mis-started server.
+grep -q "not razorpay-test" scripts/prove-razorpay.sh \
+  && ok "the Razorpay proof refuses a mock gateway" "or it reads back an id that never existed" \
+  || no "prove-razorpay mock guard"
+
 hdr "8 · End to end through the payment rail"
 pkill -f rig-gateway 2>/dev/null; sleep 0.3; rm -f wal/rig.wal
 nohup ./build/rig-gateway --port 8799 >/tmp/verify_gw.log 2>&1 </dev/null & disown 2>/dev/null || true
