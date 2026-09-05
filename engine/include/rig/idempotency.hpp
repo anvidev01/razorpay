@@ -50,7 +50,12 @@ public:
       IdemEntry& e = tab_[i];
       if (!e.live) return nullptr;
       if (e.key == k) {
-        if (now_ns > e.expires_ns) { e.live = false; return nullptr; }  // window closed
+        // Window closed. Do NOT clear live_: this is an open-addressed table, and a
+        // cleared slot terminates the probe chain, making every key placed after it by
+        // linear probing unreachable. A later cart that collided into this bucket would
+        // then miss its own duplicate check -- a DOUBLE CHARGE. The slot stays in the
+        // chain and is recycled by insert() instead.
+        if (now_ns > e.expires_ns) return nullptr;
         return &e;
       }
       i = (i + 1) & (CAP - 1);
@@ -63,10 +68,16 @@ public:
     std::uint32_t i = slot(k);
     for (std::uint32_t probe = 0; probe < CAP; ++probe) {
       IdemEntry& e = tab_[i];
-      if (!e.live || e.key == k) {
+      // A slot is reusable if it was never used, holds this same key, or has aged out.
+      // Recycling expired slots here is what keeps the probe chain intact -- find()
+      // deliberately does not clear them.
+      const bool reusable = !e.live || e.key == k || now_ns > e.expires_ns;
+      if (reusable) {
+        const bool fresh = !e.live;
         e.key = k; e.decision_id = decision_id; e.wal_seq = wal_seq;
         e.allowed = allowed; e.expires_ns = now_ns + TTL_NS; e.live = true;
-        if (e.hits == 0) ++live_;
+        e.hits = 0;
+        if (fresh) ++live_;
         return;
       }
       i = (i + 1) & (CAP - 1);

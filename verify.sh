@@ -184,6 +184,18 @@ echo "$out" | grep -q "no meaningful overfitting" \
 [ $rc -eq 0 ] && ok "held-out metrics inside the operating envelope" \
               || no "risk detector out of envelope"
 
+# ANTI-GAMING. The first version of these metrics was tuned on the same 24 cases it
+# reported, giving a fictional precision of 1.00. The train/test split fixed the method,
+# but a split can still be gamed by picking the seed whose test set happens to flatter
+# you. Re-run on a seed the thresholds have never seen and require the envelope to hold.
+alt=$(./build/rig-riskeval 1337 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | grep -E '^ +TEST')
+ap=$(echo "$alt" | awk '{print $6}'); af=$(echo "$alt" | awk '{print $8}')
+if [ -n "$ap" ] && python3 -c "import sys; sys.exit(0 if float('$ap')>=0.80 and float('$af')<=0.02 else 1)"; then
+  ok "metrics hold on an unseen seed" "seed 1337: precision $ap, FPR $af"
+else
+  no "seed robustness" "seed 1337 precision=$ap fpr=$af"
+fi
+
 if [ "$QUICK" = "0" ]; then
 hdr "5b · Portability"
 cat > /tmp/rig_port.cpp <<'CPP'

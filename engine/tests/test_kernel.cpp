@@ -1,5 +1,6 @@
 // Golden-vector tests for the deterministic policy kernel.
 #include "rig/kernel.hpp"
+#include "rig/idempotency.hpp"
 #include "rig/intern.hpp"
 #include "rig/arena.hpp"
 #include "rig/safety.hpp"
@@ -279,6 +280,31 @@ int main() {
     c.add(t.lookup("SKU_DRINK_LIME_007"), 6000, 3);
     auto v = evaluate(s, c.view(swiggy), NOW);
     CHECK(v.bits & R_QTY_EXCEEDED,     "3+3 against a cap of 4 is refused");
+  }
+  {   // IDEMPOTENCY, PROBE CHAIN. The store is an open-addressed table, so clearing an
+      // expired slot terminates the chain and orphans every key placed after it by
+      // linear probing. Two carts colliding into one bucket: when the first ages out,
+      // the second must still be findable -- otherwise its retry is not recognised as
+      // a duplicate and the basket is charged twice.
+    IdempotencyStore st;
+    const std::uint64_t NOW = 1000000000ull;
+    Hash256 a{}, b{}; std::uint32_t sa = 0; bool paired = false;
+    for (std::uint64_t x = 0; x < 2000000 && !paired; ++x) {
+      Hash256 k = IdempotencyStore::key_of(1, sha256(&x, sizeof x), 1, (std::int64_t)x);
+      std::uint32_t h; std::memcpy(&h, k.data(), 4);
+      const std::uint32_t sl = h & (IdempotencyStore::CAP - 1);
+      if (!sa) { a = k; sa = sl ? sl : 1; }
+      else if (sl == sa) { b = k; paired = true; }
+    }
+    CHECK(paired,                              "two carts placed in the same bucket");
+    st.insert(a, 101, 11, true, NOW);
+    st.insert(b, 202, 22, true, NOW);
+    CHECK(st.find(b, NOW + 1) != nullptr,      "the probed-to cart is findable");
+    (void)st.find(a, NOW + IdempotencyStore::TTL_NS + 1);   // age the first one out
+    CHECK(st.find(b, NOW + 1) != nullptr,
+          "  -> and STAYS findable after the colliding cart expires");
+    CHECK(st.find(b, NOW + 1)->decision_id == 202,
+          "  -> resolving to its own decision, not the expired one");
   }
   {   // V-I: an empty cart is not a purchase and must not mint a token
     Cart c;
