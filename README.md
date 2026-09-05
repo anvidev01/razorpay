@@ -19,7 +19,7 @@ afterwards.**
 | **Project** | Mandate Engine |
 | **What it solves** | An AI agent can spend money the human never authorised, because every payment rail checks *who is asking* and *how much* — and nothing checks *what is in the cart*. This is the layer that reads the cart. |
 | **Runs on** | Linux, macOS, WSL2 · one command · CI on Ubuntu + macOS |
-| **5-min walkthrough** | ⚠️ **PASTE THE UNLISTED VIDEO URL HERE BEFORE SUBMITTING** — script: [docs/03](docs/03-DEMO-SCRIPT.md) |
+| **5-min walkthrough** | **[Watch the demo](https://drive.google.com/drive/folders/1uClccyMLdLTAKZI7gfJ2W8FVf6AQKTBH?usp=drive_link)** — script and timings: [docs/03](docs/03-DEMO-SCRIPT.md) |
 
 **How this repo answers the four things you evaluate on:**
 
