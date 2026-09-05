@@ -26,7 +26,7 @@ afterwards.**
 | what you look at | where it is |
 |---|---|
 | **Problem taste** — did you pick something that actually matters | [The problem](#the-problem-in-the-rails-own-terms) — NPCI's ₹10,000 block, live with Zomato/Swiggy/Zepto, with [sourced evidence](docs/06-AGENTIC-BLIND-SPOTS.md) |
-| **Build quality** — does it run, is it structured, would you trust it | [`./verify.sh`](#build-quality--one-command-proves-every-claim) — 42 checks, exits non-zero if any claim here is false |
+| **Build quality** — does it run, is it structured, would you trust it | [`./verify.sh`](#build-quality--one-command-proves-every-claim) — 43 checks, exits non-zero if any claim here is false |
 | **AI judgment** — the right tool in the right place, and where you chose *not* to use one | [Where I used a model, and where I refused to](#ai-judgment--where-i-used-a-model-and-where-i-refused-to) |
 | **Failure recovery** — what broke, and what you did about it | [What broke](#what-broke-and-how-i-got-out) — four real ones, including a critical bypass in my own engine |
 
