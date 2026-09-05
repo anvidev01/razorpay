@@ -6,7 +6,7 @@
 **Before every take:** `./scripts/seed.sh`, then fire one Razorpay call off camera — the
 first call pays a TLS handshake (**3,315 ms cold vs 194 ms warm**).
 
-**716 spoken words.** At 150 wpm that is **5:02** with pauses; **4:53** at 155.
+**765 spoken words.** At 150 wpm that is **5:26** with pauses; **5:16** at 155 and **5:06** at 160. **Time one run before you commit to it** — if your limit is a hard 5:00, the cut list below names what goes.
 Re-time against your own reading pace before committing to it.
 
 Read what is on **your** screen. The 8-line kernel reads 50–59 ns depending on thermal
@@ -72,30 +72,12 @@ state, and `rig-load` moves a little run to run.
 
 > "In February, **Razorpay and NPCI** put agentic payments on **Claude** — Zomato,
 > Swiggy, Zepto. In four days NPCI is expected to unveil the **Unified Agent Protocol**
-> at Global Fintech Fest. Google's **AP2** added a checkout mandate; **Amex** now
-> underwrites purchases that *deviate from authenticated intent*.
+> at Global Fintech Fest. Google's **AP2** added a checkout mandate.
 >
 > Everyone started building cart verification this year. **None of it is in UPI yet.**"
 
 > **VOICE** — Brisk through the four names; this is setup, not the point. Land on **four
 > days** — it is the only urgency you have. Pause before the last sentence, then say it flat.
-
----
-
-# 0:42 — The documented failure
-
-> *Still no command.*
-
-**SAY**
-
-> "And it isn't hypothetical. OpenAI's **Operator** was asked to *find* the cheapest
-> eggs. It **bought** them — thirty-one dollars on Instacart, no confirmation. OpenAI
-> said it fell short of its own safeguards.
->
-> The agent wasn't hacked. **It just did something nobody authorised.**"
-
-> **VOICE** — Storytelling pace, slower than the beat before. Stress ***find*** and then
-> **bought** — the contrast is the evidence. Two-beat pause before the last line, then dry.
 
 ---
 
@@ -109,9 +91,6 @@ state, and `rig-load` moves a little run to run.
 > paise**. Violations accumulate into a **bitfield** and it **never short-circuits** —
 > every reason a cart failed, not the first. **Twenty-four reject codes**, **per-line
 > attribution**.
->
-> I measured what that costs: the verdict struct is deliberately **not**
-> zero-initialised, because zeroing 512 bytes cost **seven nanoseconds** a call.
 >
 > And there is **no model in this path**. `evaluate` takes a mandate and a cart — **no
 > utterance parameter**. A language model cannot reach this decision even in principle."
@@ -150,8 +129,8 @@ state, and `rig-load` moves a little run to run.
 > macOS returns **success** while your bytes sit in the **drive's volatile cache**.
 >
 > The honest primitive is **`F_FULLFSYNC`** — **thirty-three microseconds for the lie,
-> four milliseconds for the truth**. That caps you at **two hundred and fifty decisions
-> a second**.
+> four milliseconds for the truth** — which caps you at **two hundred and fifty a
+> second**.
 >
 > **Group commit** amortises one flush across about **a hundred and twenty** decisions:
 > **forty-seven microseconds** each, **twenty-one thousand a second**."
@@ -182,12 +161,6 @@ state, and `rig-load` moves a little run to run.
 
 > "Then a **Java re-implementation that shares no code** replays the same log and agrees.
 > **Zero divergences.**"
-
-> **SPACE** → `./scripts/tamper.sh`
-
-**SAY**
-
-> "Flip **one bit** and seven verified records become **three**."
 
 > **VOICE** — Read the ordering list as four separate items, not one phrase. Two full beats
 > on **zero divergences** — longest pause in the video. The tamper line is a throwaway: fast, dry.
@@ -221,18 +194,23 @@ state, and `rig-load` moves a little run to run.
 **SAY**
 
 > "Same binary, **five industries**. Thirty **SaaS seats** split across three lines to
-> beat a twenty-five cap. **₹1 today, ₹999 a month after.** Nothing changed but the
-> product feed."
+> beat a twenty-five cap.
+>
+> And **₹1 today, ₹999 every month after** — under budget, right merchant, real SKU.
+> **Every limit-based check passes it.** Denied, because the mandate authorised a
+> purchase, not a **subscription**.
+>
+> A timed-out agent that **re-generates** its request — different bytes, same basket —
+> collapses onto **one charge**. Nothing changed but the product feed."
 
 > **SPACE** → `./build/rig-revenue`
 > **WAIT**
 
 **SAY**
 
-> "Risk is built in as **defense-in-depth** — unusual behaviour **escalates to a human**
-> instead of auto-blocking, so **zero legitimate sales are killed**. **A hundred percent
-> of authorised value completes, ninety-eight percent of it unattended.** An aggressive
-> blocker manages **ninety-four**."
+> "**Agent-aware risk** escalates to a human instead of auto-blocking, so **zero
+> legitimate sales are killed**. **A hundred percent of authorised value completes,
+> ninety-eight percent unattended.** An aggressive blocker manages **ninety-four**."
 
 > **VOICE** — Quick through the sectors, they are illustration. Slow for **zero legitimate
 > sales are killed**. Then **hundred / ninety-eight / ninety-four** as three separate beats.
