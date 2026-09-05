@@ -28,6 +28,10 @@ state, and `rig-load` moves a little run to run.
 > I didn't build a shopping agent. I built the layer underneath one, **that reads the
 > cart**."
 
+> **VOICE** — Energised but level, not salesy. Hit **six-thousand** and **five-hundred**
+> hard; the gap between them is the whole hook. Full stop after *"rail makes"* — two
+> beats. Drop half a tone on the last line and slow it: that sentence is the positioning.
+
 ---
 
 # 0:18 — Why now
@@ -43,6 +47,9 @@ state, and `rig-load` moves a little run to run.
 >
 > Everyone started building cart verification this year. **None of it is in UPI yet.**"
 
+> **VOICE** — Brisk through the four names; this is setup, not the point. Land on **four
+> days** — it is the only urgency you have. Pause before the last sentence, then say it flat.
+
 ---
 
 # 0:42 — The documented failure
@@ -56,6 +63,9 @@ state, and `rig-load` moves a little run to run.
 > said it fell short of its own safeguards.
 >
 > The agent wasn't hacked. **It just did something nobody authorised.**"
+
+> **VOICE** — Storytelling pace, slower than the beat before. Stress ***find*** and then
+> **bought** — the contrast is the evidence. Two-beat pause before the last line, then dry.
 
 ---
 
@@ -76,6 +86,10 @@ state, and `rig-load` moves a little run to run.
 > And there is **no model in this path**. `evaluate` takes a mandate and a cart — **no
 > utterance parameter**. A language model cannot reach this decision even in principle."
 
+> **VOICE** — Fastest beat in the script; these are credentials, deliver them cleanly and
+> keep moving. Slow only for **seven nanoseconds**. Then stop, and take the last paragraph
+> deliberately — *no utterance parameter* is the line a judge will quote.
+
 ---
 
 # 1:34 — Measured
@@ -88,6 +102,9 @@ state, and `rig-load` moves a little run to run.
 > "**Twenty-eight nanoseconds** for three lines, **fifty-nine** for eight — it scales
 > because it **reads every line**. The rail it protects takes about **two hundred
 > milliseconds**. This check is **free**."
+
+> **VOICE** — Let both numbers appear before speaking. Even pace on the two figures so the
+> scaling is audible. Hard stop before **free**, then say it plainly and stop again.
 
 ---
 
@@ -108,6 +125,10 @@ state, and `rig-load` moves a little run to run.
 >
 > **Group commit** amortises one flush across about **a hundred and twenty** decisions:
 > **forty-seven microseconds** each, **twenty-one thousand a second**."
+
+> **VOICE** — Relish **success** — that word is the whole betrayal. Slow right down through
+> *thirty-three microseconds / four milliseconds*; it is the sharpest contrast you have.
+> Speed back up for group commit and let the last two numbers land as a pair.
 
 ---
 
@@ -138,6 +159,9 @@ state, and `rig-load` moves a little run to run.
 
 > "Flip **one bit** and seven verified records become **three**."
 
+> **VOICE** — Read the ordering list as four separate items, not one phrase. Two full beats
+> on **zero divergences** — longest pause in the video. The tamper line is a throwaway: fast, dry.
+
 ---
 
 # 2:56 — Try to break it
@@ -154,6 +178,9 @@ state, and `rig-load` moves a little run to run.
 > public half**, so it cannot forge a mandate **even if you own the gateway**.
 >
 > Getting past this isn't prompt engineering. **It's forging Ed25519.**"
+
+> **VOICE** — Say nothing for two seconds while REFUSED fills the screen. Then flat and
+> unhurried — the wall is doing the work. Final line: slow, quiet, no lift at the end.
 
 ---
 
@@ -177,6 +204,9 @@ state, and `rig-load` moves a little run to run.
 > of authorised value completes, ninety-eight percent of it unattended.** An aggressive
 > blocker manages **ninety-four**."
 
+> **VOICE** — Quick through the sectors, they are illustration. Slow for **zero legitimate
+> sales are killed**. Then **hundred / ninety-eight / ninety-four** as three separate beats.
+
 ---
 
 # 3:49 — The moment the README can't give you
@@ -191,6 +221,9 @@ state, and `rig-load` moves a little run to run.
 > the **WAL sequence number** stored against it. **Nothing local can fake that.**
 >
 > And the denied cart? **No order at all.** The rail was never contacted."
+
+> **VOICE** — Lean in. This is the one thing the repo cannot show. Point at the order id as
+> you say **seconds ago**. Beat before **nothing local can fake that**, then say it slowly.
 
 ---
 
@@ -209,6 +242,10 @@ state, and `rig-load` moves a little run to run.
 >
 > All three fixed. All three pinned."
 
+> **VOICE** — Drop the energy. Matter-of-fact, almost bored — you are reporting, not
+> confessing. Slight pause before **`ALLOW`**. *"All three fixed. All three pinned."* —
+> clipped, four beats, no apology in the voice.
+
 > **SPACE** → `./verify.sh --quick`
 > **WAIT**
 
@@ -216,6 +253,9 @@ state, and `rig-load` moves a little run to run.
 
 > "Run `verify.sh --quick` — **thirty-six checks in three seconds**. The full run is
 > **forty-six**. **It exits non-zero if any of this was a lie.**"
+
+> **VOICE** — Direct address; this is an instruction to the judge. Slow the final sentence
+> right down and stop dead on **lie**. Do not add anything after it. Do not smile it away.
 
 ---
 

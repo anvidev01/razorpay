@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Render docs/03-DEMO-SCRIPT.md to a print-optimised page for reading while recording.
-
-    python3 scripts/render-script.py docs/03-DEMO-SCRIPT.md /tmp/script.html
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless \
-      --no-pdf-header-footer --print-to-pdf=script.pdf file:///tmp/script.html
-
+"""Render the recording script to a print-optimised HTML page.
 
 Two hard requirements learned the hard way:
   1. Code blocks must WRAP, never clip. A PDF cannot scroll, so `overflow-x:auto`
@@ -101,6 +96,19 @@ pre.out b{color:var(--ink);font-weight:600}
 .do code{background:transparent;color:var(--do-ink);padding:0;font-size:12px}
 .do del{opacity:.6}
 
+/* ── HOW TO SAY IT ────────────────────────────────────────────────────────
+   Sits directly under the blue block it annotates. Amber, italic, small --
+   never mistakable for a line to read aloud.                              */
+.voice{position:relative;margin:-10px 0 16px 22px;padding:9px 14px 9px 16px;
+  background:var(--warn-bg);border-left:3px solid var(--warn);
+  border-radius:0 5px 5px 0;break-inside:avoid;page-break-inside:avoid}
+.voice p{margin:0;font-size:12.5px;line-height:1.55;color:var(--warn);font-style:italic}
+.voice strong{color:#8A4700;font-weight:600;font-style:normal}
+.voice em{color:var(--warn);font-style:normal;text-decoration:underline}
+.voice .vtag{display:inline-block;background:var(--warn);color:#fff;
+  font:600 8.5px/1 ui-monospace,"SF Mono",Menlo,monospace;letter-spacing:.13em;
+  padding:3px 6px;border-radius:3px;margin-right:8px;vertical-align:1px;font-style:normal}
+
 /* stage direction */
 p.stage{background:var(--warn-bg);border-left:3px solid var(--warn);
   border-radius:0 5px 5px 0;padding:9px 14px;margin:11px 0;
@@ -136,6 +144,9 @@ hr{border:0;border-top:1px solid var(--rule);margin:26px 0}
 .sw-cmd{background:var(--cmd-bg)}
 .sw-out{background:var(--out-bg);border:1px solid var(--rule);
   border-left:3px solid var(--faint)}
+.sw-voice{background:var(--warn-bg);border-left:3px solid var(--warn);
+  border-top:1px solid var(--warn);border-right:1px solid var(--warn);
+  border-bottom:1px solid var(--warn)}
 
 .kw{background:var(--band);border-radius:6px;padding:14px 17px;margin:12px 0;
   font-size:11.5px;line-height:1.85;color:var(--mute)}
@@ -179,8 +190,15 @@ def flush_quote():
         paras.append(" ".join(cur))
     first = paras[0].lstrip() if paras else ""
     spoken = first.startswith('"') or first.startswith('&quot;')
+    voice  = first.startswith('**VOICE**')
     body = "".join("<p>%s</p>" % inline(x) for x in paras)
-    if spoken:
+    if voice:
+        # Delivery notes. Never read aloud -- a third visual state so they can never be
+        # confused with the spoken lines they sit under.
+        txt = " ".join(paras).replace("**VOICE**", "", 1).lstrip(" —-")
+        out.append('<div class="voice"><span class="vtag">VOICE</span><p>%s</p></div>'
+                   % inline(txt))
+    elif spoken:
         out.append('<div class="say"><span class="tag">SAY</span>%s</div>' % body)
     else:
         steps = "".join("<p>%s</p>" % inline(x.strip())
@@ -305,6 +323,8 @@ LEGEND = ('<div class="legend">'
   '<b>Black — the command being run.</b> record.sh types it for you.</div>'
   '<div class="lg"><span class="sw sw-out"></span>'
   '<b>Pale — expected output.</b> Check your screen matches.</div>'
+  '<div class="lg"><span class="sw sw-voice"></span>'
+  '<b>Amber italic — HOW to say it.</b> Pace, emphasis, tone. Never read aloud.</div>'
   '</div>')
 body = "\n".join(out)
 body = body.replace("</h1>", "</h1>" + LEGEND, 1)
@@ -313,6 +333,6 @@ body = re.sub(r"<h2>Keyword coverage</h2>\s*<p>(.*?)</p>",
               r'<h2>Keyword coverage</h2><div class="kw">\1</div>', body, flags=re.S)
 
 open(OUT, "w").write(
-    "<title>Mandate Engine Recording Script</title>\n"
+    "<title>Intent Gateway Recording Script</title>\n"
     "<style>%s</style>\n<div class=page>\n%s\n</div>\n" % (CSS, body))
 print("wrote", OUT)
