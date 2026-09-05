@@ -227,6 +227,30 @@ state, and `rig-load` moves a little run to run.
 
 ---
 
+# 4:05 — The third outcome  *(the only UI beat)*
+
+> **CUT TO BROWSER** → `http://127.0.0.1:8787`, already open on **Scripted scenarios**
+> **CLICK** → `5 · Hidden instructions`
+> **WAIT** — `REVIEW 0x1000`, `R_INJECTION_SUSPECTED`, and the step-up card appears
+
+**SAY**
+
+> "Allow and deny you've seen. This is the third outcome — every item inside the mandate,
+> only the text is hostile. So it **asks**, instead of killing a real sale."
+
+> **CLICK** → `Approve · MFA`
+> **WAIT** — *"human approved at step-up — token minted, payment executed"*
+
+**SAY**
+
+> "One tap. **Token minted, paid.**"
+
+> **VOICE** — Fast and light; this is a coda, not a new act. Slow only on **asks**. Say the
+> last four words on the click, then cut straight back to the terminal without a breath —
+> the next line starts immediately.
+
+---
+
 # 4:14 — The bug, and what to run
 
 > *Speak first. Run the command underneath the last line.*
