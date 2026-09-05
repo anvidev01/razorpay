@@ -26,7 +26,22 @@ static int run(int argc, char** argv) {
   if (!gw.admit_mandate(intent, device.sign(intent), device.public_key(), err))
     throw std::runtime_error("admission: " + err);
 
-  const std::string cart = slurp("fixtures/lunch_cart.json");
+  const std::string cart_tpl = slurp("fixtures/lunch_cart.json");
+
+  // Every iteration must be a DISTINCT decision. Submitting one identical cart in a
+  // loop made every call after the first a duplicate, which returns before the group
+  // -commit fence is reached -- so maybe_commit() never ran, the 2 ms timer never
+  // fired, and the whole run was flushed by a single fsync at the end. That measured
+  // "append to memory, fsync once", not group commit, and the reported throughput
+  // grew with the iteration count instead of converging.
+  auto nth_cart = [&](int i) {
+    std::string c = cart_tpl;
+    const std::string needle = "\"unit_paise\": 24000";   // fixture has a space
+    const auto at = c.find(needle);
+    if (at != std::string::npos)
+      c.replace(at, needle.size(), "\"unit_paise\": " + std::to_string(24000 + i));
+    return c;
+  };
   struct timespec ts; clock_gettime(CLOCK_REALTIME, &ts);
   const std::uint64_t now = std::uint64_t(ts.tv_sec)*1000000000ull + ts.tv_nsec;
 
@@ -39,7 +54,7 @@ static int run(int argc, char** argv) {
     const int iters = group ? n : std::min(n, 60);   // un-amortised is ~4ms/txn, keep it short
     const std::uint64_t s0 = gw.wal().syncs(), u0 = gw.wal().sync_us();
     const std::uint64_t t0 = mono();
-    for (int i = 0; i < iters; ++i) gw.decide(cart, now);
+    for (int i = 0; i < iters; ++i) gw.decide(nth_cart(i), now);
     gw.flush();
     const std::uint64_t dt = mono() - t0;
     const std::uint64_t ds = gw.wal().syncs() - s0, du = gw.wal().sync_us() - u0;

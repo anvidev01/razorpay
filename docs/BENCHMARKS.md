@@ -17,7 +17,7 @@
 | WAL record append (buffered `write`, 256 B) | 2.2 µs | 9.4 µs | not yet durable |
 | WAL `fsync` | 33.5 µs | 87.7 µs | **does not flush drive cache on macOS** |
 | WAL `fcntl(F_FULLFSYNC)` — true durability | **3 960 µs** | 5 016 µs | max observed 27.9 ms |
-| **Durable decision, group-committed (measured end-to-end)** | **37 µs** | — | 27 000 decisions/s |
+| **Durable decision, group-committed (measured end-to-end)** | **47 µs** | — | ~21 000 decisions/s |
 
 **The engineering thesis in one line:** the policy decision costs *225 nanoseconds*;
 honest durability costs *4 milliseconds*. The gateway is therefore not a
@@ -120,7 +120,15 @@ by a 256-record batch. That was wrong for two reasons the measurement exposed:
 2. **The 2 ms timer usually closes the batch first**, so the observed figure is
    125 decisions per fsync rather than the full batch.
 
-The honest number is **37 µs per durable decision at ~27 000 decisions/s**. Note also
+The honest number is **47 µs per durable decision at ~21 000 decisions/s**, converging on
+**~120 decisions per fsync** — measured at both n=2 000 (48.5 µs) and n=20 000 (46.9 µs).
+
+> **This benchmark broke once and flattered itself by 10×.** `rig-load` submitted one
+> identical cart in a loop, so every iteration after the first was a *duplicate*. The
+> duplicate path returns before the group-commit fence, `maybe_commit()` never ran, and
+> the entire run was flushed by a single fsync at the end — reporting 246 000 decisions/s
+> and *rising with the iteration count*, which is the tell: real group commit converges,
+> buffering does not. Fixed by giving each iteration a distinct cart. Note also
 that un-grouped mode shows *0.5 decisions per fsync* — `decide()` fences twice per
 decision (once before minting, once after) — which is why it costs 7.5 ms, not 4 ms.
 

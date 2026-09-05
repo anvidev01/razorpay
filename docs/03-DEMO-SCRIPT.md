@@ -225,7 +225,7 @@ is printed here.
 
 **SAY**
 
-> "Clone it and run `verify.sh`. **Forty-five checks — it exits non-zero if any of this was
+> "Clone it and run `verify.sh`. **Forty-six checks — it exits non-zero if any of this was
 > a lie.** This is **bounded, gated, explainable payments infrastructure.**"
 
 ---

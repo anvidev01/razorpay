@@ -253,6 +253,17 @@ hdr "7 · Performance (measured, not claimed)"
 k=$(./build/bench-engine-kernel 8 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | grep -oE 'p50= *[0-9.]+' | grep -oE '[0-9.]+' | head -1)
 [ -n "$k" ] && ok "policy kernel, 8-line cart" "p50 ${k} ns on this machine (README: ~58 ns on Apple M4)" \
              || no "kernel benchmark"
+
+# Real group commit fences repeatedly and converges. It regressed once to buffering the
+# whole run and fsyncing once at the end -- which reports a throughput that RISES with
+# the iteration count, the tell that nothing is being amortised. Require both.
+lo=$(./build/rig-load 2000  2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | grep -A1 'group commit' | grep -oE '[0-9]+ fsyncs' | grep -oE '^[0-9]+')
+hi=$(./build/rig-load 20000 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | grep -A1 'group commit' | grep -oE '[0-9]+ fsyncs' | grep -oE '^[0-9]+')
+if [ "${lo:-0}" -gt 5 ] && [ "${hi:-0}" -gt "${lo:-0}" ]; then
+  ok "group commit actually fences" "$lo fsyncs at n=2k, $hi at n=20k -- amortised, not buffered"
+else
+  no "group commit fencing" "fsyncs lo=$lo hi=$hi (1 fsync means the batch never closed)"
+fi
 ./build/rig-load 2000 >/dev/null 2>&1 && ok "durable commit under load" "group-committed WAL" || no "load"
 fi
 
