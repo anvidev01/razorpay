@@ -103,8 +103,13 @@ type_out(){
   printf "${Z}"
 }
 
+# The frame should look like a shell someone is using, not a script printing commands.
+# Rebuild the real zsh prompt: user@host dir %  -- override with RIG_PROMPT if your
+# terminal is themed differently.
+PROMPT_STR="${RIG_PROMPT:-$(whoami)@$(hostname -s) $(basename "$PWD") %}"
+
 run(){
-  printf "\n${G}\$${Z} "
+  printf "\n${G}%s${Z} " "$PROMPT_STR"
   type_out "$*"
   sleep 0.35                 # the beat between hitting Enter and output appearing
   printf "\n\n"
