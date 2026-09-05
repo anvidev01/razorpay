@@ -1,4 +1,4 @@
-# Build Log — Razorpay Intent Gateway
+# Build Log — Mandate Engine
 
 A timestamped engineering record. Appended via `./scripts/log.sh "<phase>" "<note>" --commit`.
 

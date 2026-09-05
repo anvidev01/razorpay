@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One command to build and run the Intent Gateway.
+# One command to build and run the Mandate Engine.
 #   ./run.sh            build if needed, start the UI on :8787, open a browser
 #   ./run.sh --demo     run the full CLI walkthrough instead
 #   ./run.sh --port N   use a different port
@@ -61,7 +61,7 @@ if [ -z "${RAZORPAY_KEY_ID:-}" ]; then
   printf "  export RAZORPAY_KEY_ID=rzp_test_xxx RAZORPAY_KEY_SECRET=yyy && ./run.sh${Z}\n"
 fi
 
-printf "\n${B}Razorpay Intent Gateway${Z}  ${G}http://127.0.0.1:$PORT${Z}\n"
+printf "\n${B}Mandate Engine${Z}  ${G}http://127.0.0.1:$PORT${Z}\n"
 printf "${D}  Scripted scenarios tab -> six one-click cases\n"
 printf "  Compose your own order  -> build a mandate and cart live\n"
 printf "  Ctrl-C to stop${Z}\n\n"

@@ -120,7 +120,7 @@ trap 'printf "\n${D}stopped.${Z}\n"; exit 0' INT
 
 clear
 if [ "$CLEAN" = "0" ]; then
-  printf "${B}Razorpay Intent Gateway — recording driver${Z}\n"
+  printf "${B}Mandate Engine — recording driver${Z}\n"
   printf "${D}space advances · q quits · --clean hides these cues for the real take${Z}\n"
 fi
 ./scripts/seed.sh >/dev/null 2>&1 || printf "${Y}seed failed — check ./verify.sh${Z}\n"

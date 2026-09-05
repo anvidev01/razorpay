@@ -1,6 +1,6 @@
-# Razorpay Intent Gateway
+# Mandate Engine
 
-[![verify](https://github.com/anvidev01/mandate-engine/actions/workflows/verify.yml/badge.svg)](https://github.com/anvidev01/mandate-engine/actions/workflows/verify.yml)
+[![verify](https://github.com/anvidev01/razorpay-mandate-engine/actions/workflows/verify.yml/badge.svg)](https://github.com/anvidev01/razorpay-mandate-engine/actions/workflows/verify.yml)
 
 **An AI payment security layer that sits between an AI buyer and the payment rail, so
 every money action an agent takes is explainable, bounded and gated — and provable
@@ -16,7 +16,7 @@ afterwards.**
 | | |
 |---|---|
 | **Track** | 01 — AI Growth & Agentic Commerce *(secondary: 02 — AI Risk Manager)* |
-| **Project** | Razorpay Intent Gateway |
+| **Project** | Mandate Engine |
 | **What it solves** | An AI agent can spend money the human never authorised, because every payment rail checks *who is asking* and *how much* — and nothing checks *what is in the cart*. This is the layer that reads the cart. |
 | **Runs on** | Linux, macOS, WSL2 · one command · CI on Ubuntu + macOS |
 | **5-min walkthrough** | ⚠️ **PASTE THE UNLISTED VIDEO URL HERE BEFORE SUBMITTING** — script: [docs/03](docs/03-DEMO-SCRIPT.md) |
@@ -286,7 +286,7 @@ Method, caveats and how each was measured: **[docs/BENCHMARKS.md](docs/BENCHMARK
 ## Build quality — one command proves every claim
 
 ```bash
-git clone https://github.com/anvidev01/mandate-engine.git && cd mandate-engine
+git clone https://github.com/anvidev01/razorpay-mandate-engine.git && cd razorpay-mandate-engine
 ./verify.sh            # 42 checks, ~90s   (--quick skips benchmarks/sanitizers, ~15s)
 ```
 

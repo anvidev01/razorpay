@@ -9,7 +9,7 @@ G="fixtures/grocery_intent.json"; W="--wal wal/grocery.wal"
 
 ./scripts/seed.sh >/dev/null
 rm -f wal/grocery.wal wal/retry.wal
-printf "${B}Razorpay Intent Gateway${Z} ${D}— the payment rail checks the price tag. Nothing checks the cart.${Z}\n"
+printf "${B}Mandate Engine${Z} ${D}— the payment rail checks the price tag. Nothing checks the cart.${Z}\n"
 
 hr; step "1. THE MANDATE + HAPPY PATH" \
   "\"order me lunch, keep it under Rs 500\" -> agent proposes a Rs 405 cart"

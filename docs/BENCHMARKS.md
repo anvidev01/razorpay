@@ -1,4 +1,4 @@
-# Measured Latency Budget — Razorpay Intent Gateway
+# Measured Latency Budget — Mandate Engine
 
 > Every number below was **measured on the target machine**, not estimated.
 > Hardware: Apple M4 (10 core), macOS 15.7.7, Apple clang 17, `-O3 -march=native`,
@@ -129,7 +129,7 @@ decision (once before minting, once after) — which is why it costs 7.5 ms, not
 The 220 ns decision is the *gateway's own* cost. A real checkout adds:
 loopback HTTP ≈ 40–80 µs, Razorpay API round trip ≈ 80–300 ms.
 
-**The claim made in the pitch is precisely:** "the Intent Gateway adds a
+**The claim made in the pitch is precisely:** "the Mandate Engine adds a
 sub-microsecond policy decision and ~37 µs of amortised durable audit to a checkout
 that already costs ~200 ms." Not "microsecond checkout." The distinction is what
 makes the number defensible.
